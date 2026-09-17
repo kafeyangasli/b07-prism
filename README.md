@@ -10,7 +10,7 @@ Proyek ini dikembangkan untuk memenuhi tugas mata kuliah **Pengembangan Platform
 
 ## Teknologi yang Digunakan ( Tech Stack )
 
-- **Bahasa pemrograman:** Java 26
+- **Bahasa pemrograman:** Java 25
 - **Framework backend:** Spring Boot 4.1.1 dengan arsitektur MVC
 - **Template engine:** Thymeleaf
 - **Keamanan:** Spring Security
@@ -125,7 +125,7 @@ Setiap folder pada `feature` dapat memiliki lapisan `model` dan `repository`, se
 
 ## Menjalankan Proyek
 
-Pastikan Java 26 dan MySQL telah terpasang, variabel lingkungan (environment variables) telah diatur, dan layanan MySQL sedang berjalan. Lalu, jalankan perintah berikut:
+Pastikan Java 25 dan MySQL telah terpasang, variabel lingkungan (environment variables) telah diatur, dan layanan MySQL sedang berjalan. Lalu, jalankan perintah berikut:
 
 ```bash
 ./mvnw spring-boot:run

@@ -125,7 +125,7 @@ Setiap folder pada `feature` dapat memiliki lapisan `model` dan `repository`, se
 
 ## Menjalankan Proyek
 
-Pastikan Java 17 dan MySQL telah terpasang, lalu jalankan perintah berikut:
+Pastikan Java 26 dan MySQL telah terpasang, variabel lingkungan (environment variables) telah diatur, dan layanan MySQL sedang berjalan. Lalu, jalankan perintah berikut:
 
 ```bash
 ./mvnw spring-boot:run

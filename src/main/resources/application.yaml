@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: b07-prism
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true

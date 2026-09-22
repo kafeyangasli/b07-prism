@@ -5,6 +5,9 @@ import com.github.kafeyangasli.prism.feature.report.model.Report;
 import com.github.kafeyangasli.prism.feature.report.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -13,12 +16,14 @@ public class ReportController {
 
     private final ReportService reportService;
 
-    @PostMapping
-    public Report createReport(@RequestBody CreateReportRequest request) {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+public Report createReport(
+        @RequestPart("data") CreateReportRequest request,
+        @RequestPart(value = "photo", required = false) MultipartFile photo
+) {
 
-        // ⚠️ TEMPORARY (ganti di step berikutnya)
-        Long mockUserId = 1L;
+    Long mockUserId = 1L; // nanti diganti auth
 
-        return reportService.createReport(request, mockUserId);
-    }
+    return reportService.createReport(request, photo, mockUserId);
+}
 }

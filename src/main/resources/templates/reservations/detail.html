@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="id"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>
+        Detail Reservasi - PRISM
+    </title>
+
+</head>
+
+<body>
+
+<h1>
+    Detail Reservasi
+</h1>
+
+
+<p
+    th:if="${success}"
+    th:text="${success}"
+    style="color: green">
+</p>
+
+
+<p
+    th:if="${error}"
+    th:text="${error}"
+    style="color: red">
+</p>
+
+
+<dl>
+
+    <dt>
+        Fasilitas
+    </dt>
+
+    <dd
+        th:text="${reservation.facility.name}">
+    </dd>
+
+
+    <dt>
+        Lokasi
+    </dt>
+
+    <dd
+        th:text="${reservation.facility.location}">
+    </dd>
+
+
+    <dt>
+        Mulai
+    </dt>
+
+    <dd
+        th:text="${reservation.startAt}">
+    </dd>
+
+
+    <dt>
+        Selesai
+    </dt>
+
+    <dd
+        th:text="${reservation.endAt}">
+    </dd>
+
+
+    <dt>
+        Tujuan
+    </dt>
+
+    <dd
+        th:text="${reservation.purpose}">
+    </dd>
+
+
+    <dt>
+        Status
+    </dt>
+
+    <dd
+        th:text="${reservation.status}">
+    </dd>
+
+
+    <dt>
+        Alasan
+    </dt>
+
+    <dd
+        th:text="${reservation.reasonDetail != null
+            ? reservation.reasonDetail
+            : '-'}">
+    </dd>
+
+
+    <dt>
+        Batas PENDING
+    </dt>
+
+    <dd
+        th:text="${reservation.expiresAt != null
+            ? reservation.expiresAt
+            : '-'}">
+    </dd>
+
+</dl>
+
+
+<!-- Proposal -->
+
+<p
+    th:if="${reservation.proposalPath != null}">
+
+    <a
+        th:href="@{/reservations/{id}/proposal(id=${reservation.id})}">
+
+        Download proposal
+
+    </a>
+
+</p>
+
+
+<!-- Cancel -->
+
+<form
+    th:if="${reservation.status.name() == 'PENDING'
+        or reservation.status.name() == 'APPROVED'}"
+    th:action="@{/reservations/{id}/cancel(id=${reservation.id})}"
+    method="post">
+
+    <button type="submit">
+        Batalkan reservasi
+    </button>
+
+</form>
+
+
+<a th:href="@{/reservations}">
+    Kembali ke riwayat
+</a>
+
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>
+        Riwayat Reservasi - PRISM
+    </title>
+
+</head>
+
+<body>
+
+<h1>
+    Riwayat Reservasi
+</h1>
+
+
+<p
+    th:if="${success}"
+    th:text="${success}"
+    style="color: green">
+</p>
+
+
+<p
+    th:if="${error}"
+    th:text="${error}"
+    style="color: red">
+</p>
+
+
+<a th:href="@{/reservations/new}">
+    Ajukan reservasi baru
+</a>
+
+
+<table border="1">
+
+    <thead>
+
+    <tr>
+
+        <th>
+            Fasilitas
+        </th>
+
+        <th>
+            Mulai
+        </th>
+
+        <th>
+            Selesai
+        </th>
+
+        <th>
+            Status
+        </th>
+
+        <th>
+            Detail
+        </th>
+
+    </tr>
+
+    </thead>
+
+
+    <tbody>
+
+    <tr
+        th:each="reservation : ${reservations}">
+
+        <td
+            th:text="${reservation.facility.name}">
+        </td>
+
+        <td
+            th:text="${reservation.startAt}">
+        </td>
+
+        <td
+            th:text="${reservation.endAt}">
+        </td>
+
+        <td
+            th:text="${reservation.status}">
+        </td>
+
+        <td>
+
+            <a
+                th:href="@{/reservations/{id}(id=${reservation.id})}">
+
+                Lihat
+
+            </a>
+
+        </td>
+
+    </tr>
+
+
+    <tr
+        th:if="${#lists.isEmpty(reservations)}">
+
+        <td colspan="5">
+            Belum ada reservasi.
+        </td>
+
+    </tr>
+
+    </tbody>
+
+</table>
+
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ajukan Reservasi - PRISM</title>
+</head>
+
+<body>
+
+<h1>Ajukan Reservasi</h1>
+
+<p
+    th:if="${error}"
+    th:text="${error}"
+    style="color: red">
+</p>
+
+<form
+    th:action="@{/reservations}"
+    th:object="${reservationForm}"
+    method="post"
+    enctype="multipart/form-data">
+
+    <!-- Facility -->
+
+    <div>
+
+        <label for="facilityId">
+            Fasilitas
+        </label>
+
+        <select
+            id="facilityId"
+            th:field="*{facilityId}"
+            required>
+
+            <option value="">
+                -- pilih fasilitas --
+            </option>
+
+            <option
+                th:each="facility : ${facilities}"
+                th:value="${facility.id}"
+                th:text="${facility.name + ' (' + facility.code + ')'}">
+            </option>
+
+        </select>
+
+    </div>
+
+
+    <!-- Start -->
+
+    <div>
+
+        <label for="startAt">
+            Mulai
+        </label>
+
+        <input
+            id="startAt"
+            type="datetime-local"
+            th:field="*{startAt}"
+            step="1800"
+            required>
+
+    </div>
+
+
+    <!-- End -->
+
+    <div>
+
+        <label for="endAt">
+            Selesai
+        </label>
+
+        <input
+            id="endAt"
+            type="datetime-local"
+            th:field="*{endAt}"
+            step="1800"
+            required>
+
+    </div>
+
+
+    <!-- Purpose -->
+
+    <div>
+
+        <label for="purpose">
+            Tujuan penggunaan
+        </label>
+
+        <textarea
+            id="purpose"
+            th:field="*{purpose}"
+            maxlength="1000"
+            required>
+        </textarea>
+
+    </div>
+
+
+    <!-- Proposal template -->
+
+    <div>
+
+        <a th:href="@{/reservations/proposal-template}">
+            Download template proposal
+        </a>
+
+    </div>
+
+
+    <!-- Proposal upload -->
+
+    <div>
+
+        <label for="proposal">
+            Proposal bertanda tangan
+        </label>
+
+        <input
+            id="proposal"
+            type="file"
+            name="proposal"
+            accept=".pdf,.doc,.docx">
+
+        <small>
+            Wajib untuk Aula atau reservasi dengan durasi
+            minimal 6 jam.
+        </small>
+
+    </div>
+
+
+    <button type="submit">
+        Ajukan Reservasi
+    </button>
+
+    <a th:href="@{/reservations}">
+        Kembali
+    </a>
+
+</form>
+
+</body>
+</html>

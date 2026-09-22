@@ -1,17 +1,17 @@
 package com.github.kafeyangasli.prism.feature.reservation.repository;
 
-import com.github.kafeyangasli.prism.feature.facility.model.Facility;
-import com.github.kafeyangasli.prism.feature.user.model.User;
-
-import com.github.kafeyangasli.prism.feature.reservation.model.Reservation;
-import com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import com.github.kafeyangasli.prism.feature.reservation.model.Reservation;
+import com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus;
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
@@ -82,4 +82,34 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByFacilityIdAndStatusOrderByStartAtAsc(Long facilityId, ReservationStatus status);
 
     List<Reservation> findByProcessedByIdOrderByProcessedAtDesc(Long userId);
+
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select r
+        from Reservation r
+        join fetch r.facility
+        where r.id = :id
+          and r.user.id = :userId
+        """)
+    Optional<Reservation> findByIdAndUserIdForUpdate(
+        @Param("id") Long id,
+        @Param("userId") Long userId
+    );
+
+    /*
+     * FR-18:
+     * mencari reservation APPROVED
+     * yang waktu pemakaiannya sudah selesai.
+     */
+    @Query("""
+        select r
+        from Reservation r
+        where r.status = :status
+          and r.endAt < :now
+        order by r.endAt asc
+        """)
+    List<Reservation> findEndedApproved(
+        @Param("status") ReservationStatus status,
+        @Param("now") LocalDateTime now
+    );
 }

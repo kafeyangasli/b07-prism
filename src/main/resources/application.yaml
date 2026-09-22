@@ -8,3 +8,15 @@ spring:
 
   flyway:
     enabled: true
+    
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+prism:
+  storage:
+    proposals: ${PRISM_PROPOSAL_STORAGE:./storage/proposals}
+
+  scheduler:
+    reservation-lifecycle-ms: ${PRISM_RESERVATION_LIFECYCLE_MS:60000}

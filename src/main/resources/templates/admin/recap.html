@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rekap PRISM</title></head>
+<body>
+<main>
+  <h1>Rekap Okupansi dan Laporan</h1>
+  <p th:if="${error}" th:text="${error}" role="alert"></p>
+  <form method="get" th:action="@{/admin/recap}">
+    <label>Mulai <input type="date" name="startDate" th:value="${filter.startDate}" required></label>
+    <label>Selesai <input type="date" name="endDate" th:value="${filter.endDate}" required></label>
+    <label>Fasilitas <select name="facilityId"><option value="">Semua</option>
+      <option th:each="facility : ${facilities}" th:value="${facility.id}" th:text="${facility.name}" th:selected="${facility.id == filter.facilityId}"></option>
+    </select></label>
+    <label>Tipe <input name="facilityType" th:value="${filter.facilityType}"></label>
+    <label>Lokasi <input name="location" th:value="${filter.location}"></label>
+    <button type="submit">Tampilkan</button>
+  </form>
+
+  <section th:if="${recap != null}">
+    <p>Ekspor:
+      <a th:href="@{/admin/recap/export(format='csv',startDate=${filter.startDate},endDate=${filter.endDate},facilityId=${filter.facilityId},facilityType=${filter.facilityType},location=${filter.location})}">CSV</a>
+      <a th:href="@{/admin/recap/export(format='xlsx',startDate=${filter.startDate},endDate=${filter.endDate},facilityId=${filter.facilityId},facilityType=${filter.facilityType},location=${filter.location})}">XLSX</a>
+      <a th:href="@{/admin/recap/export(format='pdf',startDate=${filter.startDate},endDate=${filter.endDate},facilityId=${filter.facilityId},facilityType=${filter.facilityType},location=${filter.location})}">PDF</a>
+    </p>
+    <table>
+      <thead><tr><th>Kode</th><th>Fasilitas</th><th>Tipe</th><th>Lokasi</th><th>Slot disetujui</th><th>Slot dapat dipesan</th><th>Okupansi</th><th>Laporan</th></tr></thead>
+      <tbody><tr th:each="row : ${recap.rows}">
+        <td th:text="${row.facilityCode}"></td><td th:text="${row.facilityName}"></td>
+        <td th:text="${row.facilityType}"></td><td th:text="${row.location}"></td>
+        <td th:text="${row.approvedSlots}"></td><td th:text="${row.bookableSlots}"></td>
+        <td th:text="${row.occupancyPercent + '%'}"></td><td th:text="${row.issueCount}"></td>
+      </tr></tbody>
+    </table>
+    <p th:if="${#lists.isEmpty(recap.rows)}">Tidak ada fasilitas yang cocok dengan filter.</p>
+  </section>
+</main>
+</body>
+</html>

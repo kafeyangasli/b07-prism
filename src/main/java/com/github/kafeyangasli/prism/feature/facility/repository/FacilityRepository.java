@@ -69,4 +69,15 @@ public interface FacilityRepository extends JpaRepository<Facility, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select f from Facility f where f.id = :id")
     Optional<Facility> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("""
+            select f from Facility f
+            where (:facilityId is null or f.id = :facilityId)
+              and (:type is null or lower(f.type) = lower(:type))
+              and (:location is null or lower(f.location) like lower(concat('%', :location, '%')))
+            order by f.name asc
+            """)
+    List<Facility> findForRecap(@Param("facilityId") Long facilityId,
+                                @Param("type") String type,
+                                @Param("location") String location);
 }

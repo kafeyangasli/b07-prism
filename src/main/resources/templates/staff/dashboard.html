@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Antrean PRISM</title></head>
+<body>
+<main>
+  <h1>Dashboard Antrean</h1>
+  <p th:if="${success}" th:text="${success}" role="status"></p>
+  <p th:if="${error}" th:text="${error}" role="alert"></p>
+  <nav>
+    Urutkan reservasi:
+    <a th:href="@{/staff/dashboard(sort='created')}">waktu masuk</a> |
+    <a th:href="@{/staff/dashboard(sort='start')}">waktu penggunaan</a>
+  </nav>
+
+  <h2>Reservasi Menunggu</h2>
+  <p th:if="${#lists.isEmpty(dashboard.pendingReservations)}">Tidak ada reservasi yang dapat diproses.</p>
+  <table th:unless="${#lists.isEmpty(dashboard.pendingReservations)}">
+    <thead><tr><th>Pemohon</th><th>Fasilitas</th><th>Penggunaan</th><th>Masuk</th><th>Proposal</th><th>Tindakan</th></tr></thead>
+    <tbody><tr th:each="row : ${dashboard.pendingReservations}">
+      <td th:text="${row.requesterName}"></td><td th:text="${row.facilityName}"></td>
+      <td th:text="${row.startAt + ' - ' + row.endAt}"></td><td th:text="${row.createdAt}"></td>
+      <td th:text="${!row.proposalRequired ? 'Tidak wajib' : (row.proposalValidated ? 'Valid' : 'Belum valid')}"></td>
+      <td>
+        <form th:action="@{/staff/reservations/{id}/approve(id=${row.id})}" method="post"><button type="submit">Setujui</button></form>
+        <form th:action="@{/staff/reservations/{id}/reject(id=${row.id})}" method="post">
+          <input name="reasonDetail" maxlength="2000" placeholder="Penjelasan penolakan">
+          <button type="submit">Tolak</button>
+        </form>
+      </td>
+    </tr></tbody>
+  </table>
+
+  <h2>Laporan Belum Terminal</h2>
+  <p th:if="${#lists.isEmpty(dashboard.unresolvedReports)}">Tidak ada laporan terbuka.</p>
+  <table th:unless="${#lists.isEmpty(dashboard.unresolvedReports)}">
+    <thead><tr><th>Fasilitas</th><th>Kategori</th><th>Status</th><th>Masuk</th></tr></thead>
+    <tbody><tr th:each="row : ${dashboard.unresolvedReports}">
+      <td th:text="${row.facilityName}"></td><td th:text="${row.category}"></td>
+      <td th:text="${row.status}"></td><td th:text="${row.createdAt}"></td>
+    </tr></tbody>
+  </table>
+</main>
+</body>
+</html>

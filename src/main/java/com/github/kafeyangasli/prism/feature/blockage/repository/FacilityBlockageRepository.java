@@ -24,8 +24,11 @@ public interface FacilityBlockageRepository extends JpaRepository<FacilityBlocka
             select b from FacilityBlockage b
             where b.facility.id = :facilityId
               and b.status in :statuses
-              and b.startAt < :endAt
-              and (b.plannedEndAt is null or b.plannedEndAt > :startAt)
+              and (:endAt is null or b.startAt < :endAt)
+              and (
+                  (b.actualEndAt is not null and b.actualEndAt > :startAt)
+                  or (b.actualEndAt is null and (b.plannedEndAt is null or b.plannedEndAt > :startAt))
+              )
             order by b.startAt asc
             """)
     List<FacilityBlockage> findOverlapping(@Param("facilityId") Long facilityId,
@@ -38,8 +41,11 @@ public interface FacilityBlockageRepository extends JpaRepository<FacilityBlocka
             from FacilityBlockage b
             where b.facility.id = :facilityId
               and b.status in :statuses
-              and b.startAt < :endAt
-              and (b.plannedEndAt is null or b.plannedEndAt > :startAt)
+              and (:endAt is null or b.startAt < :endAt)
+              and (
+                  (b.actualEndAt is not null and b.actualEndAt > :startAt)
+                  or (b.actualEndAt is null and (b.plannedEndAt is null or b.plannedEndAt > :startAt))
+              )
               and (:ignoredId is null or b.id <> :ignoredId)
             """)
     boolean existsOverlapping(@Param("facilityId") Long facilityId,

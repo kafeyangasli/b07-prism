@@ -106,5 +106,4 @@ public class Report {
     void beforeUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
 }

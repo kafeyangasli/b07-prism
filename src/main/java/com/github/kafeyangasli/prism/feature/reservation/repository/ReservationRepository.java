@@ -39,7 +39,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             select r from Reservation r
             where r.facility.id = :facilityId
               and r.status in :statuses
-              and r.startAt < :endAt
+              and (:endAt is null or r.startAt < :endAt)
               and r.endAt > :startAt
             order by r.startAt asc
             """)
@@ -53,7 +53,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             from Reservation r
             where r.facility.id = :facilityId
               and r.status in :statuses
-              and r.startAt < :endAt
+              and (:endAt is null or r.startAt < :endAt)
               and r.endAt > :startAt
               and (:ignoredId is null or r.id <> :ignoredId)
             """)

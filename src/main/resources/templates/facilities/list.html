@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Katalog Fasilitas - PRISM</title>
+</head>
+<body>
+    <h1>Katalog Fasilitas Kampus</h1>
+    
+    <div>
+        <span sec:authorize="isAuthenticated()">
+            Logged in as: <span sec:authentication="name"></span> (<span sec:authentication="authorities"></span>)
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <button type="submit">Logout</button>
+            </form>
+            <span sec:authorize="hasRole('ADMIN')"> | <a th:href="@{/admin/users}">Manajemen Akun</a> | <a th:href="@{/admin/facilities}">Manajemen Fasilitas</a></span>
+        </span>
+        <span sec:authorize="!isAuthenticated()">
+            <a th:href="@{/login}">Login</a> | <a th:href="@{/auth/register}">Registrasi</a>
+        </span>
+    </div>
+
+    <hr/>
+
+    <h3>Pencarian & Filter Fasilitas</h3>
+    <form th:action="@{/facilities}" method="get">
+        <div>
+            <label>Tipe: <input type="text" name="type" th:value="${type}"/></label>
+            <label>Lokasi: <input type="text" name="location" th:value="${location}"/></label>
+            <label>Kapasitas Min: <input type="number" name="capacity" th:value="${capacity}"/></label>
+        </div>
+        <div>
+            <label>Mulai Slot: <input type="datetime-local" name="startAt" th:value="${startAt}"/></label>
+            <label>Selesai Slot: <input type="datetime-local" name="endAt" th:value="${endAt}"/></label>
+        </div>
+        <div>
+            <button type="submit">Filter / Cek Ketersediaan</button>
+            <a th:href="@{/facilities}">Reset</a>
+        </div>
+    </form>
+
+    <hr/>
+
+    <h3>Daftar Fasilitas</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Kode</th>
+                <th>Nama</th>
+                <th>Tipe</th>
+                <th>Lokasi</th>
+                <th>Kapasitas</th>
+                <th>Status</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="f : ${facilities}">
+                <td th:text="${f.code}"></td>
+                <td><a th:href="@{/facilities/{id}(id=${f.id})}" th:text="${f.name}"></a></td>
+                <td th:text="${f.type}"></td>
+                <td th:text="${f.location}"></td>
+                <td th:text="${f.capacity}"></td>
+                <td th:text="${f.administrativeStatus}"></td>
+                <td>
+                    <a th:href="@{/facilities/{id}(id=${f.id})}">Detail</a>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(facilities)}">
+                <td colspan="7">Tidak ada fasilitas ditemukan.</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

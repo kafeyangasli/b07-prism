@@ -6,5 +6,10 @@ spring:
     hibernate:
       ddl-auto: validate
 
+  datasource:
+    url: jdbc:mysql://localhost:3306/prism
+    username: root
+    password: imam221006
+
   flyway:
     enabled: true

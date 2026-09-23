@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Detail Fasilitas - PRISM</title>
+</head>
+<body>
+    <h1 th:text="${facility.name}">Nama Fasilitas</h1>
+    <p><strong>Kode:</strong> <span th:text="${facility.code}"></span></p>
+    <p><strong>Tipe:</strong> <span th:text="${facility.type}"></span></p>
+    <p><strong>Lokasi:</strong> <span th:text="${facility.location}"></span></p>
+    <p><strong>Kapasitas:</strong> <span th:text="${facility.capacity}"></span></p>
+    <p><strong>Deskripsi:</strong> <span th:text="${facility.description}"></span></p>
+    <p><strong>Status:</strong> <span th:text="${facility.administrativeStatus}"></span></p>
+
+    <p><a th:href="@{/facilities}">Kembali ke Katalog</a></p>
+</body>
+</html>

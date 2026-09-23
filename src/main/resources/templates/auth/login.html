@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - PRISM</title>
+</head>
+<body>
+    <h1>Login PRISM</h1>
+    <div th:if="${param.error}" style="color: red;">Invalid username or password (atau akun belum aktif/ditolak).</div>
+    <div th:if="${param.logout}" style="color: green;">You have been logged out.</div>
+    <div th:if="${successMessage}" th:text="${successMessage}" style="color: green;"></div>
+    <div th:if="${errorMessage}" th:text="${errorMessage}" style="color: red;"></div>
+    
+    <form th:action="@{/login}" method="post">
+        <div>
+            <label>Email: <input type="email" name="username" required/></label>
+        </div>
+        <div>
+            <label>Password: <input type="password" name="password" required/></label>
+        </div>
+        <div>
+            <button type="submit">Login</button>
+        </div>
+    </form>
+    <p>Belum punya akun? <a th:href="@{/auth/register}">Registrasi Mandiri</a></p>
+    <p><a th:href="@{/facilities}">Lihat Katalog Fasilitas (Publik)</a></p>
+</body>
+</html>

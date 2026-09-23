@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Manajemen Fasilitas - PRISM Admin</title>
+</head>
+<body>
+    <h1>Manajemen Fasilitas (Admin)</h1>
+    <p><a th:href="@{/facilities}">Kembali ke Katalog</a> | <a th:href="@{/admin/users}">Manajemen Akun</a></p>
+
+    <div th:if="${successMessage}" th:text="${successMessage}" style="color: green;"></div>
+    <div th:if="${errorMessage}" th:text="${errorMessage}" style="color: red;"></div>
+
+    <h3>Tambah Fasilitas Baru</h3>
+    <form th:action="@{/admin/facilities}" th:object="${facilityDto}" method="post">
+        <div>
+            <label>Kode: <input type="text" th:field="*{code}" required/></label>
+        </div>
+        <div>
+            <label>Nama: <input type="text" th:field="*{name}" required/></label>
+        </div>
+        <div>
+            <label>Tipe: <input type="text" th:field="*{type}" required/></label>
+        </div>
+        <div>
+            <label>Lokasi: <input type="text" th:field="*{location}" required/></label>
+        </div>
+        <div>
+            <label>Kapasitas: <input type="number" th:field="*{capacity}" min="1" required/></label>
+        </div>
+        <div>
+            <label>Deskripsi: <textarea th:field="*{description}"></textarea></label>
+        </div>
+        <div>
+            <button type="submit">Simpan Fasilitas</button>
+        </div>
+    </form>
+
+    <hr/>
+
+    <h3>Daftar Seluruh Fasilitas</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Kode</th>
+                <th>Nama</th>
+                <th>Tipe</th>
+                <th>Lokasi</th>
+                <th>Kapasitas</th>
+                <th>Status</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="f : ${facilities}">
+                <td th:text="${f.id}"></td>
+                <td th:text="${f.code}"></td>
+                <td th:text="${f.name}"></td>
+                <td th:text="${f.type}"></td>
+                <td th:text="${f.location}"></td>
+                <td th:text="${f.capacity}"></td>
+                <td th:text="${f.administrativeStatus}"></td>
+                <td>
+                    <form th:if="${f.administrativeStatus.name() == 'ACTIVE'}" th:action="@{/admin/facilities/{id}/deactivate(id=${f.id})}" method="post" style="display:inline;">
+                        <button type="submit">Nonaktifkan</button>
+                    </form>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

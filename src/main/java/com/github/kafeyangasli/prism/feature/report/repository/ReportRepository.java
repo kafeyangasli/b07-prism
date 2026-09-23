@@ -8,6 +8,7 @@ import com.github.kafeyangasli.prism.feature.report.model.ReportStatus;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
 
 public interface ReportRepository extends JpaRepository<Report, Long> {
 
@@ -24,4 +25,6 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     List<Report> findByStatusInOrderByCreatedAtAsc(Collection<ReportStatus> statuses);
 
     List<Report> findByHandledByIdOrderByHandledAtDesc(Long userId);
+
+    Optional<Report> findByIdAndUserId(Long reportId, Long userId);
 }

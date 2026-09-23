@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.UUID;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -75,5 +76,10 @@ public class ReportService {
 
     public List<Report> getReportsByUser(Long userId){
         return reportRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    public Report getReportDetail(Long reportId, Long userId) {
+        return reportRepository.findByIdAndUserId(reportId, userId)
+                .orElseThrow(() -> new RuntimeException("Report not found or access denied"));
     }
 }

@@ -39,4 +39,12 @@ public class ReportController {
 
         return reportService.getReportsByUser(mockUserId);
     }
+
+    @GetMapping("/{id}")
+    public Report getReportDetail(@PathVariable Long id) {
+
+        Long mockUserId = 1L; // nanti diganti auth
+
+        return reportService.getReportDetail(id, mockUserId);
+    }
 }

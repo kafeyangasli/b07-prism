@@ -6,10 +6,12 @@ import com.github.kafeyangasli.prism.feature.user.model.Role;
 import com.github.kafeyangasli.prism.feature.user.model.User;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 import com.github.kafeyangasli.prism.feature.user.service.UserService;
+import com.github.kafeyangasli.prism.security.CustomUserDetailsService;
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,9 @@ class UserServiceTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private CustomUserDetailsService customUserDetailsService;
 
     @Test
     void testSelfRegistrationAndVerification() {
@@ -67,5 +72,21 @@ class UserServiceTest {
         // Deactivate user
         User deactivated = userService.deactivateUser(admin.getId(), verified.getId());
         assertEquals(AccountStatus.INACTIVE, deactivated.getAccountStatus());
+    }
+
+    @Test
+    void testUserDetailsServiceLoginRejections() {
+        User pending = new User("Pending", "pending@campus.ac.id", passwordEncoder.encode("pw"), Role.PENGGUNA, AccountStatus.PENDING);
+        userRepository.save(pending);
+        assertThrows(DisabledException.class, () -> customUserDetailsService.loadUserByUsername("pending@campus.ac.id"));
+
+        User inactive = new User("Inactive", "inactive@campus.ac.id", passwordEncoder.encode("pw"), Role.PENGGUNA, AccountStatus.INACTIVE);
+        userRepository.save(inactive);
+        assertThrows(DisabledException.class, () -> customUserDetailsService.loadUserByUsername("inactive@campus.ac.id"));
+
+        User active = new User("Active", "active@campus.ac.id", passwordEncoder.encode("pw"), Role.PENGGUNA, AccountStatus.ACTIVE);
+        userRepository.save(active);
+        var userDetails = customUserDetailsService.loadUserByUsername("active@campus.ac.id");
+        assertNotNull(userDetails);
     }
 }

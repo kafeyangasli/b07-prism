@@ -44,6 +44,8 @@ public class FacilityController {
     @GetMapping("/facilities/{id}")
     public String facilityDetail(@PathVariable("id") Long id, Model model) {
         model.addAttribute("facility", facilityService.getFacilityById(id));
+        model.addAttribute("approvedReservations", facilityService.getApprovedReservationsForFacility(id));
+        model.addAttribute("blockages", facilityService.getBlockagesForFacility(id));
         return "facilities/detail";
     }
 }

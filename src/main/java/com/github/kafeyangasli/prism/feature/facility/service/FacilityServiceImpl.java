@@ -1,11 +1,15 @@
 package com.github.kafeyangasli.prism.feature.facility.service;
 
 import com.github.kafeyangasli.prism.feature.blockage.model.BlockageStatus;
+import com.github.kafeyangasli.prism.feature.blockage.model.FacilityBlockage;
+import com.github.kafeyangasli.prism.feature.blockage.repository.FacilityBlockageRepository;
 import com.github.kafeyangasli.prism.feature.facility.dto.FacilityDto;
 import com.github.kafeyangasli.prism.feature.facility.model.AdministrativeStatus;
 import com.github.kafeyangasli.prism.feature.facility.model.Facility;
 import com.github.kafeyangasli.prism.feature.facility.repository.FacilityRepository;
+import com.github.kafeyangasli.prism.feature.reservation.model.Reservation;
 import com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus;
+import com.github.kafeyangasli.prism.feature.reservation.repository.ReservationRepository;
 import com.github.kafeyangasli.prism.feature.user.model.Role;
 import com.github.kafeyangasli.prism.feature.user.model.User;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
@@ -23,10 +27,17 @@ public class FacilityServiceImpl implements FacilityService {
 
     private final FacilityRepository facilityRepository;
     private final UserRepository userRepository;
+    private final ReservationRepository reservationRepository;
+    private final FacilityBlockageRepository facilityBlockageRepository;
 
-    public FacilityServiceImpl(FacilityRepository facilityRepository, UserRepository userRepository) {
+    public FacilityServiceImpl(FacilityRepository facilityRepository,
+                               UserRepository userRepository,
+                               ReservationRepository reservationRepository,
+                               FacilityBlockageRepository facilityBlockageRepository) {
         this.facilityRepository = facilityRepository;
         this.userRepository = userRepository;
+        this.reservationRepository = reservationRepository;
+        this.facilityBlockageRepository = facilityBlockageRepository;
     }
 
     @Override
@@ -139,6 +150,18 @@ public class FacilityServiceImpl implements FacilityService {
 
         facility.setAdministrativeStatus(AdministrativeStatus.INACTIVE);
         return facilityRepository.save(facility);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Reservation> getApprovedReservationsForFacility(Long facilityId) {
+        return reservationRepository.findByFacilityIdAndStatusOrderByStartAtAsc(facilityId, ReservationStatus.APPROVED);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FacilityBlockage> getBlockagesForFacility(Long facilityId) {
+        return facilityBlockageRepository.findByFacilityIdOrderByStartAtAsc(facilityId);
     }
 
     private void validateAdmin(Long adminId) {

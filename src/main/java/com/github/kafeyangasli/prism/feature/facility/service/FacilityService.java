@@ -22,4 +22,8 @@ public interface FacilityService {
     Facility updateFacility(Long adminId, Long facilityId, FacilityDto dto);
 
     Facility deactivateFacility(Long adminId, Long facilityId);
+
+    List<com.github.kafeyangasli.prism.feature.reservation.model.Reservation> getApprovedReservationsForFacility(Long facilityId);
+
+    List<com.github.kafeyangasli.prism.feature.blockage.model.FacilityBlockage> getBlockagesForFacility(Long facilityId);
 }

@@ -96,8 +96,8 @@ public class UserServiceImpl implements UserService {
         if (dto.getName() == null || dto.getName().isBlank()) {
             throw new BusinessRuleException("Name is required.");
         }
-        if (dto.getRole() == null) {
-            throw new BusinessRuleException("Role is required.");
+        if (dto.getRole() == null || (dto.getRole() != Role.PENGGUNA && dto.getRole() != Role.PETUGAS)) {
+            throw new BusinessRuleException("Admin can only create PENGGUNA or PETUGAS accounts.");
         }
 
         String normalizedEmail = dto.getEmail().trim().toLowerCase(java.util.Locale.ROOT);

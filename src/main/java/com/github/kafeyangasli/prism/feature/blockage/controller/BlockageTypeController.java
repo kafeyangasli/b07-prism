@@ -42,4 +42,14 @@ public class BlockageTypeController {
     public BlockageType getBlockageTypeById(@PathVariable Long id) {
         return blockageTypeService.getBlockageTypeById(id);
     }
+
+    @GetMapping("/code/{code}")
+    public BlockageType getBlockageTypeByCode(@PathVariable String code) {
+        return blockageTypeService.getBlockageTypeByCode(code);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteBlockageType(@PathVariable Long id) {
+        blockageTypeService.deleteBlockageType(id);
+    }
 }

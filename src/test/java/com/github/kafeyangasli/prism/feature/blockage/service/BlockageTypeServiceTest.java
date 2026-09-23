@@ -128,4 +128,46 @@ class BlockageTypeServiceTest {
         assertEquals(1, types.size());
         assertEquals("REPAIR", types.get(0).getCode());
     }
+
+    @Test
+    void getBlockageTypeByCode_Success() {
+        when(blockageTypeRepository.findByCodeIgnoreCase("REPAIR")).thenReturn(Optional.of(blockageType));
+
+        BlockageType result = blockageTypeService.getBlockageTypeByCode("repair");
+
+        assertNotNull(result);
+        assertEquals("REPAIR", result.getCode());
+    }
+
+    @Test
+    void getBlockageTypeByCode_NotFound_ThrowsException() {
+        when(blockageTypeRepository.findByCodeIgnoreCase("UNKNOWN")).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> blockageTypeService.getBlockageTypeByCode("UNKNOWN"));
+    }
+
+    @Test
+    void validateAndGetActiveBlockageType_Active_Success() {
+        when(blockageTypeRepository.findById(1L)).thenReturn(Optional.of(blockageType));
+
+        BlockageType result = blockageTypeService.validateAndGetActiveBlockageType(1L);
+
+        assertNotNull(result);
+        assertTrue(result.isActive());
+    }
+
+    @Test
+    void validateAndGetActiveBlockageType_Inactive_ThrowsException() {
+        blockageType.setActive(false);
+        when(blockageTypeRepository.findById(1L)).thenReturn(Optional.of(blockageType));
+
+        assertThrows(BusinessRuleException.class, () -> blockageTypeService.validateAndGetActiveBlockageType(1L));
+    }
+
+    @Test
+    void deleteBlockageType_ThrowsBusinessRuleException() {
+        when(blockageTypeRepository.findById(1L)).thenReturn(Optional.of(blockageType));
+
+        assertThrows(BusinessRuleException.class, () -> blockageTypeService.deleteBlockageType(1L));
+    }
 }

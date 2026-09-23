@@ -78,4 +78,29 @@ public class BlockageTypeService {
         return blockageTypeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Blockage type not found with id: " + id));
     }
+
+    @Transactional(readOnly = true)
+    public BlockageType getBlockageTypeByCode(String code) {
+        if (code == null || code.trim().isEmpty()) {
+            throw new BusinessRuleException("Blockage type code is required");
+        }
+        String normalizedCode = code.trim().toUpperCase(java.util.Locale.ROOT);
+        return blockageTypeRepository.findByCodeIgnoreCase(normalizedCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Blockage type not found with code: " + normalizedCode));
+    }
+
+    @Transactional(readOnly = true)
+    public BlockageType validateAndGetActiveBlockageType(Long id) {
+        BlockageType blockageType = getBlockageTypeById(id);
+        if (!blockageType.isActive()) {
+            throw new BusinessRuleException("Inactive blockage type cannot be used for new blockages: " + blockageType.getCode());
+        }
+        return blockageType;
+    }
+
+    @Transactional
+    public void deleteBlockageType(Long id) {
+        BlockageType blockageType = getBlockageTypeById(id);
+        throw new BusinessRuleException("Blockage types cannot be physically deleted once created. Deactivate type instead: " + blockageType.getCode());
+    }
 }

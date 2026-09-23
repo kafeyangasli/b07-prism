@@ -8,6 +8,7 @@ import com.github.kafeyangasli.prism.feature.report.model.ReportStatus;
 import com.github.kafeyangasli.prism.feature.report.repository.ReportRepository;
 import com.github.kafeyangasli.prism.feature.user.model.User;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
+import java.util.List;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -70,5 +71,9 @@ public class ReportService {
         } catch (IOException e) {
             throw new RuntimeException("Failed to store file", e);
         }
+    }
+
+    public List<Report> getReportsByUser(Long userId){
+        return reportRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 }

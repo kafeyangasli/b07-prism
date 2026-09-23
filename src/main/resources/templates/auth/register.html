@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Registrasi Akun - PRISM</title>
+</head>
+<body>
+    <h1>Registrasi Mandiri Pengguna</h1>
+    <div th:if="${errorMessage}" th:text="${errorMessage}" style="color: red;"></div>
+
+    <form th:action="@{/auth/register}" th:object="${registrationDto}" method="post">
+        <div>
+            <label>Nama Lengkap: <input type="text" th:field="*{name}" required/></label>
+        </div>
+        <div>
+            <label>Email: <input type="email" th:field="*{email}" required/></label>
+        </div>
+        <div>
+            <label>Password: <input type="password" th:field="*{password}" required/></label>
+        </div>
+        <div>
+            <button type="submit">Daftar</button>
+        </div>
+    </form>
+    <p>Sudah punya akun? <a th:href="@{/login}">Login</a></p>
+</body>
+</html>

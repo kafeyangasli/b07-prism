@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Manajemen Akun - PRISM Admin</title>
+</head>
+<body>
+    <h1>Manajemen Akun (Admin)</h1>
+    <p><a th:href="@{/facilities}">Kembali ke Katalog</a> | <a th:href="@{/admin/facilities}">Manajemen Fasilitas</a></p>
+
+    <div th:if="${successMessage}" th:text="${successMessage}" style="color: green;"></div>
+    <div th:if="${errorMessage}" th:text="${errorMessage}" style="color: red;"></div>
+
+    <h3>Tambah Akun Baru (Admin / Petugas / Pengguna)</h3>
+    <form th:action="@{/admin/users}" th:object="${createUserDto}" method="post">
+        <div>
+            <label>Nama: <input type="text" th:field="*{name}" required/></label>
+        </div>
+        <div>
+            <label>Email: <input type="email" th:field="*{email}" required/></label>
+        </div>
+        <div>
+            <label>Password: <input type="password" th:field="*{password}" required/></label>
+        </div>
+        <div>
+            <label>Peran: 
+                <select th:field="*{role}">
+                    <option value="PENGGUNA">PENGGUNA</option>
+                    <option value="PETUGAS">PETUGAS</option>
+                    <option value="ADMIN">ADMIN</option>
+                </select>
+            </label>
+        </div>
+        <div>
+            <button type="submit">Buat Akun</button>
+        </div>
+    </form>
+
+    <hr/>
+
+    <h3>Pendaftaran Menunggu Verifikasi (Pending)</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nama</th>
+                <th>Email</th>
+                <th>Tanggal Daftar</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="u : ${pendingUsers}">
+                <td th:text="${u.id}"></td>
+                <td th:text="${u.name}"></td>
+                <td th:text="${u.email}"></td>
+                <td th:text="${u.createdAt}"></td>
+                <td>
+                    <form th:action="@{/admin/users/{id}/verify(id=${u.id})}" method="post" style="display:inline;">
+                        <button type="submit">Verifikasi</button>
+                    </form>
+                    <form th:action="@{/admin/users/{id}/reject(id=${u.id})}" method="post" style="display:inline;">
+                        <button type="submit">Tolak</button>
+                    </form>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(pendingUsers)}">
+                <td colspan="5">Tidak ada pendaftaran menunggu.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <hr/>
+
+    <h3>Semua Akun Pengguna</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nama</th>
+                <th>Email</th>
+                <th>Peran</th>
+                <th>Status</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="u : ${allUsers}">
+                <td th:text="${u.id}"></td>
+                <td th:text="${u.name}"></td>
+                <td th:text="${u.email}"></td>
+                <td th:text="${u.role}"></td>
+                <td th:text="${u.accountStatus}"></td>
+                <td>
+                    <form th:if="${u.accountStatus.name() == 'ACTIVE'}" th:action="@{/admin/users/{id}/deactivate(id=${u.id})}" method="post" style="display:inline;">
+                        <button type="submit">Nonaktifkan</button>
+                    </form>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

@@ -1,6 +1,7 @@
 package com.github.kafeyangasli.prism.feature.reservation.model;
 
-public class ReservationReasonCode {
+public final class ReservationReasonCode {
+
     public static final String MANUAL_REJECTION = "MANUAL_REJECTION";
     public static final String SCHEDULE_CONFLICT = "SCHEDULE_CONFLICT";
     public static final String INVALID_PROPOSAL = "INVALID_PROPOSAL";

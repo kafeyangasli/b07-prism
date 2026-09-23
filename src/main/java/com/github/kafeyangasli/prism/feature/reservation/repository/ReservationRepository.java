@@ -15,6 +15,18 @@ import com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
+    interface ReservationLockContext {
+        Long getFacilityId();
+        Long getUserId();
+    }
+
+    @Query("select r.facility.id as facilityId, r.user.id as userId from Reservation r where r.id = :id")
+    Optional<ReservationLockContext> findLockContextById(@Param("id") Long id);
+
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from Reservation r join fetch r.facility join fetch r.user where r.id = :id")
+    Optional<Reservation> findByIdForUpdate(@Param("id") Long id);
+
     // US-04 and US-05: a user's own reservation history and status.
     List<Reservation> findByUserIdOrderByCreatedAtDesc(Long userId);
 
@@ -33,6 +45,21 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             """)
     List<Reservation> findApprovalQueue(@Param("status") ReservationStatus status,
                                        @Param("now") LocalDateTime now);
+
+    @Query("""
+            select r from Reservation r
+            join fetch r.facility
+            join fetch r.user
+            where r.status = :status
+              and (r.expiresAt is null or r.expiresAt > :now)
+              and r.startAt > :now
+            order by
+              case when :sort = 'start' then r.startAt else r.createdAt end asc,
+              r.id asc
+            """)
+    List<Reservation> findProcessableQueue(@Param("status") ReservationStatus status,
+                                           @Param("now") LocalDateTime now,
+                                           @Param("sort") String sort);
 
     // Conflict detection after the facility and user rows have been locked.
     @Query("""
@@ -70,6 +97,29 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             """)
     long countByUserAndStatuses(@Param("userId") Long userId,
                                 @Param("statuses") Collection<ReservationStatus> statuses);
+
+    @Query("""
+            select count(r) from Reservation r
+            where r.user.id = :userId
+              and r.status = :status
+              and r.endAt > :now
+            """)
+    long countActiveApproved(@Param("userId") Long userId,
+                             @Param("status") ReservationStatus status,
+                             @Param("now") LocalDateTime now);
+
+    @Query("""
+            select r from Reservation r
+            join fetch r.facility
+            where r.status in :statuses
+              and r.startAt < :periodEnd
+              and r.endAt > :periodStart
+              and r.facility.id in :facilityIds
+            """)
+    List<Reservation> findForOccupancy(@Param("statuses") Collection<ReservationStatus> statuses,
+                                       @Param("periodStart") LocalDateTime periodStart,
+                                       @Param("periodEnd") LocalDateTime periodEnd,
+                                       @Param("facilityIds") Collection<Long> facilityIds);
 
     @Query("""
             select r from Reservation r

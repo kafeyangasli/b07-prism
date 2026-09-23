@@ -61,4 +61,17 @@ public interface FacilityBlockageRepository extends JpaRepository<FacilityBlocka
     boolean existsByBlockageTypeId(Long blockageTypeId);
 
     List<FacilityBlockage> findByCreatedByIdOrderByCreatedAtDesc(Long userId);
+
+    @Query("""
+            select b from FacilityBlockage b
+            join fetch b.facility
+            where b.facility.id in :facilityIds
+              and b.status <> :cancelledStatus
+              and b.startAt < :periodEnd
+              and coalesce(b.actualEndAt, b.plannedEndAt, :periodEnd) > :periodStart
+            """)
+    List<FacilityBlockage> findForCapacity(@Param("facilityIds") Collection<Long> facilityIds,
+                                          @Param("periodStart") LocalDateTime periodStart,
+                                          @Param("periodEnd") LocalDateTime periodEnd,
+                                          @Param("cancelledStatus") BlockageStatus cancelledStatus);
 }

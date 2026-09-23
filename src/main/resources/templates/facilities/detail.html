@@ -13,6 +13,50 @@
     <p><strong>Deskripsi:</strong> <span th:text="${facility.description}"></span></p>
     <p><strong>Status:</strong> <span th:text="${facility.administrativeStatus}"></span></p>
 
+    <h3>Jadwal Dipesan (Approved Reservations)</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Mulai</th>
+                <th>Selesai</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="r : ${approvedReservations}">
+                <td th:text="${r.startAt}"></td>
+                <td th:text="${r.endAt}"></td>
+                <td th:text="${r.status}"></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(approvedReservations)}">
+                <td colspan="3">Tidak ada reservasi disetujui.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Jadwal Blokir Fasilitas (Blockages)</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Mulai</th>
+                <th>Rencana Selesai</th>
+                <th>Status</th>
+                <th>Alasan Publik</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="b : ${blockages}">
+                <td th:text="${b.startAt}"></td>
+                <td th:text="${b.plannedEndAt}"></td>
+                <td th:text="${b.status}"></td>
+                <td th:text="${b.publicReason}"></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(blockages)}">
+                <td colspan="4">Tidak ada blokir fasilitas.</td>
+            </tr>
+        </tbody>
+    </table>
+
     <p><a th:href="@{/facilities}">Kembali ke Katalog</a></p>
 </body>
 </html>

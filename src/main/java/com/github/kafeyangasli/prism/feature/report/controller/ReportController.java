@@ -2,6 +2,7 @@ package com.github.kafeyangasli.prism.feature.report.controller;
 
 import com.github.kafeyangasli.prism.feature.report.dto.CreateReportRequest;
 import com.github.kafeyangasli.prism.feature.report.model.Report;
+import com.github.kafeyangasli.prism.feature.report.model.ReportStatus;
 import com.github.kafeyangasli.prism.feature.report.service.ReportService;
 
 import lombok.RequiredArgsConstructor;
@@ -47,4 +48,15 @@ public class ReportController {
 
         return reportService.getReportDetail(id, mockUserId);
     }
+
+    @PatchMapping("/{id}/status")
+public Report updateStatus(
+        @PathVariable Long id,
+        @RequestParam ReportStatus status
+) {
+
+    Long mockUserId = 1L; // nanti diganti auth
+
+    return reportService.updateStatus(id, mockUserId, status);
+}
 }

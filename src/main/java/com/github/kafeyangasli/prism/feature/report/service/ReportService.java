@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.*;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.Optional;
 
@@ -81,5 +82,57 @@ public class ReportService {
     public Report getReportDetail(Long reportId, Long userId) {
         return reportRepository.findByIdAndUserId(reportId, userId)
                 .orElseThrow(() -> new RuntimeException("Report not found or access denied"));
+    }
+
+
+
+    private void validateTransition(ReportStatus current, ReportStatus next) {
+
+    switch (current) {
+
+        case NEW:
+            if (next != ReportStatus.IN_PROGRESS && next != ReportStatus.REJECTED) {
+                throw new RuntimeException("Invalid transition from NEW to " + next);
+            }
+            break;
+
+        case IN_PROGRESS:
+            if (next != ReportStatus.RESOLVED && next != ReportStatus.REJECTED) {
+                throw new RuntimeException("Invalid transition from IN_PROGRESS to " + next);
+            }
+            break;
+
+        case RESOLVED:
+        case REJECTED:
+            throw new RuntimeException("Cannot change status from " + current);
+
+        default:
+            throw new RuntimeException("Unknown status");
+    }
+}
+
+    public Report updateStatus(Long reportId, Long userId, ReportStatus newStatus) {
+
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new RuntimeException("Report not found"));
+
+        // OPTIONAL (lebih aman):
+        // validasi siapa yang boleh update (staff/admin)
+        // nanti di Step 9
+
+        validateTransition(report.getStatus(), newStatus);
+
+        report.setStatus(newStatus);
+
+        if (newStatus == ReportStatus.IN_PROGRESS) {
+            report.setHandledAt(LocalDateTime.now());
+            report.setHandledBy(userRepository.findById(userId).orElse(null));
+        }
+
+        if (newStatus == ReportStatus.RESOLVED) {
+            report.setResolvedAt(LocalDateTime.now());
+        }
+
+        return reportRepository.save(report);
     }
 }

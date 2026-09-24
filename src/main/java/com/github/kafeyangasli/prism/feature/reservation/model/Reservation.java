@@ -128,7 +128,7 @@ public class Reservation {
 
     private void validateTimeRange() {
         if (startAt == null || endAt == null || !startAt.isBefore(endAt)) {
-            throw new IllegalArgumentException("Reservation startAt must be before endAt");
+            throw new IllegalArgumentException("Waktu mulai reservasi harus lebih awal dari waktu selesai.");
         }
     }
 

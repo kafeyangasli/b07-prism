@@ -32,10 +32,10 @@ public class ReportService {
     public Report createReport(CreateReportRequest request, MultipartFile photo, Long userId) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("Pengguna dengan ID " + userId + " tidak ditemukan."));
 
         Facility facility = facilityRepository.findById(request.getFacilityId())
-                .orElseThrow(() -> new ResourceNotFoundException("Facility not found with id: " + request.getFacilityId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Fasilitas dengan ID " + request.getFacilityId() + " tidak ditemukan."));
 
         String photoPath = storeFile(photo);
 
@@ -57,7 +57,7 @@ public class ReportService {
         try {
             String originalFilename = file.getOriginalFilename();
             if (originalFilename != null && (originalFilename.contains("..") || originalFilename.contains("/") || originalFilename.contains("\\"))) {
-                throw new BusinessRuleException("Invalid filename containing path traversal characters");
+                throw new BusinessRuleException("Nama berkas tidak valid.");
             }
             String filename = UUID.randomUUID() + "_" + (originalFilename != null ? Paths.get(originalFilename).getFileName().toString() : "file");
 
@@ -74,7 +74,7 @@ public class ReportService {
             return filename;
 
         } catch (IOException e) {
-            throw new RuntimeException("Failed to store file", e);
+            throw new RuntimeException("Berkas gagal disimpan.", e);
         }
     }
 
@@ -84,45 +84,45 @@ public class ReportService {
 
     public Report getReportDetail(Long reportId, Long userId) {
         return reportRepository.findByIdAndUserId(reportId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Report not found or access denied"));
+                .orElseThrow(() -> new ResourceNotFoundException("Laporan tidak ditemukan atau Anda tidak memiliki akses."));
     }
 
     public void validateTransition(ReportStatus current, ReportStatus next) {
         switch (current) {
             case NEW:
                 if (next != ReportStatus.IN_PROGRESS && next != ReportStatus.REJECTED) {
-                    throw new BusinessRuleException("Invalid status transition from NEW to " + next);
+                    throw new BusinessRuleException("Status laporan Baru hanya dapat diubah menjadi Sedang Ditangani atau Ditolak.");
                 }
                 break;
 
             case IN_PROGRESS:
                 if (next != ReportStatus.RESOLVED && next != ReportStatus.REJECTED) {
-                    throw new BusinessRuleException("Invalid status transition from IN_PROGRESS to " + next);
+                    throw new BusinessRuleException("Status laporan Sedang Ditangani hanya dapat diubah menjadi Terselesaikan atau Ditolak.");
                 }
                 break;
 
             case RESOLVED:
             case REJECTED:
-                throw new BusinessRuleException("Cannot change status from terminal state: " + current);
+                throw new BusinessRuleException("Status laporan yang telah selesai tidak dapat diubah.");
 
             default:
-                throw new BusinessRuleException("Unknown report status: " + current);
+                throw new BusinessRuleException("Status laporan tidak dikenali.");
         }
     }
 
     public Report updateStatus(Long reportId, Long staffId, ReportStatus newStatus, String resolutionNote) {
 
         Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new ResourceNotFoundException("Report not found with id: " + reportId));
+                .orElseThrow(() -> new ResourceNotFoundException("Laporan dengan ID " + reportId + " tidak ditemukan."));
 
         validateTransition(report.getStatus(), newStatus);
 
         if (newStatus == ReportStatus.RESOLVED && (resolutionNote == null || resolutionNote.trim().isEmpty())) {
-            throw new BusinessRuleException("Resolution note is required when resolving a report");
+            throw new BusinessRuleException("Catatan penyelesaian wajib diisi saat menyelesaikan laporan.");
         }
 
         User staff = userRepository.findById(staffId)
-                .orElseThrow(() -> new ResourceNotFoundException("Staff user not found with id: " + staffId));
+                .orElseThrow(() -> new ResourceNotFoundException("Petugas dengan ID " + staffId + " tidak ditemukan."));
 
         report.setStatus(newStatus);
 

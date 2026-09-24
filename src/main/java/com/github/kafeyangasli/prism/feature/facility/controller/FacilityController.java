@@ -19,7 +19,12 @@ public class FacilityController {
         this.facilityService = facilityService;
     }
 
-    @GetMapping({"/", "/facilities"})
+    @GetMapping("/")
+    public String landingPage() {
+        return "home";
+    }
+
+    @GetMapping("/facilities")
     public String facilityCatalogue(@RequestParam(required = false) String type,
                                     @RequestParam(required = false) String location,
                                     @RequestParam(required = false) Integer capacity,

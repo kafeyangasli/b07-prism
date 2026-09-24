@@ -20,6 +20,7 @@ Proyek ini dikembangkan untuk memenuhi tugas mata kuliah **Pengembangan Platform
 - **Build tool:** Apache Maven
 - **Pengujian:** JUnit, Spring Boot Test, Spring Security Test, dan H2
 - **Frontend:** HTML, CSS, JavaScript, serta Thymeleaf untuk server-side rendering
+- **UI foundation:** TailwindCSS dan HTMX dengan aset yang dibangun secara lokal
 
 ## Fitur Aplikasi
 
@@ -138,3 +139,14 @@ Pada Windows, gunakan:
 ```
 
 Konfigurasi koneksi basis data dapat ditambahkan atau disesuaikan pada `src/main/resources/application.yaml`. Flyway akan menjalankan migrasi skema secara berurutan saat aplikasi dimulai.
+
+### Membangun aset frontend
+
+Instal dependensi frontend satu kali dan bangun aset sebelum menjalankan aplikasi:
+
+```bash
+npm install
+npm run build
+```
+
+Perintah build menghasilkan CSS Tailwind di `src/main/resources/static/css/app.css` dan menyalin HTMX ke `src/main/resources/static/vendor/htmx.min.js`. Konvensi komponen dan pola HTMX didokumentasikan di `docs/UI_CONVENTIONS.md`.

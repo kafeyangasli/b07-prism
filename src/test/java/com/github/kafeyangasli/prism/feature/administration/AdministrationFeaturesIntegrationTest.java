@@ -61,7 +61,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdministrationFeaturesIntegrationTest {
 
     private static final ZoneId WIB = ZoneId.of("Asia/Jakarta");
-    private static final LocalDate REPORT_DATE = LocalDate.of(2026, 9, 22);
+    private static final LocalDate REPORT_DATE = LocalDate.now(WIB);
     private static final LocalDateTime NOW = REPORT_DATE.atTime(10, 0);
 
     @Autowired StaffDashboardService dashboardService;
@@ -174,6 +174,28 @@ class AdministrationFeaturesIntegrationTest {
         mockMvc.perform(get("/staff/dashboard"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("staff/dashboard"));
+    }
+
+    @Test
+    @WithMockUser(roles = "PENGGUNA")
+    void facilityCatalogueRendersSharedLayoutAndRoleAwareNavigation() throws Exception {
+        String html = mockMvc.perform(get("/facilities"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("facilities/list"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(html)
+                .contains("/css/app.css", "/vendor/htmx.min.js", "hx-target=\"#facility-results\"",
+                        "Reservasi Saya", "status-active")
+                .doesNotContain(">Dashboard<", ">Pengguna<", ">Kelola Fasilitas<");
+    }
+
+    @Test
+    void localHtmxAssetIsPubliclyAvailable() throws Exception {
+        mockMvc.perform(get("/vendor/htmx.min.js"))
+                .andExpect(status().isOk());
     }
 
     @Test

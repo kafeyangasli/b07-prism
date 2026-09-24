@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+    <body>
+        <span th:fragment="badge(status)"
+            th:with="statusName=${status == null ? 'UNKNOWN' : status.toString()}"
+            class="ui-badge"
+            th:classappend="${status == null ? 'status-unknown' : 'status-' + #strings.toLowerCase(#strings.replace(status.toString(), '_', '-'))}">
+            <th:block th:switch="${statusName}">
+                <th:block th:case="'PENDING'">Menunggu</th:block>
+                <th:block th:case="'ACTIVE'">Aktif</th:block>
+                <th:block th:case="'INACTIVE'">Tidak Aktif</th:block>
+                <th:block th:case="'APPROVED'">Disetujui</th:block>
+                <th:block th:case="'REJECTED'">Ditolak</th:block>
+                <th:block th:case="'CANCELLED'">Dibatalkan</th:block>
+                <th:block th:case="'EXPIRED'">Kedaluwarsa</th:block>
+                <th:block th:case="'COMPLETED'">Selesai</th:block>
+                <th:block th:case="'NEW'">Baru</th:block>
+                <th:block th:case="'IN_PROGRESS'">Sedang Ditangani</th:block>
+                <th:block th:case="'RESOLVED'">Terselesaikan</th:block>
+                <th:block th:case="'SCHEDULED'">Terjadwal</th:block>
+                <th:block th:case="*">Tidak Diketahui</th:block>
+            </th:block>
+        </span>
+    </body>
+</html>

@@ -21,15 +21,15 @@ public class BlockageTypeService {
     @Transactional
     public BlockageType createBlockageType(CreateBlockageTypeRequest request) {
         if (request.getCode() == null || request.getCode().trim().isEmpty()) {
-            throw new BusinessRuleException("Blockage type code is required");
+            throw new BusinessRuleException("Kode jenis blokir wajib diisi.");
         }
         if (request.getName() == null || request.getName().trim().isEmpty()) {
-            throw new BusinessRuleException("Blockage type name is required");
+            throw new BusinessRuleException("Nama jenis blokir wajib diisi.");
         }
 
         String normalizedCode = request.getCode().trim().toUpperCase(java.util.Locale.ROOT);
         if (blockageTypeRepository.existsByCodeIgnoreCase(normalizedCode)) {
-            throw new BusinessRuleException("Blockage type code already exists: " + normalizedCode);
+            throw new BusinessRuleException("Kode jenis blokir sudah digunakan: " + normalizedCode);
         }
 
         BlockageType blockageType = new BlockageType(normalizedCode, request.getName().trim(), request.getDescription());
@@ -39,7 +39,7 @@ public class BlockageTypeService {
     @Transactional
     public BlockageType updateBlockageType(Long id, UpdateBlockageTypeRequest request) {
         BlockageType blockageType = blockageTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Blockage type not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Jenis blokir dengan ID " + id + " tidak ditemukan."));
 
         if (request.getName() != null && !request.getName().trim().isEmpty()) {
             blockageType.setName(request.getName().trim());
@@ -57,7 +57,7 @@ public class BlockageTypeService {
     @Transactional
     public BlockageType deactivateBlockageType(Long id) {
         BlockageType blockageType = blockageTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Blockage type not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Jenis blokir dengan ID " + id + " tidak ditemukan."));
 
         blockageType.setActive(false);
         return blockageTypeRepository.save(blockageType);
@@ -76,24 +76,24 @@ public class BlockageTypeService {
     @Transactional(readOnly = true)
     public BlockageType getBlockageTypeById(Long id) {
         return blockageTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Blockage type not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Jenis blokir dengan ID " + id + " tidak ditemukan."));
     }
 
     @Transactional(readOnly = true)
     public BlockageType getBlockageTypeByCode(String code) {
         if (code == null || code.trim().isEmpty()) {
-            throw new BusinessRuleException("Blockage type code is required");
+            throw new BusinessRuleException("Kode jenis blokir wajib diisi.");
         }
         String normalizedCode = code.trim().toUpperCase(java.util.Locale.ROOT);
         return blockageTypeRepository.findByCodeIgnoreCase(normalizedCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Blockage type not found with code: " + normalizedCode));
+                .orElseThrow(() -> new ResourceNotFoundException("Jenis blokir dengan kode " + normalizedCode + " tidak ditemukan."));
     }
 
     @Transactional(readOnly = true)
     public BlockageType validateAndGetActiveBlockageType(Long id) {
         BlockageType blockageType = getBlockageTypeById(id);
         if (!blockageType.isActive()) {
-            throw new BusinessRuleException("Inactive blockage type cannot be used for new blockages: " + blockageType.getCode());
+            throw new BusinessRuleException("Jenis blokir tidak aktif tidak dapat digunakan: " + blockageType.getCode());
         }
         return blockageType;
     }
@@ -101,6 +101,6 @@ public class BlockageTypeService {
     @Transactional
     public void deleteBlockageType(Long id) {
         BlockageType blockageType = getBlockageTypeById(id);
-        throw new BusinessRuleException("Blockage types cannot be physically deleted once created. Deactivate type instead: " + blockageType.getCode());
+        throw new BusinessRuleException("Jenis blokir yang telah dibuat tidak dapat dihapus permanen. Nonaktifkan jenis tersebut: " + blockageType.getCode());
     }
 }

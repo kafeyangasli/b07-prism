@@ -113,7 +113,7 @@ public class ReservationController {
 
             redirect.addFlashAttribute(
                     "success",
-                    "Reservasi berhasil diajukan dan berstatus PENDING."
+                    "Reservasi berhasil diajukan dan berstatus Menunggu."
             );
 
             return "redirect:/reservations/"

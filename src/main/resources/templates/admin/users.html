@@ -1,102 +1,210 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Manajemen Akun - PRISM Admin</title>
-</head>
-<body>
-    <h1>Manajemen Akun (Admin)</h1>
-    <p><a th:href="@{/facilities}">Kembali ke Katalog</a> | <a th:href="@{/admin/facilities}">Manajemen Fasilitas</a></p>
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+    th:replace="~{fragments/layout :: layout('Manajemen pengguna', 'users', ~{::main})}">
+    <body>
+        <main>
+            <div class="ui-page">
+                <header class="ui-page-header">
+                    <div>
+                        <p class="ui-eyebrow">Administrasi</p>
+                        <h1>Manajemen pengguna</h1>
+                        <p class="ui-description">Verifikasi pendaftaran dan kelola akses pengguna kampus.</p>
+                    </div>
+                    <button class="ui-btn ui-btn-primary" type="button" data-open-dialog="user-dialog">
+                        <span aria-hidden="true">+</span> Tambah Pengguna
+                    </button>
+                </header>
 
-    <div th:if="${successMessage}" th:text="${successMessage}" style="color: green;"></div>
-    <div th:if="${errorMessage}" th:text="${errorMessage}" style="color: red;"></div>
+                <th:block th:fragment="user-creation-success">
+                    <div th:replace="~{admin/users :: user-modal}"></div>
+                    <div id="management-feedback" hx-swap-oob="outerHTML">
+                        <div class="ui-alert ui-alert-success" role="status">
+                            <p th:text="${successMessage}">Akun baru berhasil dibuat.</p>
+                            <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">Tutup</button>
+                        </div>
+                    </div>
+                </th:block>
 
-    <h3>Tambah Akun Baru (Admin / Petugas / Pengguna)</h3>
-    <form th:action="@{/admin/users}" th:object="${createUserDto}" method="post">
-        <div>
-            <label>Nama: <input type="text" th:field="*{name}" required/></label>
-        </div>
-        <div>
-            <label>Email: <input type="email" th:field="*{email}" required/></label>
-        </div>
-        <div>
-            <label>Password: <input type="password" th:field="*{password}" required/></label>
-        </div>
-        <div>
-            <label>Peran: 
-                <select th:field="*{role}">
-                    <option value="PENGGUNA">PENGGUNA</option>
-                    <option value="PETUGAS">PETUGAS</option>
-                </select>
-            </label>
-        </div>
-        <div>
-            <button type="submit">Buat Akun</button>
-        </div>
-    </form>
+                <div class="ui-sidebar-layout">
+                    <aside class="ui-card ui-card-body ui-filter-panel" aria-labelledby="user-filter-title">
+                        <div>
+                            <h2 id="user-filter-title">Filtear pengguna</h2>
+                            <p class="ui-hint">Cari berdasarkan nama atau email, lalu batasi hasil berdasarkan peran dan status.</p>
+                        </div>
+                        <form id="user-filter-form" class="ui-form" th:action="@{/admin/users}" method="get"
+                            hx-get="/admin/users" hx-target="#user-results" hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress">
+                            <div>
+                                <label class="ui-label" for="user-search">Cari</label>
+                                <input id="user-search" class="ui-input" type="search" name="search" th:value="${search}" placeholder="Nama atau email">
+                            </div>
+                            <div>
+                                <label class="ui-label" for="user-role">Peran</label>
+                                <select id="user-role" class="ui-input" name="filterRole">
+                                    <option value="">Semua peran</option>
+                                    <option value="ADMIN" th:selected="${selectedRole != null and selectedRole.name() == 'ADMIN'}">Admin</option>
+                                    <option value="PETUGAS" th:selected="${selectedRole != null and selectedRole.name() == 'PETUGAS'}">Petugas</option>
+                                    <option value="PENGGUNA" th:selected="${selectedRole != null and selectedRole.name() == 'PENGGUNA'}">Pengguna</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="ui-label" for="user-status">Status akun</label>
+                                <select id="user-status" class="ui-input" name="filterStatus">
+                                    <option value="">Semua status</option>
+                                    <option value="PENDING" th:selected="${selectedStatus != null and selectedStatus.name() == 'PENDING'}">Menunggu verifikasi</option>
+                                    <option value="ACTIVE" th:selected="${selectedStatus != null and selectedStatus.name() == 'ACTIVE'}">Aktif</option>
+                                    <option value="INACTIVE" th:selected="${selectedStatus != null and selectedStatus.name() == 'INACTIVE'}">Tidak Aktif</option>
+                                    <option value="REJECTED" th:selected="${selectedStatus != null and selectedStatus.name() == 'REJECTED'}">Ditolak</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="ui-label" for="user-sort">Urutkan berdasarkan</label>
+                                <select id="user-sort" class="ui-input" name="sort">
+                                    <option value="createdAt" th:selected="${sort == 'createdAt'}">Tanggal dibuat</option>
+                                    <option value="name" th:selected="${sort == 'name'}">Nama</option>
+                                    <option value="email" th:selected="${sort == 'email'}">Email</option>
+                                    <option value="role" th:selected="${sort == 'role'}">Peran</option>
+                                    <option value="status" th:selected="${sort == 'status'}">Status</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="ui-label" for="user-direction">Arah urutan</label>
+                                <select id="user-direction" class="ui-input" name="direction">
+                                    <option value="asc" th:selected="${direction == 'asc'}">Menaik</option>
+                                    <option value="desc" th:selected="${direction == 'desc'}">Menurun</option>
+                                </select>
+                            </div>
+                            <div class="ui-form-actions">
+                                <button class="ui-btn ui-btn-primary" type="submit">Terapkan filter</button>
+                                <a class="ui-btn ui-btn-secondary" th:href="@{/admin/users}">Atur ulang</a>
+                            </div>
+                        </form>
+                    </aside>
 
-    <hr/>
+                    <div id="user-results" th:fragment="user-results" class="min-w-0 space-y-8" aria-live="polite">
+                        <div th:if="${actionMessage != null}" class="ui-alert ui-alert-success" role="status">
+                            <p th:text="${actionMessage}">Tindakan berhasil.</p>
+                            <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">Tutup</button>
+                        </div>
+                        <div th:if="${actionError != null}" class="ui-alert ui-alert-error" role="alert">
+                            <p th:text="${actionError}">Tindakan gagal.</p>
+                            <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">Tutup</button>
+                        </div>
 
-    <h3>Pendaftaran Menunggu Verifikasi (Pending)</h3>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nama</th>
-                <th>Email</th>
-                <th>Tanggal Daftar</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr th:each="u : ${pendingUsers}">
-                <td th:text="${u.id}"></td>
-                <td th:text="${u.name}"></td>
-                <td th:text="${u.email}"></td>
-                <td th:text="${u.createdAt}"></td>
-                <td>
-                    <form th:action="@{/admin/users/{id}/verify(id=${u.id})}" method="post" style="display:inline;">
-                        <button type="submit">Verifikasi</button>
-                    </form>
-                    <form th:action="@{/admin/users/{id}/reject(id=${u.id})}" method="post" style="display:inline;">
-                        <button type="submit">Tolak</button>
-                    </form>
-                </td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(pendingUsers)}">
-                <td colspan="5">Tidak ada pendaftaran menunggu.</td>
-            </tr>
-        </tbody>
-    </table>
+                        <section class="ui-section">
+                            <div>
+                                <h2>Pendaftaran menunggu verifikasi</h2>
+                                <p class="ui-hint">Setujui atau tolak akun baru setelah data pendaftar diperiksa.</p>
+                            </div>
+                            <div class="ui-table-wrap">
+                                <table class="ui-table">
+                                    <thead><tr><th scope="col">Nama</th><th scope="col">Email</th><th scope="col">Tanggal daftar</th><th scope="col">Aksi</th></tr></thead>
+                                    <tbody>
+                                        <tr th:each="u : ${pendingUsers}">
+                                            <td data-label="Nama" th:text="${u.name}"></td>
+                                            <td data-label="Email" th:text="${u.email}"></td>
+                                            <td data-label="Tanggal daftar" th:text="${u.createdAt != null ? #temporals.format(u.createdAt, 'dd MMM yyyy, HH:mm') : '—'}"></td>
+                                            <td data-label="Aksi" class="ui-table-actions">
+                                                <form th:action="@{/admin/users/{id}/verify(id=${u.id})}" method="post"
+                                                    th:hx-post="@{/admin/users/{id}/verify(id=${u.id})}" hx-target="#user-results" hx-swap="outerHTML" hx-include="#user-filter-form" hx-indicator="#global-progress">
+                                                    <button class="ui-btn ui-btn-primary" type="submit">Verifikasi</button>
+                                                </form>
+                                                <form th:action="@{/admin/users/{id}/reject(id=${u.id})}" method="post"
+                                                    th:hx-post="@{/admin/users/{id}/reject(id=${u.id})}" hx-target="#user-results" hx-swap="outerHTML" hx-include="#user-filter-form" hx-indicator="#global-progress">
+                                                    <button class="ui-btn ui-btn-danger" type="submit">Tolak</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        <tr th:if="${#lists.isEmpty(pendingUsers)}"><td colspan="4">Tidak ada pendaftaran yang menunggu verifikasi.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
 
-    <hr/>
+                        <section class="ui-section">
+                            <div class="ui-section-heading">
+                                <div>
+                                    <h2>Daftar pengguna</h2>
+                                    <p class="ui-hint" th:text="${#lists.size(allUsers) + ' pengguna ditemukan'}">0 pengguna ditemukan</p>
+                                </div>
+                            </div>
+                            <div class="ui-table-wrap">
+                                <table class="ui-table">
+                                    <thead><tr><th scope="col">Nama</th><th scope="col">Email</th><th scope="col">Peran</th><th scope="col">Status</th><th scope="col">Aksi</th></tr></thead>
+                                    <tbody>
+                                        <tr th:each="u : ${allUsers}">
+                                            <td data-label="Nama" th:text="${u.name}"></td>
+                                            <td data-label="Email" th:text="${u.email}"></td>
+                                            <td data-label="Peran" th:text="${u.role.name() == 'ADMIN' ? 'Admin' : (u.role.name() == 'PETUGAS' ? 'Petugas' : 'Pengguna')}"></td>
+                                            <td data-label="Status"><span th:replace="~{fragments/status :: badge(${u.accountStatus})}"></span></td>
+                                            <td data-label="Aksi" class="ui-table-actions">
+                                                <form th:if="${u.accountStatus.name() == 'ACTIVE'}" th:action="@{/admin/users/{id}/deactivate(id=${u.id})}" method="post"
+                                                    th:hx-post="@{/admin/users/{id}/deactivate(id=${u.id})}" hx-target="#user-results" hx-swap="outerHTML" hx-include="#user-filter-form" hx-indicator="#global-progress">
+                                                    <button class="ui-btn ui-btn-danger" type="submit">Nonaktifkan</button>
+                                                </form>
+                                                <form th:if="${u.accountStatus.name() == 'INACTIVE'}" th:action="@{/admin/users/{id}/activate(id=${u.id})}" method="post"
+                                                    th:hx-post="@{/admin/users/{id}/activate(id=${u.id})}" hx-target="#user-results" hx-swap="outerHTML" hx-include="#user-filter-form" hx-indicator="#global-progress">
+                                                    <button class="ui-btn ui-btn-primary" type="submit">Aktifkan</button>
+                                                </form>
+                                                <span th:if="${u.accountStatus.name() != 'ACTIVE' and u.accountStatus.name() != 'INACTIVE'}" class="text-sm text-muted">Tidak ada aksi</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div th:if="${#lists.isEmpty(allUsers)}" class="ui-empty-state">
+                                <h3>Tidak ada pengguna ditemukan</h3>
+                                <p class="mt-2 text-sm">Ubah atau hapus filter untuk menampilkan hasil lain.</p>
+                            </div>
+                        </section>
+                    </div>
+                </div>
 
-    <h3>Semua Akun Pengguna</h3>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nama</th>
-                <th>Email</th>
-                <th>Peran</th>
-                <th>Status</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr th:each="u : ${allUsers}">
-                <td th:text="${u.id}"></td>
-                <td th:text="${u.name}"></td>
-                <td th:text="${u.email}"></td>
-                <td th:text="${u.role}"></td>
-                <td th:text="${u.accountStatus}"></td>
-                <td>
-                    <form th:if="${u.accountStatus.name() == 'ACTIVE'}" th:action="@{/admin/users/{id}/deactivate(id=${u.id})}" method="post" style="display:inline;">
-                        <button type="submit">Nonaktifkan</button>
-                    </form>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-</body>
+                <div id="user-modal-region" th:fragment="user-modal">
+                    <dialog id="user-dialog" class="ui-dialog" aria-labelledby="user-dialog-title"
+                        th:attr="open=${openUserDialog == true ? 'open' : null}">
+                        <div class="ui-dialog-header">
+                            <div>
+                                <p class="ui-eyebrow">Akun baru</p>
+                                <h2 id="user-dialog-title">Tambah Pengguna</h2>
+                                <p class="ui-hint">Buat akun Pengguna atau Petugas sesuai kebutuhan akses.</p>
+                            </div>
+                            <button class="ui-btn ui-btn-ghost" type="button" data-close-dialog aria-label="Tutup dialog">×</button>
+                        </div>
+                        <form class="ui-form ui-form-grid" th:action="@{/admin/users}" th:object="${createUserDto}" method="post"
+                            hx-post="/admin/users" hx-target="#user-modal-region" hx-swap="outerHTML" hx-include="#user-filter-form" hx-indicator="#global-progress">
+                            <div class="md:col-span-full" th:replace="~{fragments/feedback :: formErrors}"></div>
+                            <div>
+                                <label class="ui-label" for="new-user-name">Nama lengkap</label>
+                                <input id="new-user-name" class="ui-input" type="text" th:field="*{name}" th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('name')}" autofocus required>
+                                <p class="ui-field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
+                            </div>
+                            <div>
+                                <label class="ui-label" for="new-user-email">Email</label>
+                                <input id="new-user-email" class="ui-input" type="email" th:field="*{email}" th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('email')}" autocomplete="username" required>
+                                <p class="ui-field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></p>
+                            </div>
+                            <div>
+                                <label class="ui-label" for="new-user-password">Kata sandi</label>
+                                <input id="new-user-password" class="ui-input" type="password" th:field="*{password}" th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('password')}" autocomplete="new-password" required>
+                                <p class="ui-field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></p>
+                            </div>
+                            <div>
+                                <label class="ui-label" for="new-user-role">Peran</label>
+                                <select id="new-user-role" class="ui-input" th:field="*{role}" th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('role')}" required>
+                                    <option value="">Pilih peran</option>
+                                    <option value="PENGGUNA">Pengguna</option>
+                                    <option value="PETUGAS">Petugas</option>
+                                </select>
+                                <p class="ui-field-error" th:if="${#fields.hasErrors('role')}" th:errors="*{role}"></p>
+                            </div>
+                            <div class="ui-form-actions md:col-span-full">
+                                <button class="ui-btn ui-btn-secondary" type="button" data-close-dialog>Batal</button>
+                                <button class="ui-btn ui-btn-primary" type="submit">Simpan Pengguna</button>
+                            </div>
+                        </form>
+                    </dialog>
+                </div>
+            </div>
+        </main>
+    </body>
 </html>

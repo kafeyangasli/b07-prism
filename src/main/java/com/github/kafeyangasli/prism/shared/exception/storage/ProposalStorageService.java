@@ -46,7 +46,7 @@ public class ProposalStorageService {
 
         if (file == null || file.isEmpty()) {
             throw new IOException(
-                    "File proposal kosong"
+                    "Berkas proposal kosong"
             );
         }
 

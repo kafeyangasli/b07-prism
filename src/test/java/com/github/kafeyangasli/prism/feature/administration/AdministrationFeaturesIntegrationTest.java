@@ -177,6 +177,18 @@ class AdministrationFeaturesIntegrationTest {
     }
 
     @Test
+    @WithMockUser(roles = "PETUGAS")
+    void operationalPagesRenderIndependently() throws Exception {
+        mockMvc.perform(get("/staff/reservations"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("staff/reservations"));
+
+        mockMvc.perform(get("/staff/reports"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("staff/reports"));
+    }
+
+    @Test
     @WithMockUser(roles = "PENGGUNA")
     void facilityCatalogueRendersSharedLayoutAndRoleAwareNavigation() throws Exception {
         String html = mockMvc.perform(get("/facilities"))
@@ -187,7 +199,7 @@ class AdministrationFeaturesIntegrationTest {
                 .getContentAsString();
 
         assertThat(html)
-                .contains("/css/app.css", "/vendor/htmx.min.js", "hx-target=\"#facility-results\"",
+                .contains("/css/prism.css", "/vendor/htmx.min.js", "hx-target=\"#facility-results\"",
                         "Reservasi Saya", "status-active")
                 .doesNotContain(">Dashboard<", ">Pengguna<", ">Kelola Fasilitas<");
     }

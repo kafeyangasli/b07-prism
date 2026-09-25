@@ -143,12 +143,63 @@
   .ui-dialog { @apply m-auto w-[min(46rem,calc(100%-2rem))] max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-border bg-surface p-5 text-content shadow-xl sm:p-6; }
   .ui-dialog::backdrop { background: rgb(33 28 42 / 0.58); }
   .ui-dialog-header { @apply mb-6 flex items-start justify-between gap-5 border-b border-border pb-5; }
+  .ui-dashboard-shell { @apply min-h-screen bg-page lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]; }
+  .ui-dashboard-main { @apply flex min-h-screen min-w-0 flex-col; }
+  .ui-dashboard-content { @apply w-full flex-1 px-4 py-7 sm:px-6 sm:py-9 lg:px-8; }
+  .ui-dashboard-feedback { @apply px-4 pt-4 sm:px-6 lg:px-8; }
+  .ui-mobile-header { @apply sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-border bg-surface px-4 lg:hidden; }
+  .ui-dashboard-sidebar { @apply fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col overflow-y-auto bg-prism-950 px-4 py-5 text-white shadow-xl transition-transform lg:sticky lg:top-0 lg:z-20 lg:h-screen lg:w-auto lg:translate-x-0 lg:shadow-none; }
+  .ui-drawer-open .ui-dashboard-sidebar { @apply translate-x-0; }
+  .ui-dashboard-backdrop { @apply fixed inset-0 z-40 hidden border-0 bg-ink-950/60 lg:hidden; }
+  .ui-drawer-open .ui-dashboard-backdrop { @apply block; }
+  .ui-sidebar-brand { @apply flex min-h-12 items-center justify-between gap-3 border-b border-white/15 pb-5; }
+  .ui-sidebar-nav { @apply flex flex-1 flex-col gap-1 py-5; }
+  .ui-sidebar-group { @apply mt-5 space-y-1 border-t border-white/15 pt-5; }
+  .ui-sidebar-group > p { @apply mb-2 px-3 text-xs font-bold uppercase tracking-widest text-prism-200; }
+  .ui-sidebar-link { @apply flex min-h-11 items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-prism-100 transition-colors hover:bg-white/10 hover:text-white; }
+  .ui-sidebar-link-active { @apply bg-white text-prism-950 shadow-sm hover:bg-white hover:text-prism-950; }
+  .ui-sidebar-link-disabled { @apply cursor-not-allowed text-prism-300 hover:bg-transparent hover:text-prism-300; }
+  .ui-sidebar-link-disabled small { @apply rounded bg-white/10 px-2 py-0.5 text-[.65rem] font-semibold uppercase tracking-wide; }
+  .ui-sidebar-account { @apply space-y-2 border-t border-white/15 pt-4; }
+  .ui-slot-placeholder { @apply rounded-md border border-dashed border-ink-300 bg-ink-50 px-4 py-5 text-sm text-muted; }
+  .ui-slot-grid { @apply grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5; }
+  .ui-slot { @apply relative flex min-h-16 flex-col items-center justify-center rounded-md border border-ink-300 bg-surface px-2 py-2 text-center text-sm text-ink-700; }
+  .ui-slot input { @apply absolute inset-0 cursor-pointer opacity-0; }
+  .ui-slot:has(input):hover { @apply border-primary bg-primary-subtle; }
+  .ui-slot:has(input:focus-visible) { @apply outline-2 outline-offset-2 outline-primary; }
+  .ui-slot-selected, .ui-slot:has(input:checked) { @apply border-primary bg-primary-subtle text-primary; }
+  .ui-slot-reserved, .ui-slot-blocked, .ui-slot-past, .ui-slot-too_soon { @apply cursor-not-allowed border-border bg-disabled text-disabled-text; }
+  .ui-slot-blocked { @apply border-warning-border bg-warning-subtle text-warning; }
+  .ui-slot small { @apply mt-0.5 text-xs leading-4; }
+  .ui-end-grid { @apply grid grid-cols-3 gap-2 sm:grid-cols-5; }
+  .ui-end-time { @apply relative flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-ink-300 bg-surface text-sm font-semibold; }
+  .ui-end-time input { @apply absolute inset-0 cursor-pointer opacity-0; }
+  .ui-end-time:has(input:checked) { @apply border-primary bg-primary text-white; }
+  .ui-end-time:has(input:focus-visible) { @apply outline-2 outline-offset-2 outline-primary; }
+  .ui-duration-summary { @apply flex min-h-24 flex-col justify-center rounded-md border border-prism-200 bg-primary-subtle px-4 py-3 text-primary; }
+  .ui-duration-summary span { @apply text-xs font-bold uppercase tracking-wide; }
+  .ui-duration-summary strong { @apply mt-1 text-xl; }
+  .ui-duration-summary small { @apply mt-1 text-sm; }
+  .ui-proposal-state { @apply rounded-md border border-border bg-ink-50 px-4 py-3; }
+  .ui-proposal-state > div { @apply flex items-center justify-between gap-3; }
+  .ui-proposal-state strong { @apply text-sm text-success; }
+  .ui-proposal-state p { @apply mt-1 text-sm text-muted; }
+  .ui-proposal-required { @apply border-warning-border bg-warning-subtle; }
+  .ui-proposal-required strong { @apply text-warning; }
+  .ui-locked-time { @apply flex min-h-24 flex-col rounded-md border border-border bg-ink-50 px-4 py-3; }
+  .ui-locked-time strong { @apply text-xl text-content; }
+  .ui-locked-time > span:last-child { @apply mt-1 text-sm text-muted; }
+  .ui-facility-context { @apply rounded-lg border border-prism-200 bg-primary-subtle p-4; }
+  .ui-facility-context strong { @apply block text-lg text-prism-950; }
+  .ui-facility-context p { @apply mt-1 text-sm text-muted; }
   .htmx-indicator { @apply invisible opacity-0 transition-opacity; }
   .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { @apply visible opacity-100; }
 }
 
 /* Keep table semantics; each mobile record exposes its column labels. */
 @media (max-width: 1023px) {
+  body:has(.ui-drawer-open) { overflow: hidden; }
+  .ui-reservation-dialog { width: 100%; max-width: none; height: 100%; max-height: none; border-radius: 0; }
   .ui-table, .ui-table tbody { display: block; }
   .ui-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .ui-table tbody tr { display: block; padding: .75rem 1rem; }

@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="id" xmlns:th="http://www.thymeleaf.org"
-    th:replace="~{fragments/layout :: layout('Manajemen fasilitas', 'admin-facilities', ~{::main})}">
+    th:replace="~{fragments/layout :: layout('Manajemen Fasilitas', 'admin-facilities', ~{::main})}">
     <body>
         <main>
             <div class="ui-page">
                 <header class="ui-page-header">
                     <div>
                         <p class="ui-eyebrow">Administrasi</p>
-                        <h1>Manajemen fasilitas</h1>
+                        <h1>Manajemen Fasilitas</h1>
                         <p class="ui-description">Kelola data dan status fasilitas yang tersedia di kampus.</p>
                     </div>
                     <button class="ui-btn ui-btn-primary" type="button" data-open-dialog="facility-dialog">
@@ -15,9 +15,14 @@
                     </button>
                 </header>
 
-                <div id="management-feedback" th:fragment="facility-feedback">
-                    <div th:replace="~{fragments/feedback :: flash}"></div>
-                </div>
+                <th:block th:fragment="facility-creation-success">
+                    <div id="management-feedback" hx-swap-oob="outerHTML">
+                        <div th:if="${successMessage != null}" class="ui-alert ui-alert-success" role="status">
+                            <p th:text="${successMessage}">Fasilitas berhasil ditambahkan.</p>
+                            <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">Tutup</button>
+                        </div>
+                    </div>
+                </th:block>
 
                 <section id="facility-list" th:fragment="facility-list" class="ui-section" aria-live="polite">
                     <div class="ui-section-heading">
@@ -41,18 +46,21 @@
                             </thead>
                             <tbody>
                                 <tr th:each="f : ${facilities}">
-                                    <td data-label="Kode" th:text="${f.code}"></td>
-                                    <td data-label="Nama" th:text="${f.name}"></td>
-                                    <td data-label="Tipe" th:text="${f.type}"></td>
-                                    <td data-label="Lokasi" th:text="${f.location}"></td>
-                                    <td data-label="Kapasitas" th:text="${f.capacity}"></td>
-                                    <td data-label="Status"><span th:replace="~{fragments/status :: badge(${f.administrativeStatus})}"></span></td>
-                                    <td data-label="Aksi" class="ui-table-actions">
+                                    <td class="align-middle" data-label="Kode" th:text="${f.code}"></td>
+                                    <td class="align-middle" data-label="Nama" th:text="${f.name}"></td>
+                                    <td class="align-middle" data-label="Tipe" th:text="${f.type}"></td>
+                                    <td class="align-middle" data-label="Lokasi" th:text="${f.location}"></td>
+                                    <td class="align-middle" data-label="Kapasitas" th:text="${f.capacity}"></td>
+                                    <td class="align-middle" data-label="Status"><span th:replace="~{fragments/status :: badge(${f.administrativeStatus})}"></span></td>
+                                    <td data-label="Aksi" class="ui-table-actions align-middle">
                                         <form th:if="${f.administrativeStatus.name() == 'ACTIVE'}"
                                             th:action="@{/admin/facilities/{id}/deactivate(id=${f.id})}" method="post">
                                             <button class="ui-btn ui-btn-danger" type="submit">Nonaktifkan</button>
                                         </form>
-                                        <span th:if="${f.administrativeStatus.name() != 'ACTIVE'}" class="text-sm text-muted">Tidak ada aksi</span>
+                                        <form th:if="${f.administrativeStatus.name() != 'ACTIVE'}"
+                                              th:action="@{/admin/facilities/{id}/activate(id=${f.id})}" method="post">
+                                            <button class="ui-btn ui-btn-primary" type="submit">Aktifkan</button>
+                                        </form>
                                     </td>
                                 </tr>
                             </tbody>
@@ -119,17 +127,6 @@
                         </form>
                     </dialog>
                 </div>
-
-                <th:block th:fragment="facility-creation-success">
-                    <div th:replace="~{admin/facilities :: facility-modal}"></div>
-                    <div id="management-feedback" hx-swap-oob="outerHTML">
-                        <div class="ui-alert ui-alert-success" role="status">
-                            <p th:text="${successMessage}">Fasilitas berhasil ditambahkan.</p>
-                            <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">Tutup</button>
-                        </div>
-                    </div>
-                    <section id="facility-list" hx-swap-oob="outerHTML" th:replace="~{admin/facilities :: facility-list}"></section>
-                </th:block>
             </div>
         </main>
     </body>

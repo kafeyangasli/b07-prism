@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="id" xmlns:th="http://www.thymeleaf.org">
-    <body>
-        <span th:fragment="badge(status)"
-            th:with="statusName=${status == null ? 'UNKNOWN' : status.toString()}"
-            class="ui-badge"
-            th:classappend="${status == null ? 'status-unknown' : 'status-' + #strings.toLowerCase(#strings.replace(status.toString(), '_', '-'))}">
+<body>
+<span th:fragment="badge(status)"
+      th:with="statusName=${status == null ? 'UNKNOWN' : status.toString()}"
+      class="ui-badge"
+      th:classappend="${status == null ? 'status-unknown' : 'status-' + #strings.toLowerCase(#strings.replace(status.toString(), '_', '-'))}">
             <th:block th:switch="${statusName}">
                 <th:block th:case="'PENDING'">Menunggu</th:block>
                 <th:block th:case="'ACTIVE'">Aktif</th:block>
@@ -21,5 +21,5 @@
                 <th:block th:case="*">Tidak Diketahui</th:block>
             </th:block>
         </span>
-    </body>
+</body>
 </html>

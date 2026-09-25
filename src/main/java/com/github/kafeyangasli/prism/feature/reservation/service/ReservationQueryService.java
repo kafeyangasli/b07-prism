@@ -1,11 +1,16 @@
 package com.github.kafeyangasli.prism.feature.reservation.service;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.github.kafeyangasli.prism.feature.reservation.model.Reservation;
+import com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus;
+import com.github.kafeyangasli.prism.feature.reservation.dto.ReservationDashboardView;
 import com.github.kafeyangasli.prism.feature.reservation.repository.ReservationRepository;
 import com.github.kafeyangasli.prism.feature.user.model.Role;
 import com.github.kafeyangasli.prism.feature.user.model.User;
@@ -17,13 +22,42 @@ import com.github.kafeyangasli.prism.shared.exception.ResourceNotFoundException;
 public class ReservationQueryService {
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
     public ReservationQueryService(
             ReservationRepository reservationRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            Clock clock
     ) {
         this.reservationRepository = reservationRepository;
         this.userRepository = userRepository;
+        this.clock = clock;
+    }
+
+    @Transactional(readOnly = true)
+    public ReservationDashboardView dashboard(String authenticatedEmail) {
+        User user = findUser(authenticatedEmail);
+        LocalDateTime now = LocalDateTime.now(clock);
+        List<Reservation> reservations = reservationRepository
+                .findByUserIdOrderByCreatedAtDesc(user.getId());
+
+        List<Reservation> pending = reservations.stream()
+                .filter(reservation -> reservation.getStatus() == ReservationStatus.PENDING)
+                .sorted(Comparator.comparing(Reservation::getStartAt))
+                .toList();
+        List<Reservation> active = reservations.stream()
+                .filter(reservation -> reservation.getStatus() == ReservationStatus.APPROVED)
+                .filter(reservation -> reservation.getEndAt().isAfter(now))
+                .sorted(Comparator.comparing(Reservation::getStartAt))
+                .toList();
+
+        return new ReservationDashboardView(
+                user.getName(),
+                pending.size(),
+                active.size(),
+                pending.stream().limit(5).toList(),
+                active.stream().limit(5).toList()
+        );
     }
 
     /*

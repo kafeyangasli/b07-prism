@@ -75,6 +75,20 @@ public class AdminFacilityController {
         return "redirect:/admin/facilities";
     }
 
+    @PostMapping("/{id}/activate")
+    public String activateFacility(@PathVariable("id") Long id,
+                                     Authentication authentication,
+                                     RedirectAttributes redirectAttributes) {
+        try {
+            com.github.kafeyangasli.prism.feature.user.model.User admin = userService.findByEmail(authentication.getName());
+            facilityService.activateFacility(admin.getId(), id);
+            redirectAttributes.addFlashAttribute("successMessage", "Fasilitas berhasil diaktifkan kembali.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/facilities";
+    }
+
     @PostMapping("/{id}/deactivate")
     public String deactivateFacility(@PathVariable("id") Long id,
                                      Authentication authentication,

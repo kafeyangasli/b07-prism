@@ -37,9 +37,12 @@ public class AdminUserController {
                             @RequestParam(defaultValue = "createdAt") String sort,
                             @RequestParam(defaultValue = "desc") String direction,
                             @RequestHeader(value = "HX-Request", required = false) String htmxRequest,
+                            @RequestHeader(value = "HX-Target", required = false) String htmxTarget,
                             Model model) {
         populatePage(model, search, role, status, sort, direction);
-        return isHtmx(htmxRequest) ? "admin/users :: user-results" : "admin/users";
+        return isHtmx(htmxRequest) && "user-results".equals(htmxTarget)
+                ? "admin/users :: user-results"
+                : "admin/users";
     }
 
     @PostMapping("/{id}/verify")

@@ -4,7 +4,7 @@ The UI uses Tailwind CSS 4, local assets, and server-rendered Thymeleaf views.
 
 ## Brand and tokens
 
-`src/main/frontend/app.css` is the source of truth. Its `@theme` defines:
+`../src/main/resources/static/css/prism.css` is the source of truth. Its `@theme` defines:
 
 - Original logo violet `#7469B6` and lavender accent `#AD88C6`.
 - Primary action `#5D5098`, hover `#4B407C`, subtle fill `#F3F0FA`.
@@ -16,8 +16,8 @@ Use semantic tokens or the shared `ui-*` classes instead of adding unrelated col
 
 ## Components
 
-- `fragments/layout.html`: assets, skip link, feedback region, footer, and page container.
-- `fragments/navigation.html`: role-based links, native mobile disclosure, active-page indicators, authentication actions.
+- `fragments/layout.html`: assets, skip link, feedback region, public shell, and authenticated dashboard shell with stable `#dashboard-content` updates.
+- `fragments/navigation.html`: public navbar plus the shared role-aware desktop sidebar/mobile drawer, active-page indicators, disabled roadmap entries, and authentication actions.
 - `fragments/page.html`: reusable page heading.
 - `fragments/feedback.html`: flash messages and bound form errors.
 - `fragments/status.html`: text-labeled semantic badges and a neutral fallback.
@@ -25,7 +25,9 @@ Use semantic tokens or the shared `ui-*` classes instead of adding unrelated col
 - `ui-input`, `ui-label`, `ui-form-*`: fields, validation, uploads, and form actions.
 - `ui-table-*`: desktop tables and labeled records below 1024px. Keep `data-label` values in sync with headings. Action cells use `ui-table-actions`.
 
-Navigation remains usable without JavaScript. The script initially collapses it on mobile and opens it at desktop widths. Existing HTMX and CSRF behavior is retained. Dismissing a global HTMX error hides its reusable target instead of removing it.
+Authenticated navigation progressively enhances normal links with HTMX while preserving direct navigation and refreshes. On mobile, the same sidebar becomes an off-canvas drawer with backdrop and Escape handling. Existing HTMX and CSRF behavior is retained. Dismissing a global HTMX error hides its reusable target instead of removing it.
+
+Reservation creation uses server-rendered 30-minute availability fragments. Date and start changes replace `#reservation-availability`; JavaScript only updates the duration/proposal presentation when the end boundary changes. Approved reservations and active/scheduled blockages disable slots, while pending reservations remain non-blocking. The server repeats the availability check during submission.
 
 ## Build and verification
 

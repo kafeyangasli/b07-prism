@@ -5,6 +5,9 @@ spring:
   cache:
     type: none # please comment in production :D
 
+  thymeleaf:
+    cache: false # and this too
+
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}

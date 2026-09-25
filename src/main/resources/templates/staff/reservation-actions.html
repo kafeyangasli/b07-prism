@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+<body>
+<td th:fragment="actions(row)" data-label="Tindakan" class="ui-table-actions">
+    <form th:if="${row.conflictingPendingCount == 0}"
+          th:action="@{/staff/reservations/{id}/approve(id=${row.id})}" method="post">
+        <button class="ui-btn ui-btn-primary" type="submit">
+            Setujui
+        </button>
+    </form>
+    <button th:if="${row.conflictingPendingCount > 0}" class="ui-btn ui-btn-primary" type="button"
+            th:attr="data-open-dialog=${'approve-reservation-' + row.id}">
+        Setujui
+    </button>
+    <button class="ui-btn ui-btn-danger" type="button"
+            th:attr="data-open-dialog=${'reject-reservation-' + row.id}">
+        Tolak
+    </button>
+
+    <dialog th:if="${row.conflictingPendingCount > 0}" th:id="${'approve-reservation-' + row.id}"
+            class="ui-dialog max-w-md" th:aria-labelledby="${'approve-reservation-title-' + row.id}">
+        <div class="ui-dialog-header">
+            <div>
+                <p class="ui-eyebrow">Konfirmasi persetujuan</p>
+                <h2 th:id="${'approve-reservation-title-' + row.id}">Ada konflik jadwal</h2>
+                <p class="ui-hint">Persetujuan ini berdampak pada reservasi lain di waktu yang sama.</p>
+            </div>
+            <button class="ui-btn ui-btn-ghost" type="button" data-close-dialog aria-label="Tutup dialog">×</button>
+        </div>
+        <div class="space-y-5">
+            <div class="ui-facility-context">
+                <strong th:text="${row.facilityName}">Fasilitas</strong>
+                <p th:text="${row.requesterName + ' · ' + #temporals.format(row.startAt, 'dd MMM yyyy, HH:mm') + ' – ' + #temporals.format(row.endAt, 'HH:mm')}">
+                    Ringkasan reservasi
+                </p>
+            </div>
+            <div class="ui-alert ui-alert-info" role="status">
+                <p>
+                    <strong th:text="${row.conflictingPendingCount}">1</strong>
+                    reservasi menunggu yang bertumpang tindih akan otomatis ditolak.
+                </p>
+            </div>
+            <form class="ui-form" th:action="@{/staff/reservations/{id}/approve(id=${row.id})}" method="post">
+                <input type="hidden" name="confirmCascade" value="true">
+                <div class="ui-form-actions">
+                    <button class="ui-btn ui-btn-secondary" type="button" data-close-dialog autofocus>Batal</button>
+                    <button class="ui-btn ui-btn-primary" type="submit">Setujui dan tolak konflik</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <dialog th:id="${'reject-reservation-' + row.id}" class="ui-dialog max-w-md"
+            th:aria-labelledby="${'reject-reservation-title-' + row.id}">
+        <div class="ui-dialog-header">
+            <div>
+                <p class="ui-eyebrow">Penolakan manual</p>
+                <h2 th:id="${'reject-reservation-title-' + row.id}">Tolak reservasi</h2>
+                <p class="ui-hint">Alasan akan ditampilkan kepada pemohon.</p>
+            </div>
+            <button class="ui-btn ui-btn-ghost" type="button" data-close-dialog aria-label="Tutup dialog">×</button>
+        </div>
+        <form class="ui-form" th:action="@{/staff/reservations/{id}/reject(id=${row.id})}" method="post">
+            <div class="ui-facility-context">
+                <strong th:text="${row.facilityName}">Fasilitas</strong>
+                <p th:text="${row.requesterName + ' · ' + #temporals.format(row.startAt, 'dd MMM yyyy, HH:mm') + ' – ' + #temporals.format(row.endAt, 'HH:mm')}">
+                    Ringkasan reservasi
+                </p>
+            </div>
+            <div class="w-full">
+                <label class="ui-label" th:for="${'rejection-reason-' + row.id}">Alasan penolakan</label>
+                <textarea th:id="${'rejection-reason-' + row.id}" class="ui-input" name="reasonDetail"
+                          rows="5" maxlength="2000" required autofocus
+                          placeholder="Jelaskan alasan reservasi ini ditolak"></textarea>
+                <p class="ui-hint">Alasan penolakan wajib diisi · Maksimal 2000 karakter.</p>
+            </div>
+            <div class="ui-form-actions align-right">
+                <button class="ui-btn ui-btn-primary" type="button" data-close-dialog>Batal</button>
+                <button class="ui-btn ui-btn-danger" type="submit">Tolak reservasi</button>
+            </div>
+        </form>
+    </dialog>
+</td>
+</body>
+</html>

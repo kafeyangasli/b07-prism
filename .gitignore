@@ -35,3 +35,8 @@ build/
 
 ### spooky stuff ###
 .env
+storage/
+uploads/
+
+### so everytime i fucking rebuild it it does not clutter the github ###
+src/main/resources/static/css/app.css

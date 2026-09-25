@@ -1,134 +1,101 @@
 <!doctype html>
-<html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-    th:replace="~{fragments/layout :: layout('Ajukan reservasi', 'reservations', ~{::main})}">
-    <body>
-        <main>
-            <div class="ui-page">
-                <header th:replace="~{fragments/page :: heading('Reservasi', 'Ajukan reservasi', 'Pilih fasilitas, tentukan jadwal, dan lengkapi tujuan penggunaan.')}">
-                </header>
-                <div th:replace="~{fragments/feedback :: flash}">
-                </div>
-                <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-                    <section class="ui-card ui-card-body">
-                        <form class="ui-form"
-                            th:action="@{/reservations}"
-                            th:object="${reservationForm}"
-                            method="post"
-                            enctype="multipart/form-data">
-                            <div class="md:col-span-full" th:replace="~{fragments/feedback :: formErrors}">
-                            </div>
-                            <!-- Facility -->
-                            <div>
-                                <label class="ui-label" for="facilityId">
-                                    Fasilitas
-                                </label>
-                                <select class="ui-input"
-                                    id="facilityId"
-                                    th:field="*{facilityId}" th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('facilityId')}"
-                                    required>
-                                    <option value="">
-                                        -- pilih fasilitas --
-                                    </option>
-                                    <option
-                                        th:each="facility : ${facilities}"
-                                        th:value="${facility.id}"
-                                        th:text="${facility.name + ' (' + facility.code + ')'}">
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="ui-form-grid">
-                                <!-- Start -->
-                                <div>
-                                    <label class="ui-label" for="startAt">
-                                        Mulai
-                                    </label>
-                                    <input class="ui-input"
-                                        id="startAt"
-                                        type="datetime-local"
-                                        th:field="*{startAt}" th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('startAt')}"
-                                        step="1800"
-                                        required>
-                                </div>
-                                <!-- End -->
-                                <div>
-                                    <label class="ui-label" for="endAt">
-                                        Selesai
-                                    </label>
-                                    <input class="ui-input"
-                                        id="endAt"
-                                        type="datetime-local"
-                                        th:field="*{endAt}" th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('endAt')}"
-                                        step="1800"
-                                        required>
-                                </div>
-                            </div>
-                            <!-- Purpose -->
-                            <div>
-                                <label class="ui-label" for="purpose">
-                                    Tujuan penggunaan
-                                </label>
-                                <textarea class="ui-input"
-                                    id="purpose"
-                                    th:field="*{purpose}" th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('purpose')}"
-                                    maxlength="1000"
-                                    required>
-                                </textarea>
-                            </div>
-                            <!-- Proposal template -->
-                            <div>
-                                <a class="ui-link" th:href="@{/reservations/proposal-template}">
-                                    Unduh templat proposal
-                                </a>
-                            </div>
-                            <!-- Proposal upload -->
-                            <div>
-                                <label class="ui-label" for="proposal">
-                                    Proposal bertanda tangan
-                                </label>
-                                <input class="ui-input"
-                                    id="proposal"
-                                    type="file"
-                                    name="proposal" aria-describedby="proposal-help"
-                                    accept=".pdf,.doc,.docx">
-                                <small id="proposal-help" class="ui-hint">
-                                    Wajib untuk Aula atau reservasi dengan durasi
-                                        minimal 6 jam.
-                                </small>
-                            </div>
-                            <div class="ui-form-actions">
-                                <button class="ui-btn ui-btn-primary" type="submit">
-                                    Ajukan Reservasi
-                                </button>
-                                <a class="ui-link" th:href="@{/reservations}">
-                                    Kembali
-                                </a>
-                            </div>
-                        </form>
-                    </section>
-                    <aside class="ui-card ui-card-body space-y-4">
-                        <p class="ui-eyebrow">
-                            Sebelum mengajukan
-                        </p>
-                        <h2>
-                            Siapkan kegiatan Anda
-                        </h2>
-                        <ol class="list-decimal space-y-4 pl-5 text-sm leading-6 text-muted">
-                            <li>
-                                Periksa jadwal reservasi dan blokir fasilitas di katalog.
-                            </li>
-                            <li>
-                                Isi waktu mulai dan selesai dengan interval 30 menit.
-                            </li>
-                            <li>
-                                Lampirkan proposal bertanda tangan untuk Aula atau durasi minimal 6 jam.
-                            </li>
-                        </ol>
-                        <a class="ui-btn ui-btn-secondary w-full" th:href="@{/facilities}">
-                            Periksa fasilitas
-                        </a>
-                    </aside>
-                </div>
-            </div>
-        </main>
-    </body>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Pengajuan Reservasi', 'reservations', ~{::main})}">
+<body>
+<main>
+    <div class="ui-page">
+        <header th:replace="~{fragments/page :: heading('Reservasi', 'Pengajuan Reservasi', 'Pilih tanggal dan slot waktu yang tersedia untuk fasilitas kampus.')}"></header>
+        <div th:replace="~{fragments/feedback :: flash}"></div>
+        <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,0.8fr)]">
+            <section class="ui-card ui-card-body">
+                <form class="ui-form" th:action="@{/reservations}" th:object="${reservationForm}"
+                      method="post" enctype="multipart/form-data">
+                    <div th:replace="~{reservations/form :: reservation-fields(false)}"></div>
+                </form>
+            </section>
+            <aside class="ui-card ui-card-body space-y-4">
+                <p class="ui-eyebrow">Alur reservasi</p>
+                <h2>Pilih jadwal dengan jelas</h2>
+                <ol class="list-decimal space-y-3 pl-5 text-sm leading-6 text-muted">
+                    <li>Pilih fasilitas dan tanggal.</li>
+                    <li>Pilih waktu mulai dari seluruh slot operasional.</li>
+                    <li>Pilih batas waktu selesai yang masih berurutan.</li>
+                    <li>Lampirkan proposal jika durasi mencapai 6 jam atau fasilitas bertipe Aula.</li>
+                </ol>
+            </aside>
+        </div>
+        <div id="reservation-modal-region"></div>
+    </div>
+</main>
+
+<div id="reservation-modal-region" th:fragment="reservation-modal">
+    <dialog id="reservation-dialog" class="ui-dialog ui-reservation-dialog"
+            aria-labelledby="reservation-dialog-title" th:attr="open=${openReservationDialog == true ? 'open' : null}">
+        <div class="ui-dialog-header">
+            <div><p class="ui-eyebrow">Reservasi fasilitas</p>
+                <h2 id="reservation-dialog-title">Ajukan reservasi</h2>
+                <p class="ui-hint">Pilih tanggal dan slot waktu yang tersedia.</p></div>
+            <button class="ui-btn ui-btn-ghost" type="button" data-close-dialog aria-label="Tutup dialog">×</button>
+        </div>
+        <form class="ui-form" th:action="@{/reservations}" th:object="${reservationForm}"
+              method="post" enctype="multipart/form-data" hx-post="/reservations"
+              hx-target="#reservation-modal-region" hx-swap="outerHTML" hx-indicator="#global-progress">
+            <div th:replace="~{reservations/form :: reservation-fields(true)}"></div>
+        </form>
+    </dialog>
+</div>
+
+<th:block th:fragment="reservation-fields(modal)">
+    <div th:replace="~{fragments/feedback :: formErrors}"></div>
+    <div th:if="${error != null}" class="ui-alert ui-alert-error" role="alert"><p th:text="${error}">Reservasi tidak
+        dapat diajukan.</p></div>
+    <input type="hidden" th:field="*{facilityFixed}">
+    <div th:if="*{facilityFixed} and ${selectedFacility != null}" class="ui-facility-context">
+        <input type="hidden" th:field="*{facilityId}">
+        <div><span class="ui-eyebrow">Fasilitas dipilih</span><strong th:text="${selectedFacility.name}">Nama
+            fasilitas</strong>
+            <p th:text="${selectedFacility.location + ' · Kapasitas ' + selectedFacility.capacity}">Lokasi ·
+                Kapasitas</p></div>
+    </div>
+    <div th:unless="*{facilityFixed} and ${selectedFacility != null}">
+        <label class="ui-label" for="facilityId">Fasilitas</label>
+        <select class="ui-input" id="facilityId" th:field="*{facilityId}" required
+                hx-get="/reservations/availability" hx-include="closest form" hx-target="#reservation-availability"
+                hx-swap="outerHTML" hx-indicator="#global-progress" hx-vals='{"reset":"true"}'>
+            <option value="">Pilih fasilitas</option>
+            <option th:each="facility : ${facilities}" th:value="${facility.id}"
+                    th:text="${facility.name + ' (' + facility.code + ')'}"></option>
+        </select>
+    </div>
+    <div>
+        <label class="ui-label" for="reservation-date">Tanggal</label>
+        <input id="reservation-date" class="ui-input" type="date" th:field="*{date}"
+               th:min="${minimumDate}" th:max="${maximumDate}" required autofocus
+               hx-get="/reservations/availability" hx-include="closest form" hx-target="#reservation-availability"
+               hx-swap="outerHTML" hx-indicator="#global-progress" hx-vals='{"reset":"true"}'>
+        <p class="ui-hint" th:text="${'Dapat dipilih sampai ' + #temporals.format(maximumDate, 'dd MMMM yyyy')}"></p>
+    </div>
+    <div th:replace="~{reservations/availability :: availability}"></div>
+    <div>
+        <label class="ui-label" for="purpose">Tujuan penggunaan</label>
+        <textarea class="ui-input" id="purpose" th:field="*{purpose}" maxlength="1000" required
+                  placeholder="Jelaskan kegiatan dan kebutuhan penggunaan fasilitas"></textarea>
+    </div>
+    <div>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <label class="ui-label mb-0" for="proposal">Proposal bertanda tangan</label>
+            <a class="ui-link text-sm" th:href="@{/reservations/proposal-template}">Unduh templat</a>
+        </div>
+        <input class="ui-input mt-2" id="proposal" type="file" name="proposal" aria-describedby="proposal-help"
+               accept=".pdf,.doc,.docx">
+        <small id="proposal-help" class="ui-hint">Berkas tetap opsional kecuali durasi mencapai 6 jam atau fasilitas
+            bertipe Aula.</small>
+    </div>
+    <div class="ui-form-actions">
+        <button th:if="${modal}" class="ui-btn ui-btn-secondary" type="button" data-close-dialog>Batal</button>
+        <a th:unless="${modal}" class="ui-btn ui-btn-secondary" th:href="@{/reservations}">Kembali</a>
+        <button class="ui-btn ui-btn-primary" type="submit">Ajukan reservasi</button>
+    </div>
+</th:block>
+</body>
 </html>

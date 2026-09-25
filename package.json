@@ -3,9 +3,9 @@
   "private": true,
   "scripts": {
     "build": "npm run build:css && npm run build:vendor",
-    "build:css": "tailwindcss -i ./src/main/frontend/app.css -o ./src/main/resources/static/css/app.css --minify",
+    "build:css": "tailwindcss -i src/main/resources/static/css/prism.css -o ./src/main/resources/static/css/app.css --minify",
     "build:vendor": "node ./scripts/copy-htmx.mjs",
-    "watch:css": "tailwindcss -i ./src/main/frontend/app.css -o ./src/main/resources/static/css/app.css --watch"
+    "watch:css": "tailwindcss -i src/main/resources/static/css/prism.css -o ./src/main/resources/static/css/app.css --watch"
   },
   "devDependencies": {
     "@tailwindcss/cli": "4.2.1",

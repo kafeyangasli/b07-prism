@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section id="reservation-availability" th:fragment="availability" class="space-y-6" aria-live="polite">
+    <div th:if="${availabilityError != null}" class="ui-alert ui-alert-error" role="alert">
+        <p th:text="${availabilityError}">Ketersediaan tidak dapat dimuat.</p>
+    </div>
+    <div th:if="${availability == null and availabilityError == null}" class="grid gap-5 sm:grid-cols-2">
+        <div><span class="ui-label">Waktu mulai</span>
+            <p class="ui-slot-placeholder">Pilih fasilitas dan tanggal terlebih dahulu.</p></div>
+        <div><span class="ui-label">Waktu selesai</span>
+            <p class="ui-slot-placeholder">Pilih waktu mulai terlebih dahulu.</p></div>
+    </div>
+    <th:block th:if="${availability != null}">
+        <div th:if="${availability.aula}" class="space-y-5">
+            <div th:if="${availability.aulaAvailable}" class="grid gap-4 sm:grid-cols-3">
+                <div class="ui-locked-time"><span class="ui-label">Waktu mulai</span><strong>07:00</strong><span>Ditentukan untuk Aula</span>
+                </div>
+                <div class="ui-locked-time"><span class="ui-label">Waktu selesai</span><strong>20:00</strong><span>Ditentukan untuk Aula</span>
+                </div>
+                <div class="ui-duration-summary" data-duration-summary><span>Durasi reservasi</span><strong
+                        data-duration-text>13 jam</strong><small data-duration-range>07:00–20:00</small></div>
+                <input type="hidden" name="startAt" th:value="${availability.selectedStart}">
+                <input type="hidden" name="endAt" th:value="${availability.selectedEnd}">
+            </div>
+            <div th:unless="${availability.aulaAvailable}" class="ui-alert ui-alert-error" role="alert">
+                <div><p class="font-semibold">Aula tidak tersedia pada tanggal ini.</p>
+                    <p>Pilih tanggal lain karena sebagian jadwal 07:00–20:00 tidak tersedia.</p></div>
+            </div>
+        </div>
+        <div th:unless="${availability.aula}" class="space-y-6">
+            <fieldset>
+                <legend class="ui-label">Waktu mulai</legend>
+                <p class="ui-hint mb-3">Semua slot operasional ditampilkan. Status tersedia dalam teks, bukan warna
+                    saja.</p>
+                <div class="ui-slot-grid">
+                    <label th:each="slot : ${availability.slots}" class="ui-slot"
+                           th:classappend="${' ui-slot-' + #strings.toLowerCase(slot.state.name())}"
+                           th:aria-disabled="${!slot.selectable} ? 'true' : null"
+                           th:title="${slot.reason != null ? slot.reason : slot.stateLabel}">
+                        <input th:if="${slot.selectable}" type="radio" name="startAt" th:value="${slot.value}"
+                               th:checked="${slot.state.name() == 'SELECTED'}"
+                               hx-get="/reservations/availability" hx-include="closest form"
+                               hx-target="#reservation-availability" hx-swap="outerHTML"
+                               hx-indicator="#global-progress">
+                        <span th:unless="${slot.selectable}" class="sr-only" th:text="${slot.stateLabel}"></span>
+                        <strong th:text="${slot.label}">07:00</strong>
+                        <small th:text="${slot.stateLabel}">Tersedia</small>
+                        <small th:if="${slot.reason != null}" th:text="${slot.reason}">Alasan publik</small>
+                    </label>
+                </div>
+            </fieldset>
+            <fieldset th:if="${availability.hasSelectedStart}">
+                <legend class="ui-label">Waktu selesai</legend>
+                <p class="ui-hint mb-3">Pilihan berakhir sebelum slot pertama yang tidak tersedia.</p>
+                <div class="ui-end-grid">
+                    <label th:each="endTime : ${availability.endTimes}" class="ui-end-time">
+                        <input type="radio" name="endAt" th:value="${endTime.value}" th:checked="${endTime.selected}"
+                               th:attr="data-duration-minutes=${endTime.durationMinutes},data-end-label=${endTime.label}">
+                        <span th:text="${endTime.label}">07:30</span>
+                    </label>
+                </div>
+            </fieldset>
+            <div th:unless="${availability.hasSelectedStart}"><span class="ui-label">Waktu selesai</span>
+                <p class="ui-slot-placeholder">Pilih waktu mulai terlebih dahulu.</p></div>
+            <div th:if="${availability.hasSelectedEnd}" class="ui-duration-summary" data-duration-summary>
+                <span>Durasi reservasi</span>
+                <strong data-duration-text
+                        th:text="${availability.durationMinutes >= 60 ? (availability.durationMinutes / 60) + ' jam' + (availability.durationMinutes % 60 > 0 ? ' ' + (availability.durationMinutes % 60) + ' menit' : '') : availability.durationMinutes + ' menit'}">30
+                    menit</strong>
+                <small data-duration-range
+                       th:text="${#temporals.format(availability.selectedStart, 'HH:mm') + '–' + #temporals.format(availability.selectedEnd, 'HH:mm')}">07:00–07:30</small>
+            </div>
+        </div>
+        <div class="ui-proposal-state" data-proposal-state
+             th:classappend="${availability.proposalRequired} ? ' ui-proposal-required' : ''">
+            <div><span class="ui-label mb-0">Proposal</span><strong data-proposal-label
+                                                                    th:text="${availability.proposalRequired ? 'Wajib' : 'Opsional'}">Opsional</strong>
+            </div>
+            <p data-proposal-help
+               th:text="${availability.proposalRequired ? 'Wajib untuk Aula atau reservasi berdurasi 6 jam atau lebih.' : 'Opsional untuk reservasi kurang dari 6 jam.'}">
+                Opsional untuk reservasi kurang dari 6 jam.</p>
+        </div>
+    </th:block>
+</section>
+</body>
+</html>

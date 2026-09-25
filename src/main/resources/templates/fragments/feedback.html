@@ -1,51 +1,55 @@
 <!doctype html>
 <html lang="id" xmlns:th="http://www.thymeleaf.org">
-    <body>
-        <div th:fragment="flash" class="ui-flash space-y-3" aria-live="polite">
-            <div th:if="${success != null}" class="ui-alert ui-alert-success" role="status">
-                <p th:text="${success}">
-                    Tindakan berhasil.
-                </p>
-                <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">
-                    Tutup
-                </button>
-            </div>
-            <div th:if="${successMessage != null}" class="ui-alert ui-alert-success" role="status">
-                <p th:text="${successMessage}">
-                    Tindakan berhasil.
-                </p>
-                <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">
-                    Tutup
-                </button>
-            </div>
-            <div th:if="${error != null}" class="ui-alert ui-alert-error" role="alert">
-                <p th:text="${error}">
-                    Terjadi kesalahan.
-                </p>
-                <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">
-                    Tutup
-                </button>
-            </div>
-            <div th:if="${errorMessage != null}" class="ui-alert ui-alert-error" role="alert">
-                <p th:text="${errorMessage}">
-                    Terjadi kesalahan.
-                </p>
-                <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">
-                    Tutup
-                </button>
-            </div>
-        </div>
-        <div th:fragment="formErrors" th:if="${#fields.hasAnyErrors()}" class="ui-alert ui-alert-error" role="alert">
-            <div>
-                <p class="font-semibold">
-                    Periksa kembali data berikut:
-                </p>
-                <ul class="mt-1 list-disc space-y-1 pl-5">
-                    <li th:each="formError : ${#fields.allErrors()}" th:text="${formError}">
-                        Data tidak valid.
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </body>
+<body>
+<div th:fragment="flash" class="ui-flash space-y-3" aria-live="polite">
+    <div th:if="${success != null and !#strings.isEmpty(#strings.trim(success))}"
+         class="ui-alert ui-alert-success" role="status">
+        <p th:text="${success}">
+            Tindakan berhasil.
+        </p>
+        <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">
+            Tutup
+        </button>
+    </div>
+    <div th:if="${successMessage != null and !#strings.isEmpty(#strings.trim(successMessage))}"
+         class="ui-alert ui-alert-success" role="status">
+        <p th:text="${successMessage}">
+            Tindakan berhasil.
+        </p>
+        <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">
+            Tutup
+        </button>
+    </div>
+    <div th:if="${error != null and !#strings.isEmpty(#strings.trim(error))}"
+         class="ui-alert ui-alert-error" role="alert">
+        <p th:text="${error}">
+            Terjadi kesalahan.
+        </p>
+        <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">
+            Tutup
+        </button>
+    </div>
+    <div th:if="${errorMessage != null and !#strings.isEmpty(#strings.trim(errorMessage))}"
+         class="ui-alert ui-alert-error" role="alert">
+        <p th:text="${errorMessage}">
+            Terjadi kesalahan.
+        </p>
+        <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">
+            Tutup
+        </button>
+    </div>
+</div>
+<div th:fragment="formErrors" th:if="${#fields.hasAnyErrors()}" class="ui-alert ui-alert-error" role="alert">
+    <div>
+        <p class="font-semibold">
+            Periksa kembali data berikut:
+        </p>
+        <ul class="mt-1 list-disc space-y-1 pl-5">
+            <li th:each="formError : ${#fields.allErrors()}" th:text="${formError}">
+                Data tidak valid.
+            </li>
+        </ul>
+    </div>
+</div>
+</body>
 </html>

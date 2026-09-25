@@ -1,6 +1,8 @@
 package com.github.kafeyangasli.prism.feature.reservation.controller;
 
 import java.net.MalformedURLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.core.io.ClassPathResource;
@@ -9,6 +11,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -25,8 +29,10 @@ import com.github.kafeyangasli.prism.feature.facility.model.AdministrativeStatus
 import com.github.kafeyangasli.prism.feature.facility.model.Facility;
 import com.github.kafeyangasli.prism.feature.facility.repository.FacilityRepository;
 import com.github.kafeyangasli.prism.feature.reservation.dto.ReservationForm;
+import com.github.kafeyangasli.prism.feature.reservation.dto.ReservationAvailabilityView;
 import com.github.kafeyangasli.prism.feature.reservation.model.Reservation;
 import com.github.kafeyangasli.prism.feature.reservation.service.ReservationLifecycleService;
+import com.github.kafeyangasli.prism.feature.reservation.service.ReservationAvailabilityService;
 import com.github.kafeyangasli.prism.feature.reservation.service.ReservationQueryService;
 import com.github.kafeyangasli.prism.feature.reservation.service.ReservationSubmissionService;
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
@@ -39,6 +45,7 @@ public class ReservationController {
     private final ReservationSubmissionService submissionService;
     private final ReservationLifecycleService lifecycleService;
     private final ReservationQueryService queryService;
+    private final ReservationAvailabilityService availabilityService;
     private final FacilityRepository facilityRepository;
     private final ProposalStorageService proposalStorageService;
 
@@ -46,6 +53,7 @@ public class ReservationController {
             ReservationSubmissionService submissionService,
             ReservationLifecycleService lifecycleService,
             ReservationQueryService queryService,
+            ReservationAvailabilityService availabilityService,
             FacilityRepository facilityRepository,
             ProposalStorageService proposalStorageService
     ) {
@@ -53,6 +61,7 @@ public class ReservationController {
         this.submissionService = submissionService;
         this.lifecycleService = lifecycleService;
         this.queryService = queryService;
+        this.availabilityService = availabilityService;
         this.facilityRepository = facilityRepository;
         this.proposalStorageService = proposalStorageService;
     }
@@ -62,26 +71,47 @@ public class ReservationController {
      */
     @GetMapping("/new")
     public String newReservation(
+            @RequestParam(name = "facilityId", required = false) Long facilityId,
+            @RequestHeader(name = "HX-Request", required = false) String hxRequest,
             Model model
     ) {
+        ReservationForm form = new ReservationForm();
+        form.setFacilityId(facilityId);
+        form.setFacilityFixed(facilityId != null);
+        populateFormModel(model, form, null);
+        model.addAttribute("openReservationDialog", true);
+        return isHtmx(hxRequest)
+                ? "reservations/form :: reservation-modal"
+                : "reservations/form";
+    }
 
-        List<Facility> facilities =
-                facilityRepository
-                        .findByAdministrativeStatusOrderByNameAsc(
-                                AdministrativeStatus.ACTIVE
-                        );
-
-        model.addAttribute(
-                "facilities",
-                facilities
-        );
-
-        model.addAttribute(
-                "reservationForm",
-                new ReservationForm()
-        );
-
-        return "reservations/form";
+    @GetMapping("/availability")
+    public String availability(
+            @RequestParam(name = "facilityId", required = false) Long facilityId,
+            @RequestParam(name = "date", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(name = "startAt", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startAt,
+            @RequestParam(name = "endAt", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endAt,
+            @RequestParam(name = "reset", defaultValue = "false") boolean reset,
+            Model model
+    ) {
+        if (reset) {
+            startAt = null;
+            endAt = null;
+        }
+        if (facilityId != null && date != null) {
+            try {
+                model.addAttribute(
+                        "availability",
+                        availabilityService.availability(facilityId, date, startAt, endAt)
+                );
+            } catch (BusinessRuleException | ResourceNotFoundException exception) {
+                model.addAttribute("availabilityError", exception.getMessage());
+            }
+        }
+        return "reservations/availability :: availability";
     }
 
     /*
@@ -90,13 +120,14 @@ public class ReservationController {
     @PostMapping(
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
-    public String submit(
+    public Object submit(
             @ModelAttribute ReservationForm form,
             @RequestParam(
                     name = "proposal",
                     required = false
             )
             MultipartFile proposal,
+            @RequestHeader(name = "HX-Request", required = false) String hxRequest,
             Authentication authentication,
             Model model,
             RedirectAttributes redirect
@@ -116,8 +147,13 @@ public class ReservationController {
                     "Reservasi berhasil diajukan dan berstatus Menunggu."
             );
 
-            return "redirect:/reservations/"
-                    + reservation.getId();
+            String detailUrl = "/reservations/" + reservation.getId();
+            if (isHtmx(hxRequest)) {
+                return ResponseEntity.noContent()
+                        .header("HX-Redirect", detailUrl)
+                        .build();
+            }
+            return "redirect:" + detailUrl;
 
         } catch (
                 BusinessRuleException
@@ -129,21 +165,55 @@ public class ReservationController {
                     exception.getMessage()
             );
 
-            model.addAttribute(
-                    "facilities",
-                    facilityRepository
-                            .findByAdministrativeStatusOrderByNameAsc(
-                                    AdministrativeStatus.ACTIVE
-                            )
-            );
-
-            model.addAttribute(
-                    "reservationForm",
-                    form
-            );
-
-            return "reservations/form";
+            populateFormModel(model, form, availabilityFor(form));
+            model.addAttribute("openReservationDialog", true);
+            return isHtmx(hxRequest)
+                    ? "reservations/form :: reservation-modal"
+                    : "reservations/form";
         }
+    }
+
+    private void populateFormModel(
+            Model model,
+            ReservationForm form,
+            ReservationAvailabilityView availability
+    ) {
+        List<Facility> facilities = facilityRepository
+                .findByAdministrativeStatusOrderByNameAsc(AdministrativeStatus.ACTIVE);
+        model.addAttribute("facilities", facilities);
+        model.addAttribute("reservationForm", form);
+        model.addAttribute("minimumDate", availabilityService.minimumDate());
+        model.addAttribute("maximumDate", availabilityService.maximumDate());
+        model.addAttribute("availability", availability);
+        if (form.getFacilityId() != null) {
+            facilities.stream()
+                    .filter(facility -> facility.getId().equals(form.getFacilityId()))
+                    .findFirst()
+                    .ifPresent(facility -> model.addAttribute("selectedFacility", facility));
+        }
+    }
+
+    private ReservationAvailabilityView availabilityFor(ReservationForm form) {
+        if (form == null || form.getFacilityId() == null || form.getDate() == null
+                || form.getDate().isBlank()) {
+            return null;
+        }
+        try {
+            LocalDate date = LocalDate.parse(form.getDate());
+            LocalDateTime start = parseOptionalDateTime(form.getStartAt());
+            LocalDateTime end = parseOptionalDateTime(form.getEndAt());
+            return availabilityService.availability(form.getFacilityId(), date, start, end);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private LocalDateTime parseOptionalDateTime(String value) {
+        return value == null || value.isBlank() ? null : LocalDateTime.parse(value);
+    }
+
+    private boolean isHtmx(String hxRequest) {
+        return "true".equalsIgnoreCase(hxRequest);
     }
 
     /*

@@ -16,7 +16,13 @@
                             Informasi fasilitas dan jadwal penggunaan yang telah dikonfirmasi.
                         </p>
                     </div>
-                    <a sec:authorize="hasRole('PENGGUNA')" th:href="@{/reservations/new}" class="ui-btn ui-btn-primary">
+                    <a sec:authorize="hasRole('PENGGUNA')"
+                        th:href="@{/reservations/new(facilityId=${facility.id})}"
+                        th:attr="hx-get=@{/reservations/new(facilityId=${facility.id})}"
+                        hx-target="#reservation-modal-region"
+                        hx-swap="outerHTML"
+                        hx-indicator="#global-progress"
+                        class="ui-btn ui-btn-primary">
                         Ajukan reservasi
                     </a>
                     <a sec:authorize="!isAuthenticated()" th:href="@{/login}" class="ui-btn ui-btn-primary">
@@ -174,6 +180,7 @@
                         </table>
                     </div>
                 </section>
+                <div id="reservation-modal-region"></div>
             </div>
         </main>
     </body>

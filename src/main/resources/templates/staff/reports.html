@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Manajemen Laporan', 'staff-reports', ~{::main})}">
+<body>
+<main>
+    <div class="ui-page">
+        <header th:replace="~{fragments/page :: heading('Operasional', 'Manajemen Laporan', 'Pantau laporan fasilitas yang masih memerlukan penanganan.')}">
+        </header>
+        <div th:replace="~{fragments/feedback :: flash}">
+        </div>
+        <section class="ui-section">
+            <h2>
+                Laporan terbuka
+            </h2>
+            <p class="ui-empty-state" th:if="${#lists.isEmpty(dashboard.unresolvedReports)}">
+                Tidak ada laporan terbuka.
+            </p>
+            <div class="ui-table-wrap" th:unless="${#lists.isEmpty(dashboard.unresolvedReports)}">
+                <table class="ui-table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Fasilitas</th>
+                        <th scope="col">Kategori</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Masuk</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${dashboard.unresolvedReports}">
+                        <td data-label="Fasilitas" th:text="${row.facilityName}">
+                        </td>
+                        <td data-label="Kategori" th:text="${row.category}">
+                        </td>
+                        <td data-label="Status">
+                            <span th:replace="~{fragments/status :: badge(${row.status})}">
+                            </span>
+                        </td>
+                        <td data-label="Masuk"
+                            th:text="${row.createdAt != null ? #temporals.format(row.createdAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</main>
+</body>
+</html>

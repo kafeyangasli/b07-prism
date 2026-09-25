@@ -5,6 +5,7 @@ import com.github.kafeyangasli.prism.feature.administration.dto.StaffDashboard;
 import com.github.kafeyangasli.prism.feature.administration.dto.UnresolvedReportRow;
 import com.github.kafeyangasli.prism.feature.report.model.ReportStatus;
 import com.github.kafeyangasli.prism.feature.report.repository.ReportRepository;
+import com.github.kafeyangasli.prism.feature.reservation.model.Reservation;
 import com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus;
 import com.github.kafeyangasli.prism.feature.reservation.repository.ReservationRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,6 +16,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
+import java.util.List;
 
 @Service
 public class StaffDashboardService {
@@ -36,6 +38,8 @@ public class StaffDashboardService {
     public StaffDashboard load(String requestedSort) {
         String sort = "start".equalsIgnoreCase(requestedSort) ? "start" : "created";
         LocalDateTime now = LocalDateTime.now(clock);
+        var pendingReservations = reservationRepository
+                .findByStatusOrderByCreatedAtAsc(ReservationStatus.PENDING);
         var reservations = reservationRepository
                 .findProcessableQueue(ReservationStatus.PENDING, now, sort)
                 .stream()
@@ -44,7 +48,8 @@ public class StaffDashboardService {
                         r.getStartAt(), r.getEndAt(), r.getCreatedAt(), r.getExpiresAt(),
                         Duration.between(r.getStartAt(), r.getEndAt()).toHours() >= 6
                                 || "Aula".equalsIgnoreCase(r.getFacility().getType()),
-                        r.getProposalValidatedAt() != null && r.getProposalValidatedBy() != null))
+                        r.getProposalValidatedAt() != null && r.getProposalValidatedBy() != null,
+                        countPendingConflicts(r, pendingReservations)))
                 .toList();
         var reports = reportRepository.findUnresolvedQueue(
                         EnumSet.of(ReportStatus.NEW, ReportStatus.IN_PROGRESS))
@@ -53,5 +58,14 @@ public class StaffDashboardService {
                         r.getCategory(), r.getStatus(), r.getCreatedAt()))
                 .toList();
         return new StaffDashboard(reservations, reports, sort);
+    }
+
+    private int countPendingConflicts(Reservation candidate, List<Reservation> pendingReservations) {
+        return (int) pendingReservations.stream()
+                .filter(other -> !other.getId().equals(candidate.getId()))
+                .filter(other -> other.getFacility().getId().equals(candidate.getFacility().getId()))
+                .filter(other -> other.getStartAt().isBefore(candidate.getEndAt())
+                        && other.getEndAt().isAfter(candidate.getStartAt()))
+                .count();
     }
 }

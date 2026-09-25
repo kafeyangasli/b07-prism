@@ -76,7 +76,7 @@ class ReservationProcessingServiceIntegrationTest {
         Reservation pending = saveReservation(requester, facility, NOW.plusDays(1).withHour(9),
                 NOW.plusDays(1).withHour(10), ReservationStatus.PENDING, NOW.plusHours(12));
 
-        Reservation approved = service.approve(pending.getId(), staff.getId());
+        Reservation approved = service.approve(pending.getId(), staff.getId(), false);
 
         assertThat(approved.getStatus()).isEqualTo(ReservationStatus.APPROVED);
         assertThat(approved.getProcessedBy().getId()).isEqualTo(staff.getId());
@@ -92,11 +92,11 @@ class ReservationProcessingServiceIntegrationTest {
         Reservation started = saveReservation(requester, facility, NOW.minusHours(1),
                 NOW.plusHours(1), ReservationStatus.PENDING, NOW.plusHours(1));
 
-        assertThatThrownBy(() -> service.approve(approved.getId(), staff.getId()))
+        assertThatThrownBy(() -> service.approve(approved.getId(), staff.getId(), false))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("menunggu");
-        assertThatThrownBy(() -> service.approve(expired.getId(), staff.getId()))
+        assertThatThrownBy(() -> service.approve(expired.getId(), staff.getId(), false))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("lewat");
-        assertThatThrownBy(() -> service.approve(started.getId(), staff.getId()))
+        assertThatThrownBy(() -> service.approve(started.getId(), staff.getId(), false))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("tercapai");
     }
 
@@ -104,13 +104,13 @@ class ReservationProcessingServiceIntegrationTest {
     void proposalRequiredReservationNeedsStaffValidation() {
         Reservation pending = saveReservation(requester, facility, NOW.plusDays(1).withHour(7),
                 NOW.plusDays(1).withHour(13), ReservationStatus.PENDING, NOW.plusHours(12));
-        assertThatThrownBy(() -> service.approve(pending.getId(), staff.getId()))
+        assertThatThrownBy(() -> service.approve(pending.getId(), staff.getId(), false))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Proposal");
 
         pending.setProposalValidatedAt(NOW.minusMinutes(1));
         pending.setProposalValidatedBy(staff);
         reservations.saveAndFlush(pending);
-        assertThat(service.approve(pending.getId(), staff.getId()).getStatus())
+        assertThat(service.approve(pending.getId(), staff.getId(), false).getStatus())
                 .isEqualTo(ReservationStatus.APPROVED);
     }
 
@@ -124,9 +124,9 @@ class ReservationProcessingServiceIntegrationTest {
         Reservation adjacent = saveReservation(requester, facility, day.plusHours(1), day.plusHours(2),
                 ReservationStatus.PENDING, NOW.plusHours(12));
 
-        assertThatThrownBy(() -> service.approve(overlapping.getId(), staff.getId()))
+        assertThatThrownBy(() -> service.approve(overlapping.getId(), staff.getId(), false))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("bertumpang tindih");
-        assertThat(service.approve(adjacent.getId(), staff.getId()).getStatus())
+        assertThat(service.approve(adjacent.getId(), staff.getId(), true).getStatus())
                 .isEqualTo(ReservationStatus.APPROVED);
     }
 
@@ -139,7 +139,7 @@ class ReservationProcessingServiceIntegrationTest {
         Reservation pending = saveReservation(requester, facility, start, start.plusHours(1),
                 ReservationStatus.PENDING, NOW.plusHours(12));
 
-        assertThatThrownBy(() -> service.approve(pending.getId(), staff.getId()))
+        assertThatThrownBy(() -> service.approve(pending.getId(), staff.getId(), false))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("diblokir");
     }
 
@@ -153,7 +153,14 @@ class ReservationProcessingServiceIntegrationTest {
         Reservation adjacent = saveReservation(requester, facility, start.plusHours(1), start.plusHours(2),
                 ReservationStatus.PENDING, NOW.plusHours(12));
 
-        service.approve(chosen.getId(), staff.getId());
+        assertThatThrownBy(() -> service.approve(chosen.getId(), staff.getId(), false))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Konfirmasi");
+        assertThat(reservations.findById(chosen.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReservationStatus.PENDING);
+        assertThat(reservations.findById(conflict.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReservationStatus.PENDING);
+
+        service.approve(chosen.getId(), staff.getId(), true);
 
         Reservation rejected = reservations.findById(conflict.getId()).orElseThrow();
         assertThat(rejected.getStatus()).isEqualTo(ReservationStatus.REJECTED);
@@ -175,6 +182,11 @@ class ReservationProcessingServiceIntegrationTest {
         assertThat(rejected.getReasonDetail()).isEqualTo("Dokumen tidak sesuai");
         assertThat(rejected.getProcessedBy().getId()).isEqualTo(staff.getId());
         assertThat(rejected.getProcessedAt()).isEqualTo(NOW);
+
+        Reservation another = saveReservation(requester, facility, NOW.plusDays(2).withHour(9),
+                NOW.plusDays(2).withHour(10), ReservationStatus.PENDING, NOW.plusHours(12));
+        assertThatThrownBy(() -> service.reject(another.getId(), staff.getId(), "  "))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("wajib");
     }
 
     @Test
@@ -196,7 +208,7 @@ class ReservationProcessingServiceIntegrationTest {
         Reservation eighth = saveReservation(requester, facility, NOW.plusDays(10).withHour(9),
                 NOW.plusDays(10).withHour(10), ReservationStatus.PENDING, NOW.plusHours(12));
 
-        assertThatThrownBy(() -> service.approve(eighth.getId(), staff.getId()))
+        assertThatThrownBy(() -> service.approve(eighth.getId(), staff.getId(), false))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("tujuh");
         assertThat(reservations.findById(eighth.getId()).orElseThrow().getStatus())
                 .isEqualTo(ReservationStatus.PENDING);
@@ -210,7 +222,7 @@ class ReservationProcessingServiceIntegrationTest {
         }
         Reservation seventh = saveReservation(requester, facility, NOW.plusDays(8).withHour(9),
                 NOW.plusDays(8).withHour(10), ReservationStatus.PENDING, NOW.plusHours(12));
-        assertThat(service.approve(seventh.getId(), staff.getId()).getStatus())
+        assertThat(service.approve(seventh.getId(), staff.getId(), false).getStatus())
                 .isEqualTo(ReservationStatus.APPROVED);
     }
 

@@ -1,35 +1,131 @@
 <!doctype html>
 <html lang="id"
-    xmlns:th="http://www.thymeleaf.org"
-    xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-    th:replace="~{fragments/layout :: layout('Beranda', 'minimal', ~{::main})}">
-    <body>
-        <main>
-            <section class="ui-hero" aria-labelledby="hero-title">
-                <div class="max-w-3xl">
-                    <p class="ui-eyebrow">Fasilitas kampus dalam satu layanan</p>
-                    <h1 id="hero-title" class="text-4xl font-bold tracking-tight sm:text-5xl">
-                        PRISM
-                    </h1>
-                    <p class="mt-3 text-xl font-semibold text-prism-800">
-                        Platform for Reservation and Issue Management
-                    </p>
-                    <p class="mt-5 max-w-2xl text-base leading-7 text-ink-600 sm:text-lg">
-                        Temukan dan reservasi fasilitas kampus, pantau jadwal penggunaan, serta kelola kendala fasilitas secara terpusat.
-                    </p>
-                    <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                        <a sec:authorize="!isAuthenticated()" th:href="@{/reservations/new}" th class="ui-btn ui-btn-primary">
-                            Mulai Reservasi
-                        </a>
-                        <a th:href="@{/facilities}" class="ui-btn ui-btn-secondary">
-                            Lihat Fasilitas
-                        </a>
-                    </div>
-                    <p sec:authorize="!isAuthenticated()" class="mt-4 text-sm text-muted">
-                        Anda akan diminta masuk sebelum mengajukan reservasi.
-                    </p>
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{fragments/layout :: layout('Beranda', 'minimal', ~{::main})}">
+<body>
+<main>
+    <section sec:authorize="!isAuthenticated()" class="ui-hero" aria-labelledby="hero-title">
+        <div class="max-w-3xl">
+            <p class="ui-eyebrow">Fasilitas kampus dalam satu layanan</p>
+            <h1 id="hero-title" class="text-4xl font-bold tracking-tight sm:text-5xl">
+                PRISM
+            </h1>
+            <p class="mt-3 text-xl font-semibold text-prism-800">
+                Platform for Reservation and Issue Management
+            </p>
+            <p class="mt-5 max-w-2xl text-base leading-7 text-ink-600 sm:text-lg">
+                Temukan dan reservasi fasilitas kampus, pantau jadwal penggunaan, serta kelola kendala fasilitas secara
+                terpusat.
+            </p>
+            <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+                <a th:href="@{/reservations/new}" class="ui-btn ui-btn-primary">
+                    Mulai Reservasi
+                </a>
+                <a th:href="@{/facilities}" class="ui-btn ui-btn-secondary">
+                    Lihat Fasilitas
+                </a>
+            </div>
+            <p class="mt-4 text-sm text-muted">
+                Anda akan diminta masuk sebelum mengajukan reservasi.
+            </p>
+        </div>
+    </section>
+
+    <div sec:authorize="hasRole('PENGGUNA')" class="ui-page" th:if="${userDashboard != null}">
+        <header class="ui-page-header">
+            <div>
+                <p class="ui-eyebrow">Dashboard</p>
+                <h1 th:text="${'Halo, ' + userDashboard.requesterName}">Halo, Pengguna</h1>
+                <p class="ui-description">Pantau reservasi yang menunggu persetujuan dan jadwal penggunaan fasilitas
+                    Anda.</p>
+            </div>
+            <a th:href="@{/reservations/new}" class="ui-btn ui-btn-primary">Ajukan reservasi</a>
+        </header>
+
+        <section class="grid gap-4 sm:grid-cols-2" aria-label="Ringkasan reservasi">
+            <a th:href="@{/reservations}" class="ui-stat">
+                <p class="text-sm font-medium text-muted">Menunggu persetujuan</p>
+                <p class="ui-stat-value" th:text="${userDashboard.pendingCount}">0</p>
+            </a>
+            <a th:href="@{/reservations}" class="ui-stat">
+                <p class="text-sm font-medium text-muted">Aktif &amp; akan datang</p>
+                <p class="ui-stat-value" th:text="${userDashboard.activeCount}">0</p>
+            </a>
+        </section>
+
+        <section class="ui-section" aria-labelledby="pending-title">
+            <div class="ui-section-heading">
+                <div>
+                    <h2 id="pending-title">Reservasi menunggu</h2>
+                    <p class="ui-hint">Pengajuan yang masih menunggu keputusan petugas.</p>
                 </div>
-            </section>
-        </main>
-    </body>
+                <a th:href="@{/reservations}" class="ui-link">Lihat semua</a>
+            </div>
+            <div th:if="${!#lists.isEmpty(userDashboard.pendingReservations)}" class="ui-table-wrap">
+                <table class="ui-table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Fasilitas</th>
+                        <th scope="col">Jadwal</th>
+                        <th scope="col">Batas menunggu</th>
+                        <th scope="col">Detail</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="reservation : ${userDashboard.pendingReservations}">
+                        <td data-label="Fasilitas" th:text="${reservation.facility.name}">Fasilitas</td>
+                        <td data-label="Jadwal">
+                            <span th:text="${#temporals.format(reservation.startAt, 'dd MMM yyyy, HH:mm')}">Mulai</span>
+                            <span aria-hidden="true">–</span>
+                            <span th:text="${#temporals.format(reservation.endAt, 'HH:mm')}">Selesai</span>
+                        </td>
+                        <td data-label="Batas menunggu"
+                            th:text="${reservation.expiresAt != null ? #temporals.format(reservation.expiresAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                            —
+                        </td>
+                        <td data-label="Detail"><a class="ui-link"
+                                                   th:href="@{/reservations/{id}(id=${reservation.id})}">Buka</a></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div th:if="${#lists.isEmpty(userDashboard.pendingReservations)}" class="ui-empty-state">
+                <h3>Tidak ada reservasi menunggu</h3>
+                <p class="mt-2 text-sm">Pengajuan baru yang belum diproses akan muncul di sini.</p>
+            </div>
+        </section>
+
+        <section class="ui-section" aria-labelledby="active-title">
+            <div class="ui-section-heading">
+                <div>
+                    <h2 id="active-title">Reservasi aktif &amp; akan datang</h2>
+                    <p class="ui-hint">Reservasi disetujui yang belum selesai.</p>
+                </div>
+                <a th:href="@{/facilities}" class="ui-link">Cari fasilitas</a>
+            </div>
+            <div th:if="${!#lists.isEmpty(userDashboard.activeReservations)}" class="grid gap-4 md:grid-cols-2">
+                <article th:each="reservation : ${userDashboard.activeReservations}" class="ui-card ui-card-body">
+                    <div class="flex items-start justify-between gap-4">
+                        <div><p class="ui-eyebrow" th:text="${reservation.facility.code}">KODE</p>
+                            <h3 th:text="${reservation.facility.name}">Fasilitas</h3></div>
+                        <span th:replace="~{fragments/status :: badge(${reservation.status})}"></span>
+                    </div>
+                    <p class="mt-4 text-sm font-medium"
+                       th:text="${#temporals.format(reservation.startAt, 'dd MMM yyyy, HH:mm') + '–' + #temporals.format(reservation.endAt, 'HH:mm')}">
+                        Jadwal</p>
+                    <p class="mt-1 text-sm text-muted" th:text="${reservation.facility.location}">Lokasi</p>
+                    <a class="ui-btn ui-btn-secondary mt-5" th:href="@{/reservations/{id}(id=${reservation.id})}">Lihat
+                        detail</a>
+                </article>
+            </div>
+            <div th:if="${#lists.isEmpty(userDashboard.activeReservations)}" class="ui-empty-state">
+                <h3>Belum ada reservasi aktif</h3>
+                <p class="mt-2 text-sm">Reservasi yang disetujui dan belum selesai akan tampil di sini.</p>
+                <a th:href="@{/facilities}" class="ui-btn ui-btn-secondary mt-5">Jelajahi fasilitas</a>
+            </div>
+        </section>
+    </div>
+</main>
+</body>
 </html>

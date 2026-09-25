@@ -143,6 +143,16 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
+    public Facility activateFacility(Long adminId, Long facilityId) {
+        validateAdmin(adminId);
+        Facility facility = facilityRepository.findByIdForUpdate(facilityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fasilitas dengan ID " + facilityId + " tidak ditemukan."));
+
+        facility.setAdministrativeStatus(AdministrativeStatus.ACTIVE);
+        return facilityRepository.save(facility);
+    }
+
+    @Override
     public Facility deactivateFacility(Long adminId, Long facilityId) {
         validateAdmin(adminId);
         Facility facility = facilityRepository.findByIdForUpdate(facilityId)

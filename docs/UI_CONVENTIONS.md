@@ -62,7 +62,8 @@ Render enums with `fragments/status :: badge(status)`. The badge always includes
 
 - `fragments/navigation` is authoritative. Visibility uses Spring Security dialect checks, while `SecurityConfig` remains the access-control authority.
 - Do not create a live link until a matching HTML route is available to that role. A disabled label may communicate planned navigation without sending users to a JSON API or forbidden route.
-- Supported `activeNav` keys currently include `facilities`, `reservations`, `dashboard`, `users`, `admin-facilities`, and `recap`.
+- Authenticated pages render inside the persistent dashboard sidebar; public pages retain the compact public navbar. Dashboard links target `#dashboard-content`, select the same stable region from full-page responses, and use the server-rendered `data-active-nav` value to synchronize active state after a swap.
+- Supported `activeNav` keys currently include `minimal` (Pengguna dashboard), `facilities`, `reservations`, `dashboard`, `staff-reservations`, `staff-reports`, `users`, `admin-facilities`, and `recap`.
 
 ## Frontend build
 

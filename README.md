@@ -1,4 +1,4 @@
-# PRISM
+![Alt Text](src/main/resources/static/images/prism-dark.svg)
 
 ---
 
@@ -6,7 +6,7 @@
 
 PRISM membantu pengunjung dan civitas akademika melihat fasilitas serta ketersediaannya, mengajukan reservasi, dan melaporkan masalah. Petugas dan Admin dapat memproses reservasi, menangani laporan, mengatur periode blokir fasilitas, serta memantau pemanfaatan fasilitas melalui dashboard dan rekapitulasi.
 
-Proyek ini dikembangkan untuk memenuhi tugas mata kuliah **Pengembangan Platform Khusus**.
+> Proyek ini dikembangkan untuk memenuhi tugas mata kuliah **Pengembangan Platform Khusus**.
 
 ## Teknologi yang Digunakan ( Tech Stack )
 
@@ -108,18 +108,21 @@ src/
 ├── main/
 │   ├── java/com/github/kafeyangasli/prism/
 │   │   ├── feature/
-│   │   │   ├── user/          # Akun, peran, dan status pengguna
-│   │   │   ├── facility/      # Data fasilitas dan ketersediaan
-│   │   │   ├── reservation/   # Pengajuan dan pengelolaan reservasi
-│   │   │   ├── report/        # Pelaporan kerusakan dan resolusi
-│   │   │   └── blockage/      # Blokir fasilitas dan jenis blokir
-│   │   ├── config/            # Konfigurasi aplikasi
-│   │   ├── security/          # Autentikasi dan otorisasi
-│   │   └── shared/            # Komponen umum dan exception
+│   │   │   ├── user/           # Akun, peran, dan status pengguna
+│   │   │   ├── facility/       # Data fasilitas dan ketersediaan
+│   │   │   ├── reservation/    # Pengajuan dan pengelolaan reservasi
+│   │   │   ├── report/         # Pelaporan kerusakan dan resolusi
+│   │   │   ├── blockage/       # Blokir fasilitas dan jenis blokir
+│   │   │   └── administration  # Peran administrasi  
+│   │   ├── config/             # Konfigurasi aplikasi
+│   │   ├── security/           # Autentikasi dan otorisasi
+│   │   └── shared/             # Komponen umum dan exception
 │   └── resources/
-│       ├── db/migration/      # Migrasi skema basis data dengan Flyway
-│       └── application.yaml   # Konfigurasi aplikasi
-└── test/                      # Pengujian aplikasi
+│       ├── static/             # Resource statis
+│       ├── templates/          # Template Thymeleaf untuk SSR
+│       ├── db/migration/       # Migrasi skema basis data dengan Flyway
+│       └── application.yaml    # Konfigurasi aplikasi
+└── test/                       # Pengujian aplikasi
 ```
 
 Setiap folder pada `feature` dapat memiliki lapisan `model` dan `repository`, serta dapat dikembangkan dengan lapisan `controller` dan `service` sesuai kebutuhan fitur. Pemisahan ini menjaga agar aturan bisnis, akses data, dan komponen pendukung setiap fitur tetap terorganisir.

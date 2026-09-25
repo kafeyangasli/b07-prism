@@ -1,4 +1,4 @@
-package com.github.kafeyangasli.prism.config;
+package com.github.kafeyangasli.prism.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

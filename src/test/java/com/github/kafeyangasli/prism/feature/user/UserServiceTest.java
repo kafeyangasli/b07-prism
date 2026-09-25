@@ -6,7 +6,7 @@ import com.github.kafeyangasli.prism.feature.user.model.Role;
 import com.github.kafeyangasli.prism.feature.user.model.User;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 import com.github.kafeyangasli.prism.feature.user.service.UserService;
-import com.github.kafeyangasli.prism.config.CustomUserDetailsService;
+import com.github.kafeyangasli.prism.security.CustomUserDetailsService;
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

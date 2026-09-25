@@ -1,4 +1,4 @@
-package com.github.kafeyangasli.prism.config;
+package com.github.kafeyangasli.prism.security;
 
 import com.github.kafeyangasli.prism.feature.user.model.AccountStatus;
 import com.github.kafeyangasli.prism.feature.user.model.User;

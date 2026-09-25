@@ -17,8 +17,8 @@ Seluruh individu yang berkontribusi pada projek ini terafiliasi dengan
 
 | Nama                           | NIM            | Profil GitHub                                      |
 |--------------------------------|----------------|----------------------------------------------------|
-| Imam Alfarezel                 | 24060124120028 | [jordantenggara](https://github.com/jordantenggara) |
-| Jordan Tenggara                | 24060124120044 | [Rezzel22](https://github.com/Rezzel22)            |
+| Imam Alfarezel                 | 24060124120028 | [Rezzel22](https://github.com/Rezzel22)            |
+| Jordan Tenggara                | 24060124120044 | [jordantenggara](https://github.com/jordantenggara) |
 | Maulana Ghazzam Adil Al Faiq   | 24060124130083 | [kafeyangasli](https://github.com/kafeyangasli)    |
 | Ikrar Maheswara Rabbani Wibowo | 24060124140202 | [Maesh-shush](https://github.com/Maesh-shush)      |
 

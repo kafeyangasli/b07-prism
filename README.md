@@ -8,6 +8,20 @@ PRISM membantu pengunjung dan civitas akademika melihat fasilitas serta ketersed
 
 > Proyek ini dikembangkan untuk memenuhi tugas mata kuliah **Pengembangan Platform Khusus**.
 
+## Kontributor
+
+Seluruh individu yang berkontribusi pada projek ini terafiliasi dengan
+> **Departemen Informatika/Ilmu Komputer**\
+> **Fakultas Sains dan Matematika**\
+> **Universitas Diponegoro**
+
+| Nama                           | NIM            | Profil GitHub                                      |
+|--------------------------------|----------------|----------------------------------------------------|
+| Imam Alfarezel                 | 24060124120028 | [jordantenggara](https://github.com/jordantenggara) |
+| Jordan Tenggara                | 24060124120044 | [Rezzel22](https://github.com/Rezzel22)            |
+| Maulana Ghazzam Adil Al Faiq   | 24060124130083 | [kafeyangasli](https://github.com/kafeyangasli)    |
+| Ikrar Maheswara Rabbani Wibowo | 24060124140202 | [Maesh-shush](https://github.com/Maesh-shush)      |
+
 ## Teknologi yang Digunakan ( Tech Stack )
 
 - **Bahasa pemrograman:** Java 25

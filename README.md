@@ -1,4 +1,4 @@
-# PRISM
+![Alt Text](src/main/resources/static/images/prism-dark.svg)
 
 ---
 
@@ -6,7 +6,21 @@
 
 PRISM membantu pengunjung dan civitas akademika melihat fasilitas serta ketersediaannya, mengajukan reservasi, dan melaporkan masalah. Petugas dan Admin dapat memproses reservasi, menangani laporan, mengatur periode blokir fasilitas, serta memantau pemanfaatan fasilitas melalui dashboard dan rekapitulasi.
 
-Proyek ini dikembangkan untuk memenuhi tugas mata kuliah **Pengembangan Platform Khusus**.
+> Proyek ini dikembangkan untuk memenuhi tugas mata kuliah **Pengembangan Platform Khusus**.
+
+## Kontributor
+
+Seluruh individu yang berkontribusi pada projek ini terafiliasi dengan
+> **Departemen Informatika/Ilmu Komputer**\
+> **Fakultas Sains dan Matematika**\
+> **Universitas Diponegoro**
+
+| Nama                           | NIM            | Profil GitHub                                      |
+|--------------------------------|----------------|----------------------------------------------------|
+| Imam Alfarezel                 | 24060124120028 | [jordantenggara](https://github.com/jordantenggara) |
+| Jordan Tenggara                | 24060124120044 | [Rezzel22](https://github.com/Rezzel22)            |
+| Maulana Ghazzam Adil Al Faiq   | 24060124130083 | [kafeyangasli](https://github.com/kafeyangasli)    |
+| Ikrar Maheswara Rabbani Wibowo | 24060124140202 | [Maesh-shush](https://github.com/Maesh-shush)      |
 
 ## Teknologi yang Digunakan ( Tech Stack )
 
@@ -20,6 +34,7 @@ Proyek ini dikembangkan untuk memenuhi tugas mata kuliah **Pengembangan Platform
 - **Build tool:** Apache Maven
 - **Pengujian:** JUnit, Spring Boot Test, Spring Security Test, dan H2
 - **Frontend:** HTML, CSS, JavaScript, serta Thymeleaf untuk server-side rendering
+- **UI foundation:** TailwindCSS dan HTMX dengan aset yang dibangun secara lokal
 
 ## Fitur Aplikasi
 
@@ -107,18 +122,21 @@ src/
 ├── main/
 │   ├── java/com/github/kafeyangasli/prism/
 │   │   ├── feature/
-│   │   │   ├── user/          # Akun, peran, dan status pengguna
-│   │   │   ├── facility/      # Data fasilitas dan ketersediaan
-│   │   │   ├── reservation/   # Pengajuan dan pengelolaan reservasi
-│   │   │   ├── report/        # Pelaporan kerusakan dan resolusi
-│   │   │   └── blockage/      # Blokir fasilitas dan jenis blokir
-│   │   ├── config/            # Konfigurasi aplikasi
-│   │   ├── security/          # Autentikasi dan otorisasi
-│   │   └── shared/            # Komponen umum dan exception
+│   │   │   ├── user/           # Akun, peran, dan status pengguna
+│   │   │   ├── facility/       # Data fasilitas dan ketersediaan
+│   │   │   ├── reservation/    # Pengajuan dan pengelolaan reservasi
+│   │   │   ├── report/         # Pelaporan kerusakan dan resolusi
+│   │   │   ├── blockage/       # Blokir fasilitas dan jenis blokir
+│   │   │   └── administration  # Peran administrasi  
+│   │   ├── config/             # Konfigurasi aplikasi
+│   │   ├── security/           # Autentikasi dan otorisasi
+│   │   └── shared/             # Komponen umum dan exception
 │   └── resources/
-│       ├── db/migration/      # Migrasi skema basis data dengan Flyway
-│       └── application.yaml   # Konfigurasi aplikasi
-└── test/                      # Pengujian aplikasi
+│       ├── static/             # Resource statis
+│       ├── templates/          # Template Thymeleaf untuk SSR
+│       ├── db/migration/       # Migrasi skema basis data dengan Flyway
+│       └── application.yaml    # Konfigurasi aplikasi
+└── test/                       # Pengujian aplikasi
 ```
 
 Setiap folder pada `feature` dapat memiliki lapisan `model` dan `repository`, serta dapat dikembangkan dengan lapisan `controller` dan `service` sesuai kebutuhan fitur. Pemisahan ini menjaga agar aturan bisnis, akses data, dan komponen pendukung setiap fitur tetap terorganisir.
@@ -138,3 +156,14 @@ Pada Windows, gunakan:
 ```
 
 Konfigurasi koneksi basis data dapat ditambahkan atau disesuaikan pada `src/main/resources/application.yaml`. Flyway akan menjalankan migrasi skema secara berurutan saat aplikasi dimulai.
+
+### Membangun aset frontend
+
+Instal dependensi frontend satu kali dan bangun aset sebelum menjalankan aplikasi:
+
+```bash
+npm install
+npm run build
+```
+
+Perintah build menghasilkan CSS Tailwind di `src/main/resources/static/css/app.css` dan menyalin HTMX ke `src/main/resources/static/vendor/htmx.min.js`. Konvensi komponen dan pola HTMX didokumentasikan di `docs/UI_CONVENTIONS.md`.

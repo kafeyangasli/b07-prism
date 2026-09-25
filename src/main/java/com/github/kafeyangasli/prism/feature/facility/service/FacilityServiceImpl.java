@@ -58,7 +58,7 @@ public class FacilityServiceImpl implements FacilityService {
     @Transactional(readOnly = true)
     public List<Facility> getAvailableFacilities(LocalDateTime startAt, LocalDateTime endAt) {
         if (startAt == null || endAt == null || !startAt.isBefore(endAt)) {
-            throw new BusinessRuleException("Valid startAt and endAt interval is required for availability check.");
+            throw new BusinessRuleException("Waktu mulai dan selesai yang valid wajib diisi untuk memeriksa ketersediaan.");
         }
         return facilityRepository.findAvailableFacilities(
                 AdministrativeStatus.ACTIVE,
@@ -79,31 +79,31 @@ public class FacilityServiceImpl implements FacilityService {
     @Transactional(readOnly = true)
     public Facility getFacilityById(Long id) {
         return facilityRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Facility not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Fasilitas dengan ID " + id + " tidak ditemukan."));
     }
 
     @Override
     public Facility createFacility(Long adminId, FacilityDto dto) {
         validateAdmin(adminId);
         if (dto.getCode() == null || dto.getCode().isBlank()) {
-            throw new BusinessRuleException("Facility code is required.");
+            throw new BusinessRuleException("Kode fasilitas wajib diisi.");
         }
         if (dto.getName() == null || dto.getName().isBlank()) {
-            throw new BusinessRuleException("Facility name is required.");
+            throw new BusinessRuleException("Nama fasilitas wajib diisi.");
         }
         if (dto.getType() == null || dto.getType().isBlank()) {
-            throw new BusinessRuleException("Facility type is required.");
+            throw new BusinessRuleException("Tipe fasilitas wajib diisi.");
         }
         if (dto.getLocation() == null || dto.getLocation().isBlank()) {
-            throw new BusinessRuleException("Facility location is required.");
+            throw new BusinessRuleException("Lokasi fasilitas wajib diisi.");
         }
         if (dto.getCapacity() == null || dto.getCapacity() <= 0) {
-            throw new BusinessRuleException("Facility capacity must be positive.");
+            throw new BusinessRuleException("Kapasitas fasilitas harus lebih dari nol.");
         }
 
         String normalizedCode = dto.getCode().trim().toUpperCase(java.util.Locale.ROOT);
         if (facilityRepository.existsByCodeIgnoreCase(normalizedCode)) {
-            throw new BusinessRuleException("Facility code already exists.");
+            throw new BusinessRuleException("Kode fasilitas sudah digunakan.");
         }
 
         AdministrativeStatus status = dto.getAdministrativeStatus() != null ? dto.getAdministrativeStatus() : AdministrativeStatus.ACTIVE;
@@ -115,7 +115,7 @@ public class FacilityServiceImpl implements FacilityService {
     public Facility updateFacility(Long adminId, Long facilityId, FacilityDto dto) {
         validateAdmin(adminId);
         Facility facility = facilityRepository.findByIdForUpdate(facilityId)
-                .orElseThrow(() -> new ResourceNotFoundException("Facility not found with id: " + facilityId));
+                .orElseThrow(() -> new ResourceNotFoundException("Fasilitas dengan ID " + facilityId + " tidak ditemukan."));
 
         if (dto.getName() != null && !dto.getName().isBlank()) {
             facility.setName(dto.getName().trim());
@@ -128,7 +128,7 @@ public class FacilityServiceImpl implements FacilityService {
         }
         if (dto.getCapacity() != null) {
             if (dto.getCapacity() <= 0) {
-                throw new BusinessRuleException("Facility capacity must be positive.");
+                throw new BusinessRuleException("Kapasitas fasilitas harus lebih dari nol.");
             }
             facility.setCapacity(dto.getCapacity());
         }
@@ -143,10 +143,20 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
+    public Facility activateFacility(Long adminId, Long facilityId) {
+        validateAdmin(adminId);
+        Facility facility = facilityRepository.findByIdForUpdate(facilityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fasilitas dengan ID " + facilityId + " tidak ditemukan."));
+
+        facility.setAdministrativeStatus(AdministrativeStatus.ACTIVE);
+        return facilityRepository.save(facility);
+    }
+
+    @Override
     public Facility deactivateFacility(Long adminId, Long facilityId) {
         validateAdmin(adminId);
         Facility facility = facilityRepository.findByIdForUpdate(facilityId)
-                .orElseThrow(() -> new ResourceNotFoundException("Facility not found with id: " + facilityId));
+                .orElseThrow(() -> new ResourceNotFoundException("Fasilitas dengan ID " + facilityId + " tidak ditemukan."));
 
         facility.setAdministrativeStatus(AdministrativeStatus.INACTIVE);
         return facilityRepository.save(facility);
@@ -166,12 +176,12 @@ public class FacilityServiceImpl implements FacilityService {
 
     private void validateAdmin(Long adminId) {
         if (adminId == null) {
-            throw new BusinessRuleException("Admin ID is required.");
+            throw new BusinessRuleException("ID admin wajib tersedia.");
         }
         User admin = userRepository.findById(adminId)
-                .orElseThrow(() -> new ResourceNotFoundException("Admin not found with id: " + adminId));
+                .orElseThrow(() -> new ResourceNotFoundException("Admin dengan ID " + adminId + " tidak ditemukan."));
         if (admin.getRole() != Role.ADMIN) {
-            throw new BusinessRuleException("Only Admin can perform this action.");
+            throw new BusinessRuleException("Tindakan ini hanya dapat dilakukan oleh Admin.");
         }
     }
 }

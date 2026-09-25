@@ -1,121 +1,76 @@
-<!DOCTYPE html>
-<html lang="id"
-      xmlns:th="http://www.thymeleaf.org">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <title>
-        Riwayat Reservasi - PRISM
-    </title>
-
-</head>
-
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{fragments/layout :: layout('Reservasiku', 'reservations', ~{::main})}">
 <body>
-
-<h1>
-    Riwayat Reservasi
-</h1>
-
-
-<p
-    th:if="${success}"
-    th:text="${success}"
-    style="color: green">
-</p>
-
-
-<p
-    th:if="${error}"
-    th:text="${error}"
-    style="color: red">
-</p>
-
-
-<a th:href="@{/reservations/new}">
-    Ajukan reservasi baru
-</a>
-
-
-<table border="1">
-
-    <thead>
-
-    <tr>
-
-        <th>
-            Fasilitas
-        </th>
-
-        <th>
-            Mulai
-        </th>
-
-        <th>
-            Selesai
-        </th>
-
-        <th>
-            Status
-        </th>
-
-        <th>
-            Detail
-        </th>
-
-    </tr>
-
-    </thead>
-
-
-    <tbody>
-
-    <tr
-        th:each="reservation : ${reservations}">
-
-        <td
-            th:text="${reservation.facility.name}">
-        </td>
-
-        <td
-            th:text="${reservation.startAt}">
-        </td>
-
-        <td
-            th:text="${reservation.endAt}">
-        </td>
-
-        <td
-            th:text="${reservation.status}">
-        </td>
-
-        <td>
-
-            <a
-                th:href="@{/reservations/{id}(id=${reservation.id})}">
-
-                Lihat
-
+<main>
+    <div class="ui-page">
+        <header th:replace="~{fragments/page :: heading('Reservasi', 'Reservasiku', 'Pantau status pengajuan dan buka detail setiap reservasi.')}">
+        </header>
+        <div th:replace="~{fragments/feedback :: flash}">
+        </div>
+        <div class="ui-section-heading">
+            <h2>
+                Riwayat reservasi
+            </h2>
+            <a th:href="@{/reservations/new}" class="ui-btn ui-btn-primary">
+                Ajukan reservasi baru
             </a>
-
-        </td>
-
-    </tr>
-
-
-    <tr
-        th:if="${#lists.isEmpty(reservations)}">
-
-        <td colspan="5">
-            Belum ada reservasi.
-        </td>
-
-    </tr>
-
-    </tbody>
-
-</table>
-
+        </div>
+        <div class="ui-table-wrap">
+            <table class="ui-table">
+                <thead>
+                <tr>
+                    <th scope="col">
+                        Fasilitas
+                    </th>
+                    <th scope="col">
+                        Mulai
+                    </th>
+                    <th scope="col">
+                        Selesai
+                    </th>
+                    <th scope="col">
+                        Status
+                    </th>
+                    <th scope="col">
+                        Detail
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr
+                        th:each="reservation : ${reservations}">
+                    <td data-label="Fasilitas"
+                        th:text="${reservation.facility.name}">
+                    </td>
+                    <td data-label="Mulai"
+                        th:text="${reservation.startAt != null ? #temporals.format(reservation.startAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                    </td>
+                    <td data-label="Selesai"
+                        th:text="${reservation.endAt != null ? #temporals.format(reservation.endAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                    </td>
+                    <td data-label="Status"
+                    >
+                                    <span th:replace="~{fragments/status :: badge(${reservation.status})}">
+                                    </span>
+                    </td>
+                    <td data-label="Detail">
+                        <a class="ui-link"
+                           th:href="@{/reservations/{id}(id=${reservation.id})}">
+                            Lihat
+                        </a>
+                    </td>
+                </tr>
+                <tr
+                        th:if="${#lists.isEmpty(reservations)}">
+                    <td colspan="5">
+                        Belum ada reservasi.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
 </body>
 </html>

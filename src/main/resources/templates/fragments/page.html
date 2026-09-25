@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+<body>
+<header th:fragment="heading(eyebrow, title, description)" class="ui-page-header">
+    <div>
+        <p class="ui-eyebrow" th:text="${eyebrow}">
+        </p>
+        <h1 th:text="${title}">
+        </h1>
+        <p class="ui-description" th:text="${description}">
+        </p>
+    </div>
+</header>
+</body>
+</html>

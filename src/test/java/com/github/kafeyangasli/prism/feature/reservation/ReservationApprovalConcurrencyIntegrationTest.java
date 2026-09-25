@@ -134,7 +134,7 @@ class ReservationApprovalConcurrencyIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_PETUGAS"))));
         SecurityContextHolder.setContext(context);
         try {
-            service.approve(reservationId, actorId);
+            service.approve(reservationId, actorId, true);
             return true;
         } catch (RuntimeException exception) {
             return false;

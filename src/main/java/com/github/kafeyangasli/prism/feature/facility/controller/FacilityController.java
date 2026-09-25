@@ -1,7 +1,9 @@
 package com.github.kafeyangasli.prism.feature.facility.controller;
 
 import com.github.kafeyangasli.prism.feature.facility.service.FacilityService;
+import com.github.kafeyangasli.prism.feature.reservation.service.ReservationQueryService;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,12 +16,33 @@ import java.time.LocalDateTime;
 public class FacilityController {
 
     private final FacilityService facilityService;
+    private final ReservationQueryService reservationQueryService;
 
-    public FacilityController(FacilityService facilityService) {
+    public FacilityController(
+            FacilityService facilityService,
+            ReservationQueryService reservationQueryService
+    ) {
         this.facilityService = facilityService;
+        this.reservationQueryService = reservationQueryService;
     }
 
-    @GetMapping({"/", "/facilities"})
+    @GetMapping("/")
+    public String landingPage(Authentication authentication, Model model) {
+        if (authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_PETUGAS")
+                        || authority.getAuthority().equals("ROLE_ADMIN"))) {
+            return "redirect:/staff/dashboard";
+        }
+        if (authentication != null) {
+            model.addAttribute(
+                    "userDashboard",
+                    reservationQueryService.dashboard(authentication.getName())
+            );
+        }
+        return "home";
+    }
+
+    @GetMapping("/facilities")
     public String facilityCatalogue(@RequestParam(required = false) String type,
                                     @RequestParam(required = false) String location,
                                     @RequestParam(required = false) Integer capacity,

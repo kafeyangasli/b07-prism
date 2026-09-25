@@ -72,6 +72,9 @@ class UserServiceTest {
         // Deactivate user
         User deactivated = userService.deactivateUser(admin.getId(), verified.getId());
         assertEquals(AccountStatus.INACTIVE, deactivated.getAccountStatus());
+
+        User reactivated = userService.activateUser(admin.getId(), deactivated.getId());
+        assertEquals(AccountStatus.ACTIVE, reactivated.getAccountStatus());
     }
 
     @Test

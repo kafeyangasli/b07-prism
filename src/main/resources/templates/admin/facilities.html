@@ -1,73 +1,133 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Manajemen Fasilitas - PRISM Admin</title>
-</head>
-<body>
-    <h1>Manajemen Fasilitas (Admin)</h1>
-    <p><a th:href="@{/facilities}">Kembali ke Katalog</a> | <a th:href="@{/admin/users}">Manajemen Akun</a></p>
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+    th:replace="~{fragments/layout :: layout('Manajemen Fasilitas', 'admin-facilities', ~{::main})}">
+    <body>
+        <main>
+            <div class="ui-page">
+                <header class="ui-page-header">
+                    <div>
+                        <p class="ui-eyebrow">Administrasi</p>
+                        <h1>Manajemen Fasilitas</h1>
+                        <p class="ui-description">Kelola data dan status fasilitas yang tersedia di kampus.</p>
+                    </div>
+                    <button class="ui-btn ui-btn-primary" type="button" data-open-dialog="facility-dialog">
+                        <span aria-hidden="true">+</span> Tambah Fasilitas
+                    </button>
+                </header>
 
-    <div th:if="${successMessage}" th:text="${successMessage}" style="color: green;"></div>
-    <div th:if="${errorMessage}" th:text="${errorMessage}" style="color: red;"></div>
+                <th:block th:fragment="facility-creation-success">
+                    <div id="management-feedback" hx-swap-oob="outerHTML">
+                        <div th:if="${successMessage != null}" class="ui-alert ui-alert-success" role="status">
+                            <p th:text="${successMessage}">Fasilitas berhasil ditambahkan.</p>
+                            <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">Tutup</button>
+                        </div>
+                    </div>
+                </th:block>
 
-    <h3>Tambah Fasilitas Baru</h3>
-    <form th:action="@{/admin/facilities}" th:object="${facilityDto}" method="post">
-        <div>
-            <label>Kode: <input type="text" th:field="*{code}" required/></label>
-        </div>
-        <div>
-            <label>Nama: <input type="text" th:field="*{name}" required/></label>
-        </div>
-        <div>
-            <label>Tipe: <input type="text" th:field="*{type}" required/></label>
-        </div>
-        <div>
-            <label>Lokasi: <input type="text" th:field="*{location}" required/></label>
-        </div>
-        <div>
-            <label>Kapasitas: <input type="number" th:field="*{capacity}" min="1" required/></label>
-        </div>
-        <div>
-            <label>Deskripsi: <textarea th:field="*{description}"></textarea></label>
-        </div>
-        <div>
-            <button type="submit">Simpan Fasilitas</button>
-        </div>
-    </form>
+                <section id="facility-list" th:fragment="facility-list" class="ui-section" aria-live="polite">
+                    <div class="ui-section-heading">
+                        <div>
+                            <h2>Seluruh fasilitas</h2>
+                            <p class="ui-hint" th:text="${#lists.size(facilities) + ' fasilitas tercatat'}">0 fasilitas tercatat</p>
+                        </div>
+                    </div>
+                    <div class="ui-table-wrap">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Kode</th>
+                                    <th scope="col">Nama</th>
+                                    <th scope="col">Tipe</th>
+                                    <th scope="col">Lokasi</th>
+                                    <th scope="col">Kapasitas</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="f : ${facilities}">
+                                    <td class="align-middle" data-label="Kode" th:text="${f.code}"></td>
+                                    <td class="align-middle" data-label="Nama" th:text="${f.name}"></td>
+                                    <td class="align-middle" data-label="Tipe" th:text="${f.type}"></td>
+                                    <td class="align-middle" data-label="Lokasi" th:text="${f.location}"></td>
+                                    <td class="align-middle" data-label="Kapasitas" th:text="${f.capacity}"></td>
+                                    <td class="align-middle" data-label="Status"><span th:replace="~{fragments/status :: badge(${f.administrativeStatus})}"></span></td>
+                                    <td data-label="Aksi" class="ui-table-actions align-middle">
+                                        <form th:if="${f.administrativeStatus.name() == 'ACTIVE'}"
+                                            th:action="@{/admin/facilities/{id}/deactivate(id=${f.id})}" method="post">
+                                            <button class="ui-btn ui-btn-danger" type="submit">Nonaktifkan</button>
+                                        </form>
+                                        <form th:if="${f.administrativeStatus.name() != 'ACTIVE'}"
+                                              th:action="@{/admin/facilities/{id}/activate(id=${f.id})}" method="post">
+                                            <button class="ui-btn ui-btn-primary" type="submit">Aktifkan</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div th:if="${#lists.isEmpty(facilities)}" class="ui-empty-state">
+                        <h3>Belum ada fasilitas</h3>
+                        <p class="mt-2 text-sm">Gunakan tombol Tambah Fasilitas untuk membuat data pertama.</p>
+                    </div>
+                </section>
 
-    <hr/>
-
-    <h3>Daftar Seluruh Fasilitas</h3>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Kode</th>
-                <th>Nama</th>
-                <th>Tipe</th>
-                <th>Lokasi</th>
-                <th>Kapasitas</th>
-                <th>Status</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr th:each="f : ${facilities}">
-                <td th:text="${f.id}"></td>
-                <td th:text="${f.code}"></td>
-                <td th:text="${f.name}"></td>
-                <td th:text="${f.type}"></td>
-                <td th:text="${f.location}"></td>
-                <td th:text="${f.capacity}"></td>
-                <td th:text="${f.administrativeStatus}"></td>
-                <td>
-                    <form th:if="${f.administrativeStatus.name() == 'ACTIVE'}" th:action="@{/admin/facilities/{id}/deactivate(id=${f.id})}" method="post" style="display:inline;">
-                        <button type="submit">Nonaktifkan</button>
-                    </form>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-</body>
+                <div id="facility-modal-region" th:fragment="facility-modal">
+                    <dialog id="facility-dialog" class="ui-dialog" aria-labelledby="facility-dialog-title"
+                        th:attr="open=${openFacilityDialog == true ? 'open' : null}">
+                        <div class="ui-dialog-header">
+                            <div>
+                                <p class="ui-eyebrow">Fasilitas baru</p>
+                                <h2 id="facility-dialog-title">Tambah Fasilitas</h2>
+                                <p class="ui-hint">Lengkapi identitas, lokasi, dan kapasitas fasilitas.</p>
+                            </div>
+                            <button class="ui-btn ui-btn-ghost" type="button" data-close-dialog aria-label="Tutup dialog">×</button>
+                        </div>
+                        <form class="ui-form ui-form-grid" th:action="@{/admin/facilities}" th:object="${facilityDto}" method="post"
+                            hx-post="/admin/facilities" hx-target="#facility-modal-region" hx-swap="outerHTML" hx-indicator="#global-progress">
+                            <div class="md:col-span-full" th:replace="~{fragments/feedback :: formErrors}"></div>
+                            <div>
+                                <label class="ui-label" for="facility-code">Kode fasilitas</label>
+                                <input id="facility-code" class="ui-input" type="text" th:field="*{code}" th:errorclass="ui-input-error"
+                                    th:aria-invalid="${#fields.hasErrors('code')}" autocomplete="off" placeholder="Contoh: RK-101" autofocus required>
+                                <p class="ui-field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></p>
+                            </div>
+                            <div>
+                                <label class="ui-label" for="facility-name">Nama fasilitas</label>
+                                <input id="facility-name" class="ui-input" type="text" th:field="*{name}" th:errorclass="ui-input-error"
+                                    th:aria-invalid="${#fields.hasErrors('name')}" placeholder="Contoh: Ruang Kelas 101" required>
+                                <p class="ui-field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
+                            </div>
+                            <div>
+                                <label class="ui-label" for="facility-type">Tipe fasilitas</label>
+                                <input id="facility-type" class="ui-input" type="text" th:field="*{type}" th:errorclass="ui-input-error"
+                                    th:aria-invalid="${#fields.hasErrors('type')}" placeholder="Contoh: Ruang kelas" required>
+                                <p class="ui-field-error" th:if="${#fields.hasErrors('type')}" th:errors="*{type}"></p>
+                            </div>
+                            <div>
+                                <label class="ui-label" for="facility-location">Lokasi</label>
+                                <input id="facility-location" class="ui-input" type="text" th:field="*{location}" th:errorclass="ui-input-error"
+                                    th:aria-invalid="${#fields.hasErrors('location')}" placeholder="Contoh: Gedung A lantai 1" required>
+                                <p class="ui-field-error" th:if="${#fields.hasErrors('location')}" th:errors="*{location}"></p>
+                            </div>
+                            <div>
+                                <label class="ui-label" for="facility-capacity">Kapasitas</label>
+                                <input id="facility-capacity" class="ui-input" type="number" th:field="*{capacity}" th:errorclass="ui-input-error"
+                                    th:aria-invalid="${#fields.hasErrors('capacity')}" min="1" inputmode="numeric" placeholder="Contoh: 40" required>
+                                <p class="ui-field-error" th:if="${#fields.hasErrors('capacity')}" th:errors="*{capacity}"></p>
+                            </div>
+                            <div class="md:col-span-full">
+                                <label class="ui-label" for="facility-description">Deskripsi</label>
+                                <textarea id="facility-description" class="ui-input" th:field="*{description}" placeholder="Jelaskan fasilitas dan perlengkapan yang tersedia"></textarea>
+                            </div>
+                            <div class="ui-form-actions md:col-span-full">
+                                <button class="ui-btn ui-btn-secondary" type="button" data-close-dialog>Batal</button>
+                                <button class="ui-btn ui-btn-primary" type="submit">Simpan Fasilitas</button>
+                            </div>
+                        </form>
+                    </dialog>
+                </div>
+            </div>
+        </main>
+    </body>
 </html>

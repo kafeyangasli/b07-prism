@@ -21,6 +21,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
+import java.util.List;
 
 @Service
 public class ReservationProcessingService {
@@ -49,7 +50,7 @@ public class ReservationProcessingService {
 
     @Transactional
     @PreAuthorize("hasAnyRole('PETUGAS','ADMIN')")
-    public Reservation approve(long reservationId, long actorId) {
+    public Reservation approve(long reservationId, long actorId, boolean confirmCascade) {
         LocalDateTime now = LocalDateTime.now(clock);
 
         // This scalar projection intentionally avoids putting the Reservation entity in the
@@ -96,22 +97,30 @@ public class ReservationProcessingService {
             throw rule("ACTIVE_RESERVATION_LIMIT", "Pengguna telah memiliki tujuh reservasi aktif");
         }
 
+        List<Reservation> pendingConflicts = reservationRepository.findOverlapping(
+                        reservation.getFacility().getId(), reservation.getStartAt(), reservation.getEndAt(),
+                        EnumSet.of(ReservationStatus.PENDING))
+                .stream()
+                .filter(conflicting -> !conflicting.getId().equals(reservation.getId()))
+                .toList();
+        if (!pendingConflicts.isEmpty() && !confirmCascade) {
+            throw rule("CASCADE_CONFIRMATION_REQUIRED",
+                    "Konfirmasi diperlukan karena persetujuan ini akan menolak "
+                            + pendingConflicts.size() + " reservasi lain yang bertumpang tindih");
+        }
+
         reservation.setStatus(ReservationStatus.APPROVED);
         reservation.setProcessedBy(actor);
         reservation.setProcessedAt(now);
         reservation.setReasonCode(null);
         reservation.setReasonDetail(null);
 
-        for (Reservation conflicting : reservationRepository.findOverlapping(
-                reservation.getFacility().getId(), reservation.getStartAt(), reservation.getEndAt(),
-                EnumSet.of(ReservationStatus.PENDING))) {
-            if (!conflicting.getId().equals(reservation.getId())) {
-                conflicting.setStatus(ReservationStatus.REJECTED);
-                conflicting.setProcessedBy(actor);
-                conflicting.setProcessedAt(now);
-                conflicting.setReasonCode(ReservationReasonCode.SCHEDULE_CONFLICT);
-                conflicting.setReasonDetail("Ditolak otomatis karena reservasi lain pada slot yang sama disetujui");
-            }
+        for (Reservation conflicting : pendingConflicts) {
+            conflicting.setStatus(ReservationStatus.REJECTED);
+            conflicting.setProcessedBy(actor);
+            conflicting.setProcessedAt(now);
+            conflicting.setReasonCode(ReservationReasonCode.SCHEDULE_CONFLICT);
+            conflicting.setReasonDetail("Ditolak otomatis karena reservasi lain pada slot yang sama disetujui");
         }
         return reservation;
     }
@@ -119,6 +128,8 @@ public class ReservationProcessingService {
     @Transactional
     @PreAuthorize("hasAnyRole('PETUGAS','ADMIN')")
     public Reservation reject(long reservationId, long actorId, String reasonDetail) {
+        String normalizedReason = normalizeRequired(reasonDetail,
+                "REJECTION_REASON_REQUIRED", "Alasan penolakan wajib diisi");
         LocalDateTime now = LocalDateTime.now(clock);
         Reservation reservation = reservationRepository.findByIdForUpdate(reservationId)
                 .orElseThrow(() -> notFound(reservationId));
@@ -129,7 +140,7 @@ public class ReservationProcessingService {
         reservation.setProcessedBy(actor);
         reservation.setProcessedAt(now);
         reservation.setReasonCode(ReservationReasonCode.MANUAL_REJECTION);
-        reservation.setReasonDetail(normalizeOptional(reasonDetail));
+        reservation.setReasonDetail(normalizedReason);
         return reservation;
     }
 

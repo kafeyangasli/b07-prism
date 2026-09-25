@@ -1,28 +1,79 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Login - PRISM</title>
-</head>
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{fragments/layout :: layout('Login', 'minimal', ~{::main})}">
 <body>
-    <h1>Login PRISM</h1>
-    <div th:if="${param.error}" style="color: red;">Invalid username or password (atau akun belum aktif/ditolak).</div>
-    <div th:if="${param.logout}" style="color: green;">You have been logged out.</div>
-    <div th:if="${successMessage}" th:text="${successMessage}" style="color: green;"></div>
-    <div th:if="${errorMessage}" th:text="${errorMessage}" style="color: red;"></div>
-    
-    <form th:action="@{/login}" method="post">
-        <div>
-            <label>Email: <input type="email" name="username" required/></label>
+<main>
+    <div class="ui-page">
+        <div class="ui-auth">
+            <aside class="ui-auth-aside">
+                <a th:href="@{/}" aria-label="Beranda PRISM" class="inline-flex rounded-lg">
+                    <img th:src="@{/images/prism-dark.svg}" alt="PRISM" width="442" height="112" class="h-12 w-auto"/>
+                </a>
+                <div>
+                    <p class="mb-3 text-sm font-semibold uppercase tracking-widest">
+                        Fasilitas kampus
+                    </p>
+                    <h2 class="text-3xl leading-tight text-white">
+                        Ruang untuk setiap kegiatan.
+                    </h2>
+                    <p class="mt-4">
+                        Temukan fasilitas, rencanakan penggunaan, dan pantau reservasi dalam satu tempat.
+                    </p>
+                </div>
+                <div></div>
+            </aside>
+            <section class="ui-auth-content">
+                <div>
+                    <p class="ui-eyebrow">
+                        Akun PRISM
+                    </p>
+                    <h1 class="text-2xl sm:text-3xl">
+                        Selamat datang kembali
+                    </h1>
+                    <p class="ui-description text-sm">
+                        Masuk untuk mengelola reservasi dan aktivitas fasilitas Anda.
+                    </p>
+                </div>
+                <div th:replace="~{fragments/feedback :: flash}">
+                </div>
+                <div th:if="${param.error}" class="ui-alert ui-alert-error" role="alert">
+                    Email atau kata sandi tidak sesuai, atau akun belum aktif maupun telah ditolak.
+                </div>
+                <div th:if="${param.logout}" class="ui-alert ui-alert-success" role="status">
+                    Anda berhasil keluar.
+                </div>
+                <form class="ui-form" th:action="@{/login}" method="post">
+                    <div>
+                        <label class="ui-label">
+                            Email:
+                            <input class="ui-input" type="email" autocomplete="username" name="username" required/>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="ui-label">
+                            Kata sandi:
+                            <input class="ui-input" type="password" autocomplete="current-password" name="password"
+                                   required/>
+                        </label>
+                    </div>
+                    <div>
+                        <button class="ui-btn ui-btn-primary" type="submit">
+                            Masuk
+                        </button>
+                    </div>
+                </form>
+                <p class="text-sm text-muted">
+                    Belum punya akun?
+                    <a class="ui-link" th:href="@{/auth/register}">
+                        Daftar sekarang
+                    </a>
+                </p>
+                <a class="ui-link text-sm" th:href="@{/facilities}">
+                    Lihat katalog fasilitas
+                </a>
+            </section>
         </div>
-        <div>
-            <label>Password: <input type="password" name="password" required/></label>
-        </div>
-        <div>
-            <button type="submit">Login</button>
-        </div>
-    </form>
-    <p>Belum punya akun? <a th:href="@{/auth/register}">Registrasi Mandiri</a></p>
-    <p><a th:href="@{/facilities}">Lihat Katalog Fasilitas (Publik)</a></p>
+    </div>
+</main>
 </body>
 </html>

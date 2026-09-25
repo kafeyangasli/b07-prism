@@ -41,17 +41,17 @@ public class BlockageService {
     @Transactional(readOnly = true)
     public BlockageImpactPreviewResponse previewBlockageImpact(BlockageImpactPreviewRequest request) {
         if (request.getFacilityId() == null) {
-            throw new BusinessRuleException("Facility ID is required for impact preview");
+            throw new BusinessRuleException("Fasilitas wajib dipilih untuk melihat dampak blokir.");
         }
         if (request.getStartAt() == null) {
-            throw new BusinessRuleException("Start time is required for impact preview");
+            throw new BusinessRuleException("Waktu mulai wajib diisi untuk melihat dampak blokir.");
         }
         if (request.getPlannedEndAt() != null && !request.getStartAt().isBefore(request.getPlannedEndAt())) {
-            throw new BusinessRuleException("Facility blockage startAt must be before plannedEndAt");
+            throw new BusinessRuleException("Waktu mulai blokir harus lebih awal dari rencana waktu selesai.");
         }
 
         Facility facility = facilityRepository.findById(request.getFacilityId())
-                .orElseThrow(() -> new ResourceNotFoundException("Facility not found with id: " + request.getFacilityId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Fasilitas dengan ID " + request.getFacilityId() + " tidak ditemukan."));
 
         List<ReservationStatus> targetStatuses = List.of(ReservationStatus.APPROVED, ReservationStatus.PENDING);
 
@@ -84,24 +84,24 @@ public class BlockageService {
     @Transactional
     public FacilityBlockage createBlockage(CreateBlockageRequest request, Long creatorUserId) {
         if (request.getFacilityId() == null) {
-            throw new BusinessRuleException("Facility ID is required");
+            throw new BusinessRuleException("Fasilitas wajib dipilih.");
         }
         if (request.getBlockageTypeId() == null) {
-            throw new BusinessRuleException("Blockage type ID is required");
+            throw new BusinessRuleException("Jenis blokir wajib dipilih.");
         }
         if (request.getStartAt() == null) {
-            throw new BusinessRuleException("Start time is required");
+            throw new BusinessRuleException("Waktu mulai wajib diisi.");
         }
         if (request.getPublicReason() == null || request.getPublicReason().trim().isEmpty()) {
-            throw new BusinessRuleException("Public reason is required");
+            throw new BusinessRuleException("Alasan yang ditampilkan kepada publik wajib diisi.");
         }
         if (request.getPlannedEndAt() != null && !request.getStartAt().isBefore(request.getPlannedEndAt())) {
-            throw new BusinessRuleException("Facility blockage startAt must be before plannedEndAt");
+            throw new BusinessRuleException("Waktu mulai blokir harus lebih awal dari rencana waktu selesai.");
         }
 
         // 1. Acquire pessimistic write lock on the Facility row (FR-24 & Locking Strategy)
         Facility facility = facilityRepository.findByIdForUpdate(request.getFacilityId())
-                .orElseThrow(() -> new ResourceNotFoundException("Facility not found with id: " + request.getFacilityId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Fasilitas dengan ID " + request.getFacilityId() + " tidak ditemukan."));
 
         // 2. Validate blockage type (must exist and be active)
         BlockageType blockageType = blockageTypeService.validateAndGetActiveBlockageType(request.getBlockageTypeId());
@@ -110,17 +110,17 @@ public class BlockageService {
         Report report = null;
         if ("REPAIR".equalsIgnoreCase(blockageType.getCode())) {
             if (request.getReportId() == null) {
-                throw new BusinessRuleException("A repair blockage must reference a facility report");
+                throw new BusinessRuleException("Blokir perbaikan harus terhubung dengan laporan fasilitas.");
             }
             report = reportRepository.findById(request.getReportId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Report not found with id: " + request.getReportId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Laporan dengan ID " + request.getReportId() + " tidak ditemukan."));
             if (!report.getFacility().getId().equals(facility.getId())) {
-                throw new BusinessRuleException("Report facility does not match the blockage facility");
+                throw new BusinessRuleException("Fasilitas pada laporan tidak sesuai dengan fasilitas yang diblokir.");
             }
         }
 
         User creator = userRepository.findById(creatorUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Creator user not found with id: " + creatorUserId));
+                .orElseThrow(() -> new ResourceNotFoundException("Pengguna pembuat dengan ID " + creatorUserId + " tidak ditemukan."));
 
         LocalDateTime now = LocalDateTime.now();
         BlockageStatus initialStatus = request.getStartAt().isAfter(now) ? BlockageStatus.SCHEDULED : BlockageStatus.ACTIVE;
@@ -172,16 +172,12 @@ public class BlockageService {
 
     private String mapReasonCode(String typeCode) {
         if (typeCode == null) return "BLOCKAGE";
-        switch (typeCode.toUpperCase(java.util.Locale.ROOT)) {
-            case "REPAIR":
-                return "BLOCKAGE_REPAIR";
-            case "PLANNED_MAINTENANCE":
-                return "BLOCKAGE_PLANNED_MAINTENANCE";
-            case "FORCE_MAJEURE":
-                return "BLOCKAGE_FORCE_MAJEURE";
-            default:
-                return "BLOCKAGE_" + typeCode.toUpperCase(java.util.Locale.ROOT);
-        }
+        return switch (typeCode.toUpperCase(java.util.Locale.ROOT)) {
+            case "REPAIR" -> "BLOCKAGE_REPAIR";
+            case "PLANNED_MAINTENANCE" -> "BLOCKAGE_PLANNED_MAINTENANCE";
+            case "FORCE_MAJEURE" -> "BLOCKAGE_FORCE_MAJEURE";
+            default -> "BLOCKAGE_" + typeCode.toUpperCase(java.util.Locale.ROOT);
+        };
     }
 
     // Step 16 & 17 — FR-25 Blockage Lifecycle Reconciliation
@@ -217,21 +213,21 @@ public class BlockageService {
     @Transactional
     public FacilityBlockage updateOrExtendBlockage(Long blockageId, UpdateBlockageRequest request, Long actingUserId) {
         FacilityBlockage blockage = facilityBlockageRepository.findById(blockageId)
-                .orElseThrow(() -> new ResourceNotFoundException("Blockage not found with id: " + blockageId));
+                .orElseThrow(() -> new ResourceNotFoundException("Blokir fasilitas dengan ID " + blockageId + " tidak ditemukan."));
 
         if (blockage.getStatus() == BlockageStatus.COMPLETED || blockage.getStatus() == BlockageStatus.CANCELLED) {
-            throw new BusinessRuleException("Cannot update blockage in terminal state: " + blockage.getStatus());
+            throw new BusinessRuleException("Blokir yang telah selesai atau dibatalkan tidak dapat diperbarui.");
         }
 
         User actor = userRepository.findById(actingUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + actingUserId));
+                .orElseThrow(() -> new ResourceNotFoundException("Pengguna dengan ID " + actingUserId + " tidak ditemukan."));
 
         LocalDateTime now = LocalDateTime.now();
 
         // Handle extension if plannedEndAt is extended
         if (request.getPlannedEndAt() != null) {
             if (blockage.getStartAt().isAfter(request.getPlannedEndAt())) {
-                throw new BusinessRuleException("Facility blockage startAt must be before plannedEndAt");
+                throw new BusinessRuleException("Waktu mulai blokir harus lebih awal dari rencana waktu selesai.");
             }
 
             LocalDateTime extensionStart = blockage.getPlannedEndAt() != null ? blockage.getPlannedEndAt() : blockage.getStartAt();
@@ -268,18 +264,18 @@ public class BlockageService {
     @Transactional
     public FacilityBlockage earlyCompleteBlockage(Long blockageId, EarlyCompletionRequest request, Long actingUserId) {
         FacilityBlockage blockage = facilityBlockageRepository.findById(blockageId)
-                .orElseThrow(() -> new ResourceNotFoundException("Blockage not found with id: " + blockageId));
+                .orElseThrow(() -> new ResourceNotFoundException("Blokir fasilitas dengan ID " + blockageId + " tidak ditemukan."));
 
         if (blockage.getStatus() == BlockageStatus.COMPLETED || blockage.getStatus() == BlockageStatus.CANCELLED) {
-            throw new BusinessRuleException("Blockage is already in terminal state: " + blockage.getStatus());
+            throw new BusinessRuleException("Blokir fasilitas sudah selesai atau dibatalkan.");
         }
 
         if (request.getEarlyCompletionReason() == null || request.getEarlyCompletionReason().trim().isEmpty()) {
-            throw new BusinessRuleException("Early completion reason is required");
+            throw new BusinessRuleException("Alasan penyelesaian lebih awal wajib diisi.");
         }
 
         User endedBy = userRepository.findById(actingUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + actingUserId));
+                .orElseThrow(() -> new ResourceNotFoundException("Pengguna dengan ID " + actingUserId + " tidak ditemukan."));
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -309,7 +305,7 @@ public class BlockageService {
     @Transactional(readOnly = true)
     public FacilityBlockage getBlockageById(Long id) {
         return facilityBlockageRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Blockage not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Blokir fasilitas dengan ID " + id + " tidak ditemukan."));
     }
 
     @Transactional(readOnly = true)

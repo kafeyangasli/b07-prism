@@ -22,4 +22,16 @@ public class StaffDashboardController {
         model.addAttribute("dashboard", dashboardService.load(sort));
         return "staff/dashboard";
     }
+
+    @GetMapping("/staff/reservations")
+    public String reservations(@RequestParam(defaultValue = "created") String sort, Model model) {
+        model.addAttribute("dashboard", dashboardService.load(sort));
+        return "staff/reservations";
+    }
+
+    @GetMapping("/staff/reports")
+    public String reports(Model model) {
+        model.addAttribute("dashboard", dashboardService.load("created"));
+        return "staff/reports";
+    }
 }

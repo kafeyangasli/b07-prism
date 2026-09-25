@@ -1,27 +1,85 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Registrasi Akun - PRISM</title>
-</head>
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{fragments/layout :: layout('Daftar', 'minimal', ~{::main})}">
 <body>
-    <h1>Registrasi Mandiri Pengguna</h1>
-    <div th:if="${errorMessage}" th:text="${errorMessage}" style="color: red;"></div>
-
-    <form th:action="@{/auth/register}" th:object="${registrationDto}" method="post">
-        <div>
-            <label>Nama Lengkap: <input type="text" th:field="*{name}" required/></label>
+<main>
+    <div class="ui-page">
+        <div class="ui-auth">
+            <aside class="ui-auth-aside">
+                <a th:href="@{/}" aria-label="Beranda PRISM" class="inline-flex rounded-lg">
+                    <img th:src="@{/images/prism-dark.svg}" alt="PRISM" width="442" height="112" class="h-12 w-auto"/>
+                </a>
+                <div>
+                    <p class="mb-3 text-sm font-semibold uppercase tracking-widest">
+                        Fasilitas kampus
+                    </p>
+                    <h2 class="text-3xl leading-tight text-white">
+                        Ruang untuk setiap kegiatan.
+                    </h2>
+                    <p class="mt-4">
+                        Temukan fasilitas, rencanakan penggunaan, dan pantau reservasi dalam satu tempat.
+                    </p>
+                </div>
+                <div></div>
+            </aside>
+            <section class="ui-auth-content">
+                <div>
+                    <p class="ui-eyebrow">
+                        Akun PRISM
+                    </p>
+                    <h1 class="text-2xl sm:text-3xl">
+                        Buat akun PRISM
+                    </h1>
+                    <p class="ui-description text-sm">
+                        Daftarkan akun untuk mulai mengajukan reservasi fasilitas kampus.
+                    </p>
+                </div>
+                <div th:replace="~{fragments/feedback :: flash}">
+                </div>
+                <p class="ui-alert ui-alert-info">
+                    Akun baru akan diverifikasi oleh admin sebelum dapat digunakan.
+                </p>
+                <form class="ui-form" th:action="@{/auth/register}" th:object="${registrationDto}" method="post">
+                    <div class="md:col-span-full" th:replace="~{fragments/feedback :: formErrors}">
+                    </div>
+                    <div>
+                        <label class="ui-label">
+                            Nama lengkap:
+                            <input class="ui-input" type="text" th:field="*{name}" th:errorclass="ui-input-error"
+                                   th:aria-invalid="${#fields.hasErrors('name')}" required/>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="ui-label">
+                            Email:
+                            <input class="ui-input" type="email" autocomplete="username" th:field="*{email}"
+                                   th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('email')}"
+                                   required/>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="ui-label">
+                            Kata sandi:
+                            <input class="ui-input" type="password" autocomplete="new-password" th:field="*{password}"
+                                   th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('password')}"
+                                   required/>
+                        </label>
+                    </div>
+                    <div>
+                        <button class="ui-btn ui-btn-primary" type="submit">
+                            Daftar
+                        </button>
+                    </div>
+                </form>
+                <p class="text-sm text-muted">
+                    Sudah punya akun?
+                    <a class="ui-link" th:href="@{/login}">
+                        Masuk
+                    </a>
+                </p>
+            </section>
         </div>
-        <div>
-            <label>Email: <input type="email" th:field="*{email}" required/></label>
-        </div>
-        <div>
-            <label>Password: <input type="password" th:field="*{password}" required/></label>
-        </div>
-        <div>
-            <button type="submit">Daftar</button>
-        </div>
-    </form>
-    <p>Sudah punya akun? <a th:href="@{/login}">Login</a></p>
+    </div>
+</main>
 </body>
 </html>

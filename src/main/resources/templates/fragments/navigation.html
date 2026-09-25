@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<header th:fragment="publicNavbar(activeNav)" class="border-t-4 border-t-prism-600 border-b border-border bg-surface">
+    <div class="ui-container flex min-h-20 items-center justify-between gap-4 py-3">
+        <a th:href="@{/}" class="rounded-lg" aria-label="Beranda PRISM">
+            <img th:src="@{/images/prism-light.svg}" alt="PRISM" width="412" height="112" class="h-8 w-auto sm:h-10">
+        </a>
+        <nav aria-label="Navigasi publik" class="flex items-center gap-2">
+            <a th:href="@{/facilities}" class="ui-nav-link"
+               th:classappend="${activeNav == 'facilities'} ? ' ui-nav-link-active'"
+               th:aria-current="${activeNav == 'facilities'} ? 'page' : null">Fasilitas</a>
+            <a sec:authorize="!isAuthenticated()" th:href="@{/login}" class="ui-btn ui-btn-secondary">Masuk</a>
+            <a sec:authorize="!isAuthenticated()" th:href="@{/auth/register}"
+               class="ui-btn ui-btn-primary hidden sm:inline-flex">Daftar</a>
+        </nav>
+    </div>
+</header>
+
+<aside th:fragment="sidebar(activeNav)" id="dashboard-sidebar" class="ui-dashboard-sidebar"
+       aria-label="Navigasi dasbor">
+    <div class="ui-sidebar-brand">
+        <a th:href="@{/}" class="rounded-lg" aria-label="Beranda PRISM">
+            <img th:src="@{/images/prism-dark.svg}" alt="PRISM" width="412" height="112" class="h-9 w-auto">
+        </a>
+        <button type="button" class="ui-btn ui-btn-ghost lg:hidden" data-close-drawer aria-label="Tutup navigasi">×
+        </button>
+    </div>
+    <nav class="ui-sidebar-nav" aria-label="Navigasi utama">
+        <a sec:authorize="hasRole('PENGGUNA')" th:href="@{/}" class="ui-sidebar-link" data-dashboard-link
+           data-nav-key="overview"
+           hx-get="/" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
+           hx-push-url="true" hx-indicator="#global-progress"
+           th:classappend="${activeNav == 'minimal'} ? ' ui-sidebar-link-active'"
+           th:aria-current="${activeNav == 'minimal'} ? 'page' : null">Dashboard</a>
+        <a sec:authorize="hasAnyRole('PETUGAS','ADMIN')" th:href="@{/staff/dashboard}" class="ui-sidebar-link"
+           data-dashboard-link data-nav-key="dashboard"
+           hx-get="/staff/dashboard" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
+           hx-push-url="true" hx-indicator="#global-progress"
+           th:classappend="${activeNav == 'dashboard'} ? ' ui-sidebar-link-active'"
+           th:aria-current="${activeNav == 'dashboard'} ? 'page' : null">Dashboard</a>
+        <a th:href="@{/facilities}" class="ui-sidebar-link" data-dashboard-link data-nav-key="facilities"
+           hx-get="/facilities" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
+           hx-push-url="true" hx-indicator="#global-progress"
+           th:classappend="${activeNav == 'facilities'} ? ' ui-sidebar-link-active'"
+           th:aria-current="${activeNav == 'facilities'} ? 'page' : null">Fasilitas</a>
+        <a sec:authorize="hasRole('PENGGUNA')" th:href="@{/reservations}" class="ui-sidebar-link" data-dashboard-link
+           data-nav-key="reservations"
+           hx-get="/reservations" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
+           hx-push-url="true" hx-indicator="#global-progress"
+           th:classappend="${activeNav == 'reservations'} ? ' ui-sidebar-link-active'"
+           th:aria-current="${activeNav == 'reservations'} ? 'page' : null">Reservasi Saya</a>
+        <span sec:authorize="hasRole('PENGGUNA')" class="ui-sidebar-link ui-sidebar-link-disabled" aria-disabled="true">Laporan Saya <small>Segera</small></span>
+
+        <div sec:authorize="hasAnyRole('PETUGAS','ADMIN')" class="ui-sidebar-group">
+            <p>Operasional</p>
+            <a th:href="@{/staff/reservations}" class="ui-sidebar-link" data-dashboard-link
+               data-nav-key="staff-reservations"
+               hx-get="/staff/reservations" hx-target="#dashboard-content" hx-select="#dashboard-content"
+               hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
+               th:classappend="${activeNav == 'staff-reservations'} ? ' ui-sidebar-link-active'"
+               th:aria-current="${activeNav == 'staff-reservations'} ? 'page' : null">Reservasi</a>
+            <a th:href="@{/staff/reports}" class="ui-sidebar-link" data-dashboard-link
+               data-nav-key="staff-reports"
+               hx-get="/staff/reports" hx-target="#dashboard-content" hx-select="#dashboard-content"
+               hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
+               th:classappend="${activeNav == 'staff-reports'} ? ' ui-sidebar-link-active'"
+               th:aria-current="${activeNav == 'staff-reports'} ? 'page' : null">Laporan</a>
+            <span class="ui-sidebar-link ui-sidebar-link-disabled"
+                  aria-disabled="true">Blokir <small>Segera</small></span>
+        </div>
+
+        <div sec:authorize="hasRole('ADMIN')" class="ui-sidebar-group">
+            <p>Administrasi</p>
+            <a th:href="@{/admin/users}" class="ui-sidebar-link" data-dashboard-link data-nav-key="users"
+               hx-get="/admin/users" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
+               hx-push-url="true" hx-indicator="#global-progress"
+               th:classappend="${activeNav == 'users'} ? ' ui-sidebar-link-active'"
+               th:aria-current="${activeNav == 'users'} ? 'page' : null">Pengguna</a>
+            <a th:href="@{/admin/facilities}" class="ui-sidebar-link" data-dashboard-link
+               data-nav-key="admin-facilities"
+               hx-get="/admin/facilities" hx-target="#dashboard-content" hx-select="#dashboard-content"
+               hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
+               th:classappend="${activeNav == 'admin-facilities'} ? ' ui-sidebar-link-active'"
+               th:aria-current="${activeNav == 'admin-facilities'} ? 'page' : null">Kelola Fasilitas</a>
+            <span class="ui-sidebar-link ui-sidebar-link-disabled"
+                  aria-disabled="true">Jenis Fasilitas <small>Segera</small></span>
+            <span class="ui-sidebar-link ui-sidebar-link-disabled"
+                  aria-disabled="true">Jenis Blokir <small>Segera</small></span>
+            <a th:href="@{/admin/recap}" class="ui-sidebar-link" data-dashboard-link data-nav-key="recap"
+               hx-get="/admin/recap" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
+               hx-push-url="true" hx-indicator="#global-progress"
+               th:classappend="${activeNav == 'recap'} ? ' ui-sidebar-link-active'"
+               th:aria-current="${activeNav == 'recap'} ? 'page' : null">Rekap / Laporan</a>
+        </div>
+    </nav>
+    <div class="ui-sidebar-account">
+        <div class="min-w-0"><p class="truncate text-sm font-semibold" sec:authentication="name">nama@kampus.ac.id</p>
+            <p class="text-xs text-prism-200">Akun aktif</p></div>
+        <span class="ui-sidebar-link ui-sidebar-link-disabled" aria-disabled="true">Akun <small>Segera</small></span>
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="ui-sidebar-link w-full bg-rose-900 text-rose-100 hover:bg-rose-800 transition-colors">Keluar</button>
+        </form>
+    </div>
+</aside>
+</body>
+</html>

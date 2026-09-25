@@ -1,62 +1,187 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Detail Fasilitas - PRISM</title>
-</head>
-<body>
-    <h1 th:text="${facility.name}">Nama Fasilitas</h1>
-    <p><strong>Kode:</strong> <span th:text="${facility.code}"></span></p>
-    <p><strong>Tipe:</strong> <span th:text="${facility.type}"></span></p>
-    <p><strong>Lokasi:</strong> <span th:text="${facility.location}"></span></p>
-    <p><strong>Kapasitas:</strong> <span th:text="${facility.capacity}"></span></p>
-    <p><strong>Deskripsi:</strong> <span th:text="${facility.description}"></span></p>
-    <p><strong>Status:</strong> <span th:text="${facility.administrativeStatus}"></span></p>
-
-    <h3>Jadwal Dipesan (Approved Reservations)</h3>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Mulai</th>
-                <th>Selesai</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr th:each="r : ${approvedReservations}">
-                <td th:text="${r.startAt}"></td>
-                <td th:text="${r.endAt}"></td>
-                <td th:text="${r.status}"></td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(approvedReservations)}">
-                <td colspan="3">Tidak ada reservasi disetujui.</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <h3>Jadwal Blokir Fasilitas (Blockages)</h3>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Mulai</th>
-                <th>Rencana Selesai</th>
-                <th>Status</th>
-                <th>Alasan Publik</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr th:each="b : ${blockages}">
-                <td th:text="${b.startAt}"></td>
-                <td th:text="${b.plannedEndAt}"></td>
-                <td th:text="${b.status}"></td>
-                <td th:text="${b.publicReason}"></td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(blockages)}">
-                <td colspan="4">Tidak ada blokir fasilitas.</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <p><a th:href="@{/facilities}">Kembali ke Katalog</a></p>
-</body>
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+    th:replace="~{fragments/layout :: layout('Detail fasilitas', 'facilities', ~{::main})}">
+    <body>
+        <main>
+            <div class="ui-page">
+                <header class="ui-page-header">
+                    <div>
+                        <a class="ui-link text-sm" th:href="@{/facilities}">
+                            ← Katalog fasilitas
+                        </a>
+                        <h1 class="mt-4" th:text="${facility.name}">
+                            Nama fasilitas
+                        </h1>
+                        <p class="ui-description">
+                            Informasi fasilitas dan jadwal penggunaan yang telah dikonfirmasi.
+                        </p>
+                    </div>
+                    <a sec:authorize="hasRole('PENGGUNA')"
+                        th:href="@{/reservations/new(facilityId=${facility.id})}"
+                        th:attr="hx-get=@{/reservations/new(facilityId=${facility.id})}"
+                        hx-target="#reservation-modal-region"
+                        hx-swap="outerHTML"
+                        hx-indicator="#global-progress"
+                        class="ui-btn ui-btn-primary">
+                        Ajukan reservasi
+                    </a>
+                    <a sec:authorize="!isAuthenticated()" th:href="@{/login}" class="ui-btn ui-btn-primary">
+                        Masuk untuk reservasi
+                    </a>
+                </header>
+                <section class="ui-card ui-card-body">
+                    <dl class="ui-details">
+                        <div>
+                            <dt>
+                                Kode
+                            </dt>
+                            <dd>
+                                <span th:text="${facility.code}">
+                                </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>
+                                Tipe
+                            </dt>
+                            <dd>
+                                <span th:text="${facility.type}">
+                                </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>
+                                Lokasi
+                            </dt>
+                            <dd>
+                                <span th:text="${facility.location}">
+                                </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>
+                                Kapasitas
+                            </dt>
+                            <dd>
+                                <span th:text="${facility.capacity}">
+                                </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>
+                                Deskripsi
+                            </dt>
+                            <dd>
+                                <span th:text="${facility.description}">
+                                </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>
+                                Status
+                            </dt>
+                            <dd>
+                                <span th:replace="~{fragments/status :: badge(${facility.administrativeStatus})}">
+                                </span>
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+                <section class="ui-section">
+                    <div>
+                        <h2>
+                            Jadwal reservasi disetujui
+                        </h2>
+                        <p class="ui-hint">
+                            Periksa jadwal ini sebelum merencanakan penggunaan.
+                        </p>
+                    </div>
+                    <div class="ui-table-wrap">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">
+                                        Mulai
+                                    </th>
+                                    <th scope="col">
+                                        Selesai
+                                    </th>
+                                    <th scope="col">
+                                        Status
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="r : ${approvedReservations}">
+                                    <td data-label="Mulai" th:text="${r.startAt != null ? #temporals.format(r.startAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                                    </td>
+                                    <td data-label="Selesai" th:text="${r.endAt != null ? #temporals.format(r.endAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                                    </td>
+                                    <td data-label="Status" >
+                                        <span th:replace="~{fragments/status :: badge(${r.status})}">
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(approvedReservations)}">
+                                    <td colspan="3">
+                                        Tidak ada reservasi disetujui.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <section class="ui-section">
+                    <div>
+                        <h2>
+                            Jadwal blokir fasilitas
+                        </h2>
+                        <p class="ui-hint">
+                            Rentang waktu fasilitas tidak dapat digunakan.
+                        </p>
+                    </div>
+                    <div class="ui-table-wrap">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">
+                                        Mulai
+                                    </th>
+                                    <th scope="col">
+                                        Rencana Selesai
+                                    </th>
+                                    <th scope="col">
+                                        Status
+                                    </th>
+                                    <th scope="col">
+                                        Alasan Publik
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="b : ${blockages}">
+                                    <td data-label="Mulai" th:text="${b.startAt != null ? #temporals.format(b.startAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                                    </td>
+                                    <td data-label="Rencana Selesai" th:text="${b.plannedEndAt != null ? #temporals.format(b.plannedEndAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                                    </td>
+                                    <td data-label="Status" >
+                                        <span th:replace="~{fragments/status :: badge(${b.status})}">
+                                        </span>
+                                    </td>
+                                    <td data-label="Alasan Publik" th:text="${b.publicReason}">
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(blockages)}">
+                                    <td colspan="4">
+                                        Tidak ada blokir fasilitas.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <div id="reservation-modal-region"></div>
+            </div>
+        </main>
+    </body>
 </html>

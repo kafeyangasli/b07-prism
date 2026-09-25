@@ -43,6 +43,7 @@ public class ReservationSubmissionService {
     private final FacilityRepository facilityRepository;
     private final UserRepository userRepository;
     private final ProposalStorageService proposalStorageService;
+    private final ReservationAvailabilityService availabilityService;
     private final Clock clock;
 
     public ReservationSubmissionService(
@@ -50,12 +51,14 @@ public class ReservationSubmissionService {
             FacilityRepository facilityRepository,
             UserRepository userRepository,
             ProposalStorageService proposalStorageService,
+            ReservationAvailabilityService availabilityService,
             Clock clock
     ) {
         this.reservationRepository = reservationRepository;
         this.facilityRepository = facilityRepository;
         this.userRepository = userRepository;
         this.proposalStorageService = proposalStorageService;
+        this.availabilityService = availabilityService;
         this.clock = clock;
     }
 
@@ -137,6 +140,18 @@ public class ReservationSubmissionService {
         );
 
         String purpose = normalizePurpose(form.getPurpose());
+
+        /*
+         * Availability shown in the browser is advisory. Re-check immediately
+         * before accepting the request so stale forms cannot reserve an
+         * approved or blocked interval. Pending requests intentionally do not
+         * participate in this check.
+         */
+        availabilityService.ensureIntervalAvailable(
+                facility.getId(),
+                startAt,
+                endAt
+        );
 
         /*
          * FR-10

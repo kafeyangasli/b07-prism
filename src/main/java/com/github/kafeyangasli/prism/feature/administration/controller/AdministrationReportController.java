@@ -34,9 +34,11 @@ public class AdministrationReportController {
     private final ReportExportService exportService;
     private final Clock clock;
 
-    public AdministrationReportController(AdministrationReportService reportService,
-                                          ReportExportService exportService,
-                                          Clock clock) {
+    public AdministrationReportController(
+            AdministrationReportService reportService,
+            ReportExportService exportService,
+            Clock clock
+    ) {
         this.reportService = reportService;
         this.exportService = exportService;
         this.clock = clock;

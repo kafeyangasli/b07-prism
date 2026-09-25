@@ -14,6 +14,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -30,10 +31,13 @@ public class ReservationProcessingController {
     }
 
     @PostMapping("/staff/reservations/{id}/approve")
-    public String approve(@PathVariable long id, Authentication authentication,
+    public String approve(@PathVariable long id,
+                          @RequestParam(defaultValue = "false") boolean confirmCascade,
+                          Authentication authentication,
                           RedirectAttributes redirect) {
         return execute(redirect, () -> processingService.approve(id,
-                actorResolver.resolveId(authentication.getName())), "Reservasi berhasil disetujui");
+                actorResolver.resolveId(authentication.getName()), confirmCascade),
+                "Reservasi berhasil disetujui");
     }
 
     @PostMapping("/staff/reservations/{id}/reject")
@@ -44,7 +48,7 @@ public class ReservationProcessingController {
                          RedirectAttributes redirect) {
         if (bindingResult.hasErrors()) {
             redirect.addFlashAttribute("error", bindingResult.getAllErrors().get(0).getDefaultMessage());
-            return "redirect:/staff/dashboard";
+            return "redirect:/staff/reservations";
         }
         return execute(redirect, () -> processingService.reject(id,
                 actorResolver.resolveId(authentication.getName()), form.reasonDetail()),
@@ -59,7 +63,7 @@ public class ReservationProcessingController {
                          RedirectAttributes redirect) {
         if (bindingResult.hasErrors()) {
             redirect.addFlashAttribute("error", bindingResult.getAllErrors().get(0).getDefaultMessage());
-            return "redirect:/staff/dashboard";
+            return "redirect:/staff/reservations";
         }
         return execute(redirect, () -> processingService.cancelApproved(id,
                 actorResolver.resolveId(authentication.getName()), form.reason()),
@@ -73,6 +77,6 @@ public class ReservationProcessingController {
         } catch (BusinessRuleException | ResourceNotFoundException exception) {
             redirect.addFlashAttribute("error", exception.getMessage());
         }
-        return "redirect:/staff/dashboard";
+        return "redirect:/staff/reservations";
     }
 }

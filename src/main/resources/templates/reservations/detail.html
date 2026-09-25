@@ -1,151 +1,100 @@
-<!DOCTYPE html>
-<html lang="id"
-      xmlns:th="http://www.thymeleaf.org">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <title>
-        Detail Reservasi - PRISM
-    </title>
-
-</head>
-
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{fragments/layout :: layout('Reservasi', 'reservations', ~{::main})}">
 <body>
-
-<h1>
-    Detail Reservasi
-</h1>
-
-
-<p
-    th:if="${success}"
-    th:text="${success}"
-    style="color: green">
-</p>
-
-
-<p
-    th:if="${error}"
-    th:text="${error}"
-    style="color: red">
-</p>
-
-
-<dl>
-
-    <dt>
-        Fasilitas
-    </dt>
-
-    <dd
-        th:text="${reservation.facility.name}">
-    </dd>
-
-
-    <dt>
-        Lokasi
-    </dt>
-
-    <dd
-        th:text="${reservation.facility.location}">
-    </dd>
-
-
-    <dt>
-        Mulai
-    </dt>
-
-    <dd
-        th:text="${reservation.startAt}">
-    </dd>
-
-
-    <dt>
-        Selesai
-    </dt>
-
-    <dd
-        th:text="${reservation.endAt}">
-    </dd>
-
-
-    <dt>
-        Tujuan
-    </dt>
-
-    <dd
-        th:text="${reservation.purpose}">
-    </dd>
-
-
-    <dt>
-        Status
-    </dt>
-
-    <dd
-        th:text="${reservation.status}">
-    </dd>
-
-
-    <dt>
-        Alasan
-    </dt>
-
-    <dd
-        th:text="${reservation.reasonDetail != null
-            ? reservation.reasonDetail
-            : '-'}">
-    </dd>
-
-
-    <dt>
-        Batas PENDING
-    </dt>
-
-    <dd
-        th:text="${reservation.expiresAt != null
-            ? reservation.expiresAt
-            : '-'}">
-    </dd>
-
-</dl>
-
-
-<!-- Proposal -->
-
-<p
-    th:if="${reservation.proposalPath != null}">
-
-    <a
-        th:href="@{/reservations/{id}/proposal(id=${reservation.id})}">
-
-        Download proposal
-
-    </a>
-
-</p>
-
-
-<!-- Cancel -->
-
-<form
-    th:if="${reservation.status.name() == 'PENDING'
-        or reservation.status.name() == 'APPROVED'}"
-    th:action="@{/reservations/{id}/cancel(id=${reservation.id})}"
-    method="post">
-
-    <button type="submit">
-        Batalkan reservasi
-    </button>
-
-</form>
-
-
-<a th:href="@{/reservations}">
-    Kembali ke riwayat
-</a>
-
+<main>
+    <div class="ui-page">
+        <header th:replace="~{fragments/page :: heading('Reservasi', 'Detail Reservasi', 'Tinjau jadwal, status, dan dokumen pengajuan Anda.')}">
+        </header>
+        <div th:replace="~{fragments/feedback :: flash}">
+        </div>
+        <section class="ui-card ui-card-body">
+            <dl class="ui-details">
+                <div>
+                    <dt>
+                        Fasilitas
+                    </dt>
+                    <dd th:text="${reservation.facility.name}">
+                    </dd>
+                </div>
+                <div>
+                    <dt>
+                        Lokasi
+                    </dt>
+                    <dd th:text="${reservation.facility.location}">
+                    </dd>
+                </div>
+                <div>
+                    <dt>
+                        Mulai
+                    </dt>
+                    <dd th:text="${reservation.startAt != null ? #temporals.format(reservation.startAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                    </dd>
+                </div>
+                <div>
+                    <dt>
+                        Selesai
+                    </dt>
+                    <dd th:text="${reservation.endAt != null ? #temporals.format(reservation.endAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                    </dd>
+                </div>
+                <div>
+                    <dt>
+                        Tujuan
+                    </dt>
+                    <dd th:text="${reservation.purpose}">
+                    </dd>
+                </div>
+                <div>
+                    <dt>
+                        Status
+                    </dt>
+                    <dd>
+                                <span th:replace="~{fragments/status :: badge(${reservation.status})}">
+                                </span>
+                    </dd>
+                </div>
+                <div>
+                    <dt>
+                        Alasan
+                    </dt>
+                    <dd th:text="${reservation.reasonDetail != null
+                                ? reservation.reasonDetail
+                                : '-'}">
+                    </dd>
+                </div>
+                <div>
+                    <dt>
+                        Batas waktu menunggu
+                    </dt>
+                    <dd th:text="${reservation.expiresAt != null
+                                ? #temporals.format(reservation.expiresAt, 'dd MMM yyyy, HH:mm')
+                                : '-'}">
+                    </dd>
+                </div>
+            </dl>
+            <div class="mt-6" th:if="${reservation.proposalPath != null}">
+                <a class="ui-btn ui-btn-secondary"
+                   th:href="@{/reservations/{id}/proposal(id=${reservation.id})}">
+                    Unduh proposal
+                </a>
+            </div>
+        </section>
+        <div class="ui-form-actions">
+            <a class="ui-btn ui-btn-neutral" th:href="@{/reservations}">
+                Kembali ke riwayat
+            </a>
+            <form class="ui-form"
+                  th:if="${reservation.status.name() == 'PENDING'
+                        or reservation.status.name() == 'APPROVED'}"
+                  th:action="@{/reservations/{id}/cancel(id=${reservation.id})}"
+                  method="post">
+                <button class="ui-btn ui-btn-danger" type="submit">
+                    Batalkan reservasi
+                </button>
+            </form>
+        </div>
+    </div>
+</main>
 </body>
 </html>

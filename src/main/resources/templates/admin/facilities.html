@@ -48,11 +48,34 @@
                                 <tr th:each="f : ${facilities}">
                                     <td class="align-middle" data-label="Kode" th:text="${f.code}"></td>
                                     <td class="align-middle" data-label="Nama" th:text="${f.name}"></td>
-                                    <td class="align-middle" data-label="Tipe" th:text="${f.type}"></td>
+                                    <td class="align-middle" data-label="Tipe" th:text="${f.facilityType.name}"></td>
                                     <td class="align-middle" data-label="Lokasi" th:text="${f.location}"></td>
                                     <td class="align-middle" data-label="Kapasitas" th:text="${f.capacity}"></td>
                                     <td class="align-middle" data-label="Status"><span th:replace="~{fragments/status :: badge(${f.administrativeStatus})}"></span></td>
                                     <td data-label="Aksi" class="ui-table-actions align-middle">
+                                        <details>
+                                            <summary class="ui-btn ui-btn-secondary">Ubah</summary>
+                                            <form class="ui-form mt-3" th:action="@{/admin/facilities/{id}/update(id=${f.id})}" method="post">
+                                                <input type="hidden" name="code" th:value="${f.code}">
+                                                <label class="ui-label" th:for="${'edit-name-' + f.id}">Nama</label>
+                                                <input class="ui-input" th:id="${'edit-name-' + f.id}" name="name" th:value="${f.name}" required>
+                                                <label class="ui-label" th:for="${'edit-type-' + f.id}">Tipe</label>
+                                                <select class="ui-input" th:id="${'edit-type-' + f.id}" name="facilityTypeId" required>
+                                                    <option th:if="${!f.facilityType.active}" th:value="${f.facilityType.id}"
+                                                            th:text="${f.facilityType.name + ' (tidak aktif)'}" selected></option>
+                                                    <option th:each="type : ${facilityTypes}" th:value="${type.id}" th:text="${type.name}"
+                                                            th:selected="${type.id == f.facilityType.id}"></option>
+                                                </select>
+                                                <label class="ui-label" th:for="${'edit-location-' + f.id}">Lokasi</label>
+                                                <input class="ui-input" th:id="${'edit-location-' + f.id}" name="location" th:value="${f.location}" required>
+                                                <label class="ui-label" th:for="${'edit-capacity-' + f.id}">Kapasitas</label>
+                                                <input class="ui-input" th:id="${'edit-capacity-' + f.id}" type="number" min="1" name="capacity" th:value="${f.capacity}" required>
+                                                <label class="ui-label" th:for="${'edit-description-' + f.id}">Deskripsi</label>
+                                                <textarea class="ui-input" th:id="${'edit-description-' + f.id}" name="description" th:text="${f.description}"></textarea>
+                                                <input type="hidden" name="administrativeStatus" th:value="${f.administrativeStatus}">
+                                                <button class="ui-btn ui-btn-primary" type="submit">Simpan</button>
+                                            </form>
+                                        </details>
                                         <form th:if="${f.administrativeStatus.name() == 'ACTIVE'}"
                                             th:action="@{/admin/facilities/{id}/deactivate(id=${f.id})}" method="post">
                                             <button class="ui-btn ui-btn-danger" type="submit">Nonaktifkan</button>
@@ -100,9 +123,12 @@
                             </div>
                             <div>
                                 <label class="ui-label" for="facility-type">Tipe fasilitas</label>
-                                <input id="facility-type" class="ui-input" type="text" th:field="*{type}" th:errorclass="ui-input-error"
-                                    th:aria-invalid="${#fields.hasErrors('type')}" placeholder="Contoh: Ruang kelas" required>
-                                <p class="ui-field-error" th:if="${#fields.hasErrors('type')}" th:errors="*{type}"></p>
+                                <select id="facility-type" class="ui-input" th:field="*{facilityTypeId}" th:errorclass="ui-input-error"
+                                    th:aria-invalid="${#fields.hasErrors('facilityTypeId')}" required>
+                                    <option value="">Pilih tipe fasilitas</option>
+                                    <option th:each="type : ${facilityTypes}" th:value="${type.id}" th:text="${type.name}"></option>
+                                </select>
+                                <p class="ui-field-error" th:if="${#fields.hasErrors('facilityTypeId')}" th:errors="*{facilityTypeId}"></p>
                             </div>
                             <div>
                                 <label class="ui-label" for="facility-location">Lokasi</label>

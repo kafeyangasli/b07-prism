@@ -6,7 +6,9 @@ import com.github.kafeyangasli.prism.feature.blockage.repository.FacilityBlockag
 import com.github.kafeyangasli.prism.feature.facility.dto.FacilityDto;
 import com.github.kafeyangasli.prism.feature.facility.model.AdministrativeStatus;
 import com.github.kafeyangasli.prism.feature.facility.model.Facility;
+import com.github.kafeyangasli.prism.feature.facility.model.FacilityType;
 import com.github.kafeyangasli.prism.feature.facility.repository.FacilityRepository;
+import com.github.kafeyangasli.prism.feature.facility.repository.FacilityTypeRepository;
 import com.github.kafeyangasli.prism.feature.reservation.model.Reservation;
 import com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus;
 import com.github.kafeyangasli.prism.feature.reservation.repository.ReservationRepository;
@@ -26,15 +28,18 @@ import java.util.List;
 public class FacilityServiceImpl implements FacilityService {
 
     private final FacilityRepository facilityRepository;
+    private final FacilityTypeRepository facilityTypeRepository;
     private final UserRepository userRepository;
     private final ReservationRepository reservationRepository;
     private final FacilityBlockageRepository facilityBlockageRepository;
 
     public FacilityServiceImpl(FacilityRepository facilityRepository,
+                               FacilityTypeRepository facilityTypeRepository,
                                UserRepository userRepository,
                                ReservationRepository reservationRepository,
                                FacilityBlockageRepository facilityBlockageRepository) {
         this.facilityRepository = facilityRepository;
+        this.facilityTypeRepository = facilityTypeRepository;
         this.userRepository = userRepository;
         this.reservationRepository = reservationRepository;
         this.facilityBlockageRepository = facilityBlockageRepository;
@@ -91,9 +96,7 @@ public class FacilityServiceImpl implements FacilityService {
         if (dto.getName() == null || dto.getName().isBlank()) {
             throw new BusinessRuleException("Nama fasilitas wajib diisi.");
         }
-        if (dto.getType() == null || dto.getType().isBlank()) {
-            throw new BusinessRuleException("Tipe fasilitas wajib diisi.");
-        }
+        FacilityType facilityType = requireAssignableType(dto.getFacilityTypeId());
         if (dto.getLocation() == null || dto.getLocation().isBlank()) {
             throw new BusinessRuleException("Lokasi fasilitas wajib diisi.");
         }
@@ -107,7 +110,7 @@ public class FacilityServiceImpl implements FacilityService {
         }
 
         AdministrativeStatus status = dto.getAdministrativeStatus() != null ? dto.getAdministrativeStatus() : AdministrativeStatus.ACTIVE;
-        Facility facility = new Facility(normalizedCode, dto.getName().trim(), dto.getType().trim(), dto.getLocation().trim(), dto.getCapacity(), dto.getDescription(), status);
+        Facility facility = new Facility(normalizedCode, dto.getName().trim(), facilityType, dto.getLocation().trim(), dto.getCapacity(), dto.getDescription(), status);
         return facilityRepository.save(facility);
     }
 
@@ -120,8 +123,12 @@ public class FacilityServiceImpl implements FacilityService {
         if (dto.getName() != null && !dto.getName().isBlank()) {
             facility.setName(dto.getName().trim());
         }
-        if (dto.getType() != null && !dto.getType().isBlank()) {
-            facility.setType(dto.getType().trim());
+        if (dto.getFacilityTypeId() == null) {
+            throw new BusinessRuleException("Tipe fasilitas wajib dipilih.");
+        }
+        Long currentTypeId = facility.getFacilityType().getId();
+        if (!dto.getFacilityTypeId().equals(currentTypeId)) {
+            facility.setFacilityType(requireAssignableType(dto.getFacilityTypeId()));
         }
         if (dto.getLocation() != null && !dto.getLocation().isBlank()) {
             facility.setLocation(dto.getLocation().trim());
@@ -183,5 +190,18 @@ public class FacilityServiceImpl implements FacilityService {
         if (admin.getRole() != Role.ADMIN) {
             throw new BusinessRuleException("Tindakan ini hanya dapat dilakukan oleh Admin.");
         }
+    }
+
+    private FacilityType requireAssignableType(Long facilityTypeId) {
+        if (facilityTypeId == null) {
+            throw new BusinessRuleException("Tipe fasilitas wajib dipilih.");
+        }
+        FacilityType facilityType = facilityTypeRepository.findById(facilityTypeId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Tipe fasilitas dengan ID " + facilityTypeId + " tidak ditemukan."));
+        if (!facilityType.isActive()) {
+            throw new BusinessRuleException("Tipe fasilitas yang tidak aktif tidak dapat dipilih.");
+        }
+        return facilityType;
     }
 }

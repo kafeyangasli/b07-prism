@@ -16,8 +16,8 @@ public class FacilityDto {
     @NotBlank(message = "Nama fasilitas wajib diisi.")
     private String name;
 
-    @NotBlank(message = "Tipe fasilitas wajib diisi.")
-    private String type;
+    @NotNull(message = "Tipe fasilitas wajib dipilih.")
+    private Long facilityTypeId;
 
     @NotBlank(message = "Lokasi fasilitas wajib diisi.")
     private String location;

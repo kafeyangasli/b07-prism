@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Table(name = "facilities", indexes = {
-        @Index(name = "idx_facilities_type_location", columnList = "type, location"),
+        @Index(name = "idx_facilities_type_location", columnList = "facility_type_id, location"),
         @Index(name = "idx_facilities_administrative_status", columnList = "administrative_status")
 })
 
@@ -27,8 +27,9 @@ public class Facility {
     private String name;
 
     @Setter
-    @Column(name = "type", nullable = false, length = 80)
-    private String type;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "facility_type_id", nullable = false)
+    private FacilityType facilityType;
 
     @Setter
     @Column(nullable = false, length = 150)
@@ -56,15 +57,25 @@ public class Facility {
     protected Facility() {
     }
 
-    public Facility(String code, String name, String type, String location, Integer capacity,
+    public Facility(String code, String name, FacilityType facilityType, String location, Integer capacity,
                     String description, AdministrativeStatus administrativeStatus) {
         this.code = code;
         this.name = name;
-        this.type = type;
+        this.facilityType = facilityType;
         this.location = location;
         this.capacity = capacity;
         this.description = description;
         this.administrativeStatus = administrativeStatus;
+    }
+
+    /**
+     * Source-compatibility constructor for callers being migrated to FacilityType.
+     * Persisted facilities must use a managed FacilityType instance.
+     */
+    @Deprecated(forRemoval = false)
+    public Facility(String code, String name, String type, String location, Integer capacity,
+                    String description, AdministrativeStatus administrativeStatus) {
+        this(code, name, new FacilityType(type, type, null), location, capacity, description, administrativeStatus);
     }
 
     @PrePersist
@@ -88,5 +99,11 @@ public class Facility {
     }
 
     public void setCode(String code) { this.code = code; normalizeCode(); }
+
+    /** Non-persistent compatibility accessor retained for other feature domains. */
+    @Transient
+    public String getType() {
+        return facilityType == null ? null : facilityType.getName();
+    }
 
 }

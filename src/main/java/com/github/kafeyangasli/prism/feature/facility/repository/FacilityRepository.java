@@ -29,7 +29,8 @@ public interface FacilityRepository extends JpaRepository<Facility, Long> {
     @Query("""
             select f from Facility f
             where f.administrativeStatus = :status
-              and (:type is null or lower(f.type) = lower(:type))
+              and (:type is null or lower(f.facilityType.name) = lower(:type)
+                   or lower(f.facilityType.code) = lower(:type))
               and (:location is null or lower(f.location) like lower(concat('%', :location, '%')))
               and (:minimumCapacity is null or f.capacity >= :minimumCapacity)
             order by f.name asc
@@ -73,7 +74,8 @@ public interface FacilityRepository extends JpaRepository<Facility, Long> {
     @Query("""
             select f from Facility f
             where (:facilityId is null or f.id = :facilityId)
-              and (:type is null or lower(f.type) = lower(:type))
+              and (:type is null or lower(f.facilityType.name) = lower(:type)
+                   or lower(f.facilityType.code) = lower(:type))
               and (:location is null or lower(f.location) like lower(concat('%', :location, '%')))
             order by f.name asc
             """)

@@ -1,5 +1,6 @@
 package com.github.kafeyangasli.prism.feature.report.service;
 
+import com.github.kafeyangasli.prism.feature.administration.service.StaffActorResolver;
 import com.github.kafeyangasli.prism.feature.facility.model.Facility;
 import com.github.kafeyangasli.prism.feature.facility.repository.FacilityRepository;
 import com.github.kafeyangasli.prism.feature.report.dto.CreateReportRequest;
@@ -11,6 +12,11 @@ import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
 import com.github.kafeyangasli.prism.shared.exception.ResourceNotFoundException;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,11 +34,11 @@ public class ReportService {
     private final ReportRepository reportRepository;
     private final FacilityRepository facilityRepository;
     private final UserRepository userRepository;
+    private final StaffActorResolver staffActorResolver;
 
-    public Report createReport(CreateReportRequest request, MultipartFile photo, Long userId) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pengguna dengan ID " + userId + " tidak ditemukan."));
+    @PreAuthorize("isAuthenticated()")
+    public Report createReport(CreateReportRequest request, MultipartFile photo) {
+        User user = currentUser();
 
         Facility facility = facilityRepository.findById(request.getFacilityId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fasilitas dengan ID " + request.getFacilityId() + " tidak ditemukan."));
@@ -78,12 +84,14 @@ public class ReportService {
         }
     }
 
-    public List<Report> getReportsByUser(Long userId) {
-        return reportRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    @PreAuthorize("isAuthenticated()")
+    public List<Report> getMyReports() {
+        return reportRepository.findByUserIdOrderByCreatedAtDesc(currentUser().getId());
     }
 
-    public Report getReportDetail(Long reportId, Long userId) {
-        return reportRepository.findByIdAndUserId(reportId, userId)
+    @PreAuthorize("isAuthenticated()")
+    public Report getReportDetail(Long reportId) {
+        return reportRepository.findByIdAndUserId(reportId, currentUser().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Laporan tidak ditemukan atau Anda tidak memiliki akses."));
     }
 
@@ -110,7 +118,8 @@ public class ReportService {
         }
     }
 
-    public Report updateStatus(Long reportId, Long staffId, ReportStatus newStatus, String resolutionNote) {
+    @PreAuthorize("hasAnyRole('PETUGAS', 'ADMIN')")
+    public Report updateStatus(Long reportId, ReportStatus newStatus, String resolutionNote) {
 
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new ResourceNotFoundException("Laporan dengan ID " + reportId + " tidak ditemukan."));
@@ -121,6 +130,7 @@ public class ReportService {
             throw new BusinessRuleException("Catatan penyelesaian wajib diisi saat menyelesaikan laporan.");
         }
 
+        long staffId = staffActorResolver.resolveId(authenticatedEmail());
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new ResourceNotFoundException("Petugas dengan ID " + staffId + " tidak ditemukan."));
 
@@ -147,5 +157,19 @@ public class ReportService {
         }
 
         return reportRepository.save(report);
+    }
+
+    private User currentUser() {
+        return userRepository.findByEmailIgnoreCase(authenticatedEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Akun pengguna tidak ditemukan."));
+    }
+
+    private String authenticatedEmail() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            throw new AuthenticationCredentialsNotFoundException("Autentikasi diperlukan.");
+        }
+        return authentication.getName();
     }
 }

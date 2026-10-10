@@ -24,6 +24,11 @@ import com.github.kafeyangasli.prism.feature.user.model.User;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
 import com.github.kafeyangasli.prism.shared.exception.ResourceNotFoundException;
+import com.github.kafeyangasli.prism.feature.administration.service.StaffActorResolver;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -61,6 +66,9 @@ class BlockageServiceTest {
     @Mock
     private ReportRepository reportRepository;
 
+    @Mock
+    private StaffActorResolver staffActorResolver;
+
     @InjectMocks
     private BlockageService blockageService;
 
@@ -74,6 +82,7 @@ class BlockageServiceTest {
 
     @BeforeEach
     void setUp() {
+        authenticate("staff@example.com", "PETUGAS");
         facility = new Facility("FAC01", "Gedung A", "Ruang Rapat", "Lantai 2", 50, "Desc", AdministrativeStatus.ACTIVE);
         ReflectionTestUtils.setField(facility, "id", 10L);
 
@@ -121,16 +130,18 @@ class BlockageServiceTest {
 
         when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
         when(blockageTypeService.validateAndGetActiveBlockageType(101L)).thenReturn(maintenanceType);
+        when(staffActorResolver.resolveId("staff@example.com")).thenReturn(2L);
         when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
         when(facilityBlockageRepository.save(any(FacilityBlockage.class))).thenAnswer(inv -> inv.getArgument(0));
         when(reservationRepository.findOverlapping(eq(10L), eq(startAt), eq(plannedEndAt), anyCollection()))
                 .thenReturn(List.of(resApproved, resPending));
 
-        FacilityBlockage result = blockageService.createBlockage(request, 2L);
+        FacilityBlockage result = blockageService.createBlockage(request);
 
         assertNotNull(result);
         assertEquals(BlockageStatus.SCHEDULED, result.getStatus());
         assertEquals("AC Maintenance", result.getPublicReason());
+        assertEquals(staff, result.getCreatedBy());
 
         // Verify reservation impact handling
         assertEquals(ReservationStatus.CANCELLED, resApproved.getStatus());
@@ -149,7 +160,7 @@ class BlockageServiceTest {
         when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
         when(blockageTypeService.validateAndGetActiveBlockageType(100L)).thenReturn(repairType);
 
-        assertThrows(BusinessRuleException.class, () -> blockageService.createBlockage(request, 2L));
+        assertThrows(BusinessRuleException.class, () -> blockageService.createBlockage(request));
     }
 
     @Test
@@ -162,10 +173,11 @@ class BlockageServiceTest {
         when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
         when(blockageTypeService.validateAndGetActiveBlockageType(100L)).thenReturn(repairType);
         when(reportRepository.findById(50L)).thenReturn(Optional.of(report));
+        when(staffActorResolver.resolveId("staff@example.com")).thenReturn(2L);
         when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
         when(facilityBlockageRepository.save(any(FacilityBlockage.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        FacilityBlockage result = blockageService.createBlockage(request, 2L);
+        FacilityBlockage result = blockageService.createBlockage(request);
 
         assertNotNull(result);
         assertEquals(report, result.getReport());
@@ -200,17 +212,19 @@ class BlockageServiceTest {
         Reservation newApproved = new Reservation(user, facility, plannedEndAt, plannedEndAt.plusHours(2), "Late Meeting", null, ReservationStatus.APPROVED, null);
 
         when(facilityBlockageRepository.findById(200L)).thenReturn(Optional.of(blockage));
+        when(staffActorResolver.resolveId("staff@example.com")).thenReturn(2L);
         when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
         when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
         when(reservationRepository.findOverlapping(eq(10L), eq(plannedEndAt), eq(newEndAt), anyCollection()))
                 .thenReturn(List.of(newApproved));
         when(facilityBlockageRepository.save(any(FacilityBlockage.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        FacilityBlockage result = blockageService.updateOrExtendBlockage(200L, request, 2L);
+        FacilityBlockage result = blockageService.updateOrExtendBlockage(200L, request);
 
         assertEquals(newEndAt, result.getPlannedEndAt());
         assertEquals("Extended maintenance", result.getPublicReason());
         assertEquals(ReservationStatus.CANCELLED, newApproved.getStatus());
+        assertEquals(staff, newApproved.getCancelledBy());
     }
 
     @Test
@@ -221,10 +235,11 @@ class BlockageServiceTest {
         EarlyCompletionRequest request = new EarlyCompletionRequest("Repairs finished early");
 
         when(facilityBlockageRepository.findById(200L)).thenReturn(Optional.of(blockage));
+        when(staffActorResolver.resolveId("staff@example.com")).thenReturn(2L);
         when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
         when(facilityBlockageRepository.save(any(FacilityBlockage.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        FacilityBlockage result = blockageService.earlyCompleteBlockage(200L, request, 2L);
+        FacilityBlockage result = blockageService.earlyCompleteBlockage(200L, request);
 
         assertEquals(BlockageStatus.COMPLETED, result.getStatus());
         assertNotNull(result.getActualEndAt());
@@ -240,6 +255,16 @@ class BlockageServiceTest {
 
         EarlyCompletionRequest request = new EarlyCompletionRequest("   ");
 
-        assertThrows(BusinessRuleException.class, () -> blockageService.earlyCompleteBlockage(200L, request, 2L));
+        assertThrows(BusinessRuleException.class, () -> blockageService.earlyCompleteBlockage(200L, request));
+    }
+    @AfterEach
+    void clearAuthentication() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticate(String email, String role) {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(email, "unused",
+                        AuthorityUtils.createAuthorityList("ROLE_" + role)));
     }
 }

@@ -9,12 +9,14 @@ import com.github.kafeyangasli.prism.feature.blockage.model.FacilityBlockage;
 import com.github.kafeyangasli.prism.feature.blockage.service.BlockageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/blockages")
+@RequestMapping("/api/staff/blockages")
+@PreAuthorize("hasAnyRole('PETUGAS', 'ADMIN')")
 @RequiredArgsConstructor
 public class BlockageController {
 
@@ -28,20 +30,17 @@ public class BlockageController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public FacilityBlockage createBlockage(@RequestBody CreateBlockageRequest request) {
-        Long mockUserId = 1L; // temporary until auth principal bound
-        return blockageService.createBlockage(request, mockUserId);
+        return blockageService.createBlockage(request);
     }
 
     @PutMapping("/{id}")
     public FacilityBlockage updateOrExtendBlockage(@PathVariable Long id, @RequestBody UpdateBlockageRequest request) {
-        Long mockUserId = 1L;
-        return blockageService.updateOrExtendBlockage(id, request, mockUserId);
+        return blockageService.updateOrExtendBlockage(id, request);
     }
 
     @PatchMapping("/{id}/complete")
     public FacilityBlockage earlyCompleteBlockage(@PathVariable Long id, @RequestBody EarlyCompletionRequest request) {
-        Long mockUserId = 1L;
-        return blockageService.earlyCompleteBlockage(id, request, mockUserId);
+        return blockageService.earlyCompleteBlockage(id, request);
     }
 
     @GetMapping

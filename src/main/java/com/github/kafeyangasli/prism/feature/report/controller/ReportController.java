@@ -2,7 +2,6 @@ package com.github.kafeyangasli.prism.feature.report.controller;
 
 import com.github.kafeyangasli.prism.feature.report.dto.CreateReportRequest;
 import com.github.kafeyangasli.prism.feature.report.model.Report;
-import com.github.kafeyangasli.prism.feature.report.model.ReportStatus;
 import com.github.kafeyangasli.prism.feature.report.service.ReportService;
 
 import lombok.RequiredArgsConstructor;
@@ -26,32 +25,19 @@ public class ReportController {
         @RequestPart("data") CreateReportRequest request,
         @RequestPart(value = "photo", required = false) MultipartFile photo
     ) {
-        Long mockUserId = 1L; // temporary until auth principal bound
-        return reportService.createReport(request, photo, mockUserId);
+        return reportService.createReport(request, photo);
     }
 
     // STEP 6 (FR-20 list)
     @GetMapping
     public List<Report> getMyReports() {
-        Long mockUserId = 1L;
-        return reportService.getReportsByUser(mockUserId);
+        return reportService.getMyReports();
     }
 
     // STEP 7 (FR-20 detail)
     @GetMapping("/{id}")
     public Report getReportDetail(@PathVariable Long id) {
-        Long mockUserId = 1L;
-        return reportService.getReportDetail(id, mockUserId);
+        return reportService.getReportDetail(id);
     }
 
-    // STEP 8 + 9 (FR-21 staff status processing)
-    @PatchMapping("/admin/{id}/status")
-    public Report updateStatusByStaff(
-            @PathVariable Long id,
-            @RequestParam ReportStatus status,
-            @RequestParam(required = false) String resolutionNote
-    ) {
-        Long mockStaffId = 1L;
-        return reportService.updateStatus(id, mockStaffId, status, resolutionNote);
-    }
 }

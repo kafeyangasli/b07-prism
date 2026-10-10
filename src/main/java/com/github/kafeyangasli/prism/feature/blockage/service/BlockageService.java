@@ -1,5 +1,6 @@
 package com.github.kafeyangasli.prism.feature.blockage.service;
 
+import com.github.kafeyangasli.prism.feature.administration.service.StaffActorResolver;
 import com.github.kafeyangasli.prism.feature.blockage.dto.BlockageImpactPreviewRequest;
 import com.github.kafeyangasli.prism.feature.blockage.dto.BlockageImpactPreviewResponse;
 import com.github.kafeyangasli.prism.feature.blockage.dto.CreateBlockageRequest;
@@ -20,6 +21,11 @@ import com.github.kafeyangasli.prism.feature.user.model.User;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
 import com.github.kafeyangasli.prism.shared.exception.ResourceNotFoundException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,8 +43,10 @@ public class BlockageService {
     private final BlockageTypeService blockageTypeService;
     private final UserRepository userRepository;
     private final ReportRepository reportRepository;
+    private final StaffActorResolver staffActorResolver;
 
     @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('PETUGAS', 'ADMIN')")
     public BlockageImpactPreviewResponse previewBlockageImpact(BlockageImpactPreviewRequest request) {
         if (request.getFacilityId() == null) {
             throw new BusinessRuleException("Fasilitas wajib dipilih untuk melihat dampak blokir.");
@@ -82,7 +90,8 @@ public class BlockageService {
     }
 
     @Transactional
-    public FacilityBlockage createBlockage(CreateBlockageRequest request, Long creatorUserId) {
+    @PreAuthorize("hasAnyRole('PETUGAS', 'ADMIN')")
+    public FacilityBlockage createBlockage(CreateBlockageRequest request) {
         if (request.getFacilityId() == null) {
             throw new BusinessRuleException("Fasilitas wajib dipilih.");
         }
@@ -119,8 +128,7 @@ public class BlockageService {
             }
         }
 
-        User creator = userRepository.findById(creatorUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pengguna pembuat dengan ID " + creatorUserId + " tidak ditemukan."));
+        User creator = currentStaff();
 
         LocalDateTime now = LocalDateTime.now();
         BlockageStatus initialStatus = request.getStartAt().isAfter(now) ? BlockageStatus.SCHEDULED : BlockageStatus.ACTIVE;
@@ -211,7 +219,8 @@ public class BlockageService {
 
     // Step 18 & 19 — FR-26 Blockage Update / Extension
     @Transactional
-    public FacilityBlockage updateOrExtendBlockage(Long blockageId, UpdateBlockageRequest request, Long actingUserId) {
+    @PreAuthorize("hasAnyRole('PETUGAS', 'ADMIN')")
+    public FacilityBlockage updateOrExtendBlockage(Long blockageId, UpdateBlockageRequest request) {
         FacilityBlockage blockage = facilityBlockageRepository.findById(blockageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Blokir fasilitas dengan ID " + blockageId + " tidak ditemukan."));
 
@@ -219,8 +228,7 @@ public class BlockageService {
             throw new BusinessRuleException("Blokir yang telah selesai atau dibatalkan tidak dapat diperbarui.");
         }
 
-        User actor = userRepository.findById(actingUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pengguna dengan ID " + actingUserId + " tidak ditemukan."));
+        User actor = currentStaff();
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -262,7 +270,8 @@ public class BlockageService {
 
     // Step 20 — FR-26 Early Completion
     @Transactional
-    public FacilityBlockage earlyCompleteBlockage(Long blockageId, EarlyCompletionRequest request, Long actingUserId) {
+    @PreAuthorize("hasAnyRole('PETUGAS', 'ADMIN')")
+    public FacilityBlockage earlyCompleteBlockage(Long blockageId, EarlyCompletionRequest request) {
         FacilityBlockage blockage = facilityBlockageRepository.findById(blockageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Blokir fasilitas dengan ID " + blockageId + " tidak ditemukan."));
 
@@ -274,8 +283,7 @@ public class BlockageService {
             throw new BusinessRuleException("Alasan penyelesaian lebih awal wajib diisi.");
         }
 
-        User endedBy = userRepository.findById(actingUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pengguna dengan ID " + actingUserId + " tidak ditemukan."));
+        User endedBy = currentStaff();
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -303,13 +311,26 @@ public class BlockageService {
     }
 
     @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('PETUGAS', 'ADMIN')")
     public FacilityBlockage getBlockageById(Long id) {
         return facilityBlockageRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Blokir fasilitas dengan ID " + id + " tidak ditemukan."));
     }
 
     @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('PETUGAS', 'ADMIN')")
     public List<FacilityBlockage> getAllBlockages() {
         return facilityBlockageRepository.findAll();
+    }
+
+    private User currentStaff() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            throw new AuthenticationCredentialsNotFoundException("Autentikasi diperlukan.");
+        }
+        long actorId = staffActorResolver.resolveId(authentication.getName());
+        return userRepository.findById(actorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Akun staf tidak ditemukan."));
     }
 }

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Blokir Fasilitas', 'staff-blockages', ~{::main})}">
+<body><main><div class="ui-page">
+    <header th:replace="~{fragments/page :: heading('Operasional', 'Blokir Fasilitas', 'Lihat dampak reservasi dan konfirmasikan sebelum menyimpan blokir.')}"></header>
+    <div th:replace="~{fragments/feedback :: flash}"></div>
+    <section class="ui-card ui-card-body">
+        <h2 th:text="${blockageId == null ? 'Blokir baru' : 'Ubah / perpanjang blokir'}"></h2>
+        <p class="ui-hint" th:if="${editing != null}" th:text="${editing.facility.name + ' · ' + editing.blockageType.name}"></p>
+        <p class="ui-hint" th:if="${blockageId != null}">Fasilitas, jenis blokir, dan waktu mulai tetap. Memperpendek blokir tidak memulihkan reservasi.</p>
+        <form th:if="${preview == null}" class="ui-form" th:object="${blockageForm}" method="post"
+              th:action="${blockageId == null ? '/staff/blockages/preview' : '/staff/blockages/' + blockageId + '/preview'}">
+            <div th:replace="~{fragments/feedback :: formErrors}"></div>
+            <div th:if="${blockageId == null}">
+                <label class="ui-label" for="facilityId">Fasilitas</label>
+                <select class="ui-input" th:field="*{facilityId}" required><option value="">Pilih fasilitas</option>
+                    <option th:each="facility : ${facilities}" th:value="${facility.id}" th:text="${facility.name}"></option></select>
+                <label class="ui-label" for="blockageTypeId">Jenis blokir</label>
+                <select class="ui-input" th:field="*{blockageTypeId}" required><option value="">Pilih jenis</option>
+                    <option th:each="type : ${types}" th:value="${type.id}" th:text="${type.name}"></option></select>
+                <label class="ui-label" for="reportId">ID laporan (wajib untuk REPAIR)</label>
+                <input class="ui-input" th:field="*{reportId}" type="number" min="1">
+                <label class="ui-label" for="startAt">Waktu mulai</label>
+                <input class="ui-input" th:field="*{startAt}" type="datetime-local" required>
+            </div>
+            <div><label class="ui-label" for="plannedEndAt">Rencana selesai</label>
+                <input class="ui-input" th:field="*{plannedEndAt}" type="datetime-local">
+                <p class="ui-hint" th:if="${blockageId == null}">Kosongkan untuk blokir tanpa batas waktu.</p>
+                <label th:if="${blockageId != null}"><input type="checkbox" th:field="*{openEnded}"> Tanpa batas waktu (kosongkan rencana selesai)</label>
+            </div>
+            <div><label class="ui-label" for="publicReason">Alasan publik</label>
+                <textarea class="ui-input" th:field="*{publicReason}" maxlength="1000" required></textarea></div>
+            <div><label class="ui-label" for="internalNote">Catatan internal</label>
+                <textarea class="ui-input" th:field="*{internalNote}" maxlength="2000"></textarea></div>
+            <button class="ui-btn ui-btn-primary" type="submit">Lihat dampak reservasi</button>
+            <a th:if="${blockageId != null}" class="ui-btn ui-btn-secondary" th:href="@{/staff/blockages}">Batal</a>
+        </form>
+        <div th:if="${preview != null}">
+            <h3>Konfirmasi dampak</h3>
+            <p th:text="${preview.facilityName}"></p>
+            <div th:if="${blockageId == null}">
+                <p th:each="type : ${types}" th:if="${type.id == blockageForm.blockageTypeId}" th:text="${type.name}"></p>
+                <p th:if="${blockageForm.reportId != null}" th:text="${'Laporan: #' + blockageForm.reportId}"></p>
+            </div>
+            <p th:text="${'Rencana selesai: ' + (preview.plannedEndAt != null ? #temporals.format(preview.plannedEndAt, 'dd MMM yyyy, HH:mm') : 'tanpa batas waktu')}"></p>
+            <p th:text="${blockageForm.publicReason}"></p>
+            <p th:if="${!#strings.isEmpty(blockageForm.internalNote)}" th:text="${blockageForm.internalNote}"></p>
+            <p>Reservasi APPROVED yang akan dibatalkan: <strong th:text="${preview.approvedCount}"></strong></p>
+            <p>Reservasi PENDING yang akan ditolak: <strong th:text="${preview.pendingCount}"></strong></p>
+            <p th:if="${preview.startAt != null}" th:text="${'Interval terdampak: ' + #temporals.format(preview.startAt, 'dd MMM yyyy, HH:mm') + ' — ' + (preview.plannedEndAt != null ? #temporals.format(preview.plannedEndAt, 'dd MMM yyyy, HH:mm') : 'tanpa batas waktu')}"></p>
+            <p th:if="${preview.startAt == null}">Tidak ada interval baru yang dicakup. Tidak ada reservasi baru yang diproses.</p>
+            <p class="ui-hint">Pratinjau berlaku 15 menit. Jika dampak berubah, Anda harus melihat pratinjau dan mengonfirmasi kembali.</p>
+            <form class="ui-form" th:object="${blockageForm}" method="post"
+                  th:action="${blockageId == null ? '/staff/blockages' : '/staff/blockages/' + blockageId}">
+                <div th:if="${blockageId == null}">
+                    <input type="hidden" th:field="*{facilityId}"><input type="hidden" th:field="*{blockageTypeId}">
+                    <input type="hidden" th:field="*{reportId}"><input type="hidden" th:field="*{startAt}">
+                </div>
+                <input th:if="${blockageId != null}" type="hidden" th:field="*{openEnded}">
+                <input type="hidden" th:field="*{plannedEndAt}"><input type="hidden" th:field="*{publicReason}">
+                <input type="hidden" th:field="*{internalNote}"><input type="hidden" name="confirmationToken" th:value="${preview.confirmationToken}">
+                <label><input type="checkbox" name="confirmed" value="true" required> Saya mengonfirmasi dampak di atas. Reservasi yang dibatalkan/ditolak tidak dipulihkan otomatis.</label>
+                <div class="ui-form-actions">
+                    <button class="ui-btn ui-btn-primary" type="submit">Konfirmasi dan simpan</button>
+                    <button class="ui-btn ui-btn-secondary" type="submit" formnovalidate
+                            th:formaction="${blockageId == null ? '/staff/blockages/input' : '/staff/blockages/' + blockageId + '/input'}">Ubah data</button>
+                </div>
+            </form>
+        </div>
+    </section>
+    <section class="ui-section"><h2>Daftar blokir</h2>
+        <p class="ui-empty-state" th:if="${#lists.isEmpty(blockages)}">Belum ada blokir fasilitas.</p>
+        <div class="ui-table-wrap" th:unless="${#lists.isEmpty(blockages)}"><table class="ui-table">
+            <thead><tr><th>Fasilitas / jenis</th><th>Waktu</th><th>Status</th><th>Tindakan</th></tr></thead>
+            <tbody><tr th:each="blockage : ${blockages}">
+                <td data-label="Fasilitas / jenis"><strong th:text="${blockage.facility.name}"></strong><p th:text="${blockage.blockageType.name}"></p><p th:text="${blockage.publicReason}"></p></td>
+                <td data-label="Waktu"><p th:text="${#temporals.format(blockage.startAt, 'dd MMM yyyy, HH:mm')}"></p>
+                    <p th:text="${blockage.plannedEndAt != null ? #temporals.format(blockage.plannedEndAt, 'dd MMM yyyy, HH:mm') : 'Tanpa batas waktu'}"></p>
+                    <p th:if="${blockage.actualEndAt != null}" th:text="${'Selesai: ' + #temporals.format(blockage.actualEndAt, 'dd MMM yyyy, HH:mm')}"></p></td>
+                <td data-label="Status"><span th:replace="~{fragments/status :: badge(${blockage.status})}"></span></td>
+                <td data-label="Tindakan"><div th:if="${blockage.status.name() == 'ACTIVE' or blockage.status.name() == 'SCHEDULED'}">
+                    <a class="ui-btn ui-btn-secondary" th:href="@{/staff/blockages/{id}/edit(id=${blockage.id})}">Ubah / perpanjang</a>
+                    <form class="ui-form" th:action="@{/staff/blockages/{id}/complete(id=${blockage.id})}" method="post">
+                        <label class="ui-label" th:for="${'completion-' + blockage.id}">Alasan penyelesaian awal</label>
+                        <textarea class="ui-input" th:id="${'completion-' + blockage.id}" name="earlyCompletionReason" maxlength="1000" required></textarea>
+                        <button class="ui-btn ui-btn-secondary" type="submit">Selesaikan lebih awal</button>
+                    </form>
+                </div></td>
+            </tr></tbody>
+        </table></div>
+    </section>
+</div></main></body></html>

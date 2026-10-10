@@ -4,6 +4,7 @@ import com.github.kafeyangasli.prism.feature.facility.dto.FacilityDto;
 import com.github.kafeyangasli.prism.feature.user.service.UserService;
 import com.github.kafeyangasli.prism.feature.facility.service.FacilityService;
 import com.github.kafeyangasli.prism.feature.facility.service.FacilityTypeService;
+import com.github.kafeyangasli.prism.feature.facility.service.FacilityImageService;
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
 import com.github.kafeyangasli.prism.shared.exception.ResourceNotFoundException;
 import jakarta.validation.Valid;
@@ -13,6 +14,8 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin/facilities")
@@ -21,12 +24,15 @@ public class AdminFacilityController {
     private final FacilityService facilityService;
     private final UserService userService;
     private final FacilityTypeService facilityTypeService;
+    private final FacilityImageService facilityImages;
 
     public AdminFacilityController(FacilityService facilityService, UserService userService,
-                                   FacilityTypeService facilityTypeService) {
+                                   FacilityTypeService facilityTypeService,
+                                   FacilityImageService facilityImages) {
         this.facilityService = facilityService;
         this.userService = userService;
         this.facilityTypeService = facilityTypeService;
+        this.facilityImages = facilityImages;
     }
 
     @GetMapping
@@ -41,18 +47,21 @@ public class AdminFacilityController {
                                  Authentication authentication,
                                  Model model,
                                  RedirectAttributes redirectAttributes,
-                                 @RequestHeader(value = "HX-Request", required = false) String htmxRequest) {
+                                 @RequestHeader(value = "HX-Request", required = false) String htmxRequest,
+                                 @RequestParam(required = false) List<MultipartFile> images,
+                                 @RequestParam(required = false) Integer thumbnailIndex) {
         if (bindingResult.hasErrors()) {
             return renderCreateFailure(model, htmxRequest);
         }
         try {
             com.github.kafeyangasli.prism.feature.user.model.User admin = userService.findByEmail(authentication.getName());
-            facilityService.createFacility(admin.getId(), dto);
+            facilityImages.create(admin.getId(), dto, images, thumbnailIndex);
             if (isHtmx(htmxRequest)) {
                 model.addAttribute("facilityDto", new FacilityDto());
                 model.addAttribute("facilities", facilityService.getAllFacilities());
                 model.addAttribute("facilityTypes", facilityTypeService.getActive());
                 model.addAttribute("successMessage", "Fasilitas berhasil ditambahkan.");
+                model.addAttribute("facilityCreationSuccess", true);
                 return "admin/facilities :: facility-creation-success";
             }
             redirectAttributes.addFlashAttribute("successMessage", "Fasilitas berhasil ditambahkan.");

@@ -19,6 +19,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+
 import com.github.kafeyangasli.prism.feature.blockage.model.BlockageStatus;
 import com.github.kafeyangasli.prism.feature.blockage.model.BlockageType;
 import com.github.kafeyangasli.prism.feature.blockage.model.FacilityBlockage;
@@ -26,6 +28,7 @@ import com.github.kafeyangasli.prism.feature.blockage.repository.BlockageTypeRep
 import com.github.kafeyangasli.prism.feature.blockage.repository.FacilityBlockageRepository;
 import com.github.kafeyangasli.prism.feature.facility.model.AdministrativeStatus;
 import com.github.kafeyangasli.prism.feature.facility.model.Facility;
+import com.github.kafeyangasli.prism.feature.facility.model.FacilityType;
 import com.github.kafeyangasli.prism.feature.facility.repository.FacilityRepository;
 import com.github.kafeyangasli.prism.feature.reservation.dto.ReservationAvailabilityView;
 import com.github.kafeyangasli.prism.feature.reservation.dto.ReservationForm;
@@ -60,6 +63,7 @@ class ReservationAvailabilityIntegrationTest {
     @Autowired FacilityBlockageRepository blockages;
     @Autowired BlockageTypeRepository blockageTypes;
     @Autowired UserRepository users;
+    @Autowired EntityManager entityManager;
 
     private User requester;
     private User staff;
@@ -69,7 +73,7 @@ class ReservationAvailabilityIntegrationTest {
     void setUp() {
         requester = users.save(new User("Pemohon", "availability@example.test", "hash", Role.PENGGUNA, AccountStatus.ACTIVE));
         staff = users.save(new User("Petugas", "availability-staff@example.test", "hash", Role.PETUGAS, AccountStatus.ACTIVE));
-        room = facilities.save(new Facility("AV-101", "Ruang Uji", "Kelas", "Gedung A", 30, null, AdministrativeStatus.ACTIVE));
+        room = facilities.save(new Facility("AV-101", "Ruang Uji", facilityType("CLASS", "Kelas"), "Gedung A", 30, null, AdministrativeStatus.ACTIVE));
     }
 
     @Test
@@ -108,7 +112,7 @@ class ReservationAvailabilityIntegrationTest {
 
     @Test
     void aulaUsesFixedFullDayAndAnyConflictMakesDayUnavailable() {
-        Facility aula = facilities.save(new Facility("AULA-1", "Aula Utama", "Aula", "Gedung Pusat", 500, null, AdministrativeStatus.ACTIVE));
+        Facility aula = facilities.save(new Facility("AULA-1", "Aula Utama", facilityType("HALL", "Aula"), "Gedung Pusat", 500, null, AdministrativeStatus.ACTIVE));
         LocalDate date = NOW.toLocalDate().plusDays(2);
 
         ReservationAvailabilityView available = availabilityService.availability(aula.getId(), date, null, null);
@@ -157,9 +161,15 @@ class ReservationAvailabilityIntegrationTest {
         assertThatThrownBy(() -> submit(room, date.atTime(9, 0), date.atTime(15, 0), null))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Proposal");
 
-        Facility aula = facilities.save(new Facility("AULA-2", "Aula Timur", "Aula", "Gedung Timur", 250, null, AdministrativeStatus.ACTIVE));
+        Facility aula = facilities.save(new Facility("AULA-2", "Aula Timur", facilityType("HALL", "Aula"), "Gedung Timur", 250, null, AdministrativeStatus.ACTIVE));
         assertThatThrownBy(() -> submit(aula, date.atTime(8, 0), date.atTime(20, 0), null))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("07:00 sampai 20:00");
+    }
+
+    private FacilityType facilityType(String code, String name) {
+        FacilityType type = new FacilityType(code, name, null);
+        entityManager.persist(type);
+        return type;
     }
 
     private ReservationSlotState stateAt(ReservationAvailabilityView view, String time) {

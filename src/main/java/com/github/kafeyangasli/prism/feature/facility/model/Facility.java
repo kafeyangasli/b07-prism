@@ -15,6 +15,11 @@ import java.time.LocalDateTime;
 
 public class Facility {
 
+    @OneToMany(mappedBy = "facility", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("effectiveAt ASC, id ASC")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private java.util.List<FacilityStatusHistory> statusHistory = new java.util.ArrayList<>();
+
     @OneToMany(mappedBy = "facility", fetch = FetchType.LAZY)
     @OrderBy("displayOrder ASC, id ASC")
     private java.util.List<FacilityImage> images = new java.util.ArrayList<>();
@@ -52,7 +57,6 @@ public class Facility {
     @Column(length = 2000)
     private String description;
 
-    @Setter
     @Enumerated(EnumType.STRING)
     @Column(name = "administrative_status", nullable = false, length = 20)
     private AdministrativeStatus administrativeStatus;
@@ -90,9 +94,10 @@ public class Facility {
     @PrePersist
     void beforeInsert() {
         normalizeCode();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(java.time.Clock.system(java.time.ZoneId.of("Asia/Jakarta")));
         createdAt = now;
         updatedAt = now;
+        if (statusHistory.isEmpty()) statusHistory.add(new FacilityStatusHistory(this, administrativeStatus, now, true));
     }
 
     @PreUpdate
@@ -108,6 +113,21 @@ public class Facility {
     }
 
     public void setCode(String code) { this.code = code; normalizeCode(); }
+
+    public void setAdministrativeStatus(AdministrativeStatus status) {
+        changeAdministrativeStatus(status, LocalDateTime.now(java.time.Clock.system(java.time.ZoneId.of("Asia/Jakarta"))));
+    }
+
+    public void changeAdministrativeStatus(AdministrativeStatus status, LocalDateTime effectiveAt) {
+        java.util.Objects.requireNonNull(status);
+        if (administrativeStatus != status) {
+            if (!statusHistory.isEmpty() && effectiveAt.isBefore(statusHistory.getLast().getEffectiveAt())) {
+                throw new IllegalArgumentException("Status history must be chronological");
+            }
+            administrativeStatus = status;
+            statusHistory.add(new FacilityStatusHistory(this, status, effectiveAt));
+        }
+    }
 
     /** Non-persistent compatibility accessor retained for other feature domains. */
     @Transient

@@ -63,6 +63,7 @@
                 <div class="ui-section-heading">
                     <div>
                         <h2 id="recap-result-title">Hasil rekap fasilitas</h2>
+                        <p class="ui-hint">Kapasitas “Tidak diketahui” berarti riwayat status fasilitas belum lengkap untuk periode ini. N/A berarti kapasitas nol; persentase tidak dapat dihitung.</p>
                         <p class="ui-hint" th:text="${'Periode ' + #temporals.format(filter.startDate, 'dd MMM yyyy') + ' – ' + #temporals.format(filter.endDate, 'dd MMM yyyy')}"></p>
                     </div>
                 </div>
@@ -109,8 +110,8 @@
                             <td data-label="Tipe" th:text="${row.facilityType}"></td>
                             <td data-label="Lokasi" th:text="${row.location}"></td>
                             <td data-label="Slot disetujui" th:text="${row.approvedSlots}"></td>
-                            <td data-label="Slot tersedia" th:text="${row.bookableSlots}"></td>
-                            <td data-label="Tingkat penggunaan" th:text="${row.occupancyPercent + '%'}"></td>
+                            <td data-label="Slot tersedia" th:text="${row.capacityDisplay()}"></td>
+                            <td data-label="Tingkat penggunaan" th:text="${row.occupancyDisplay() + (row.occupancyPercent != null ? '%' : '')}"></td>
                             <td data-label="Laporan" th:text="${row.issueCount}"></td>
                         </tr>
                         </tbody>

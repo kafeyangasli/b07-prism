@@ -73,6 +73,13 @@ class FacilityServiceTest {
         Facility deactivated = facilityService.deactivateFacility(savedAdmin.getId(), created.getId());
         assertEquals(AdministrativeStatus.INACTIVE, deactivated.getAdministrativeStatus());
         assertEquals(0, facilityService.getPublicCatalogue().size());
+        facilityRepository.flush();
+        assertEquals(List.of(AdministrativeStatus.ACTIVE, AdministrativeStatus.INACTIVE),
+                deactivated.getStatusHistory().stream().map(h -> h.getStatus()).toList());
+        Facility activated = facilityService.activateFacility(savedAdmin.getId(), created.getId());
+        assertEquals(3, activated.getStatusHistory().size());
+        facilityService.activateFacility(savedAdmin.getId(), created.getId());
+        assertEquals(3, activated.getStatusHistory().size(), "Repeated activation must not add a false transition");
     }
 
     @Test

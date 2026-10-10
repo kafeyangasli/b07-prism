@@ -27,7 +27,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.test.context.support.WithMockUser;
+import com.github.kafeyangasli.prism.support.WithPrismUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +36,7 @@ import java.time.*;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+import static com.github.kafeyangasli.prism.support.PrismTestUsers.user;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -269,7 +270,7 @@ class AccountSettingsIntegrationTest {
         assertThat(owner.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
     }
 
-    @Test @WithMockUser(username = EMAIL, roles = "PENGGUNA")
+    @Test @WithPrismUser(username = EMAIL, roles = "PENGGUNA")
     void alreadyInactiveAccountCannotMutate() {
         owner.setAccountStatus(AccountStatus.INACTIVE);
         users.saveAndFlush(owner);

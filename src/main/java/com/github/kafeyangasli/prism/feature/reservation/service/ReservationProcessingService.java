@@ -94,7 +94,9 @@ public class ReservationProcessingService {
         }
     }
 
-    @Transactional
+    // The scalar routing read establishes a snapshot under MySQL REPEATABLE READ.
+    // Post-lock conflict/count queries must see commits made while waiting for the locks.
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     @PreAuthorize("hasAnyRole('PETUGAS','ADMIN')")
     public Reservation approve(long reservationId, long actorId, boolean confirmCascade) {
         LocalDateTime now = LocalDateTime.now(clock);

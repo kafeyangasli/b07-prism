@@ -27,7 +27,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
-import org.springframework.security.test.context.support.WithMockUser;
+import com.github.kafeyangasli.prism.support.WithPrismUser;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -46,7 +46,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 })
 @Import(ReservationProcessingServiceIntegrationTest.FixedClockConfiguration.class)
 @Transactional
-@WithMockUser(username = "staff@example.test", roles = "PETUGAS")
+@WithPrismUser(username = "staff@example.test", roles = "PETUGAS")
 class ReservationProcessingServiceIntegrationTest {
 
     private static final ZoneId WIB = ZoneId.of("Asia/Jakarta");

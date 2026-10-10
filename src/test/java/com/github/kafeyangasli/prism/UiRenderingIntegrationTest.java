@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.security.test.context.support.WithMockUser;
+import com.github.kafeyangasli.prism.support.WithPrismUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import java.nio.file.*;
@@ -103,7 +103,7 @@ class UiRenderingIntegrationTest {
                 .contains("Waktu mulai dan selesai yang valid");
     }
 
-    @Test @WithMockUser(username="ui@example.test", roles="PENGGUNA")
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
     void availabilityCarriesDateAndCancellationMatchesDeadline() throws Exception {
         String date = LocalDate.now().plusDays(2).toString();
         assertThat(render("/reservations/new?facilityId=" + room.getId() + "&date=" + date, "reservation-prefilled"))
@@ -118,7 +118,7 @@ class UiRenderingIntegrationTest {
                 .contains("Batas pembatalan telah terlewati").doesNotContain("/cancel");
     }
 
-    @Test @WithMockUser(username="ui@example.test", roles="PENGGUNA")
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
     void modalSubmissionCarriesSuccessFeedbackToDetailOnce() throws Exception {
         String date = LocalDate.now().plusDays(4).toString();
         var result = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/reservations")
@@ -137,9 +137,8 @@ class UiRenderingIntegrationTest {
                 .doesNotContain("Reservasi berhasil diajukan dan berstatus Menunggu.");
     }
 
-    @Test @WithMockUser(username="staff-ui@example.test", roles="PETUGAS")
+    @Test @WithPrismUser(username="staff-ui@example.test", roles="PETUGAS")
     void reportDetailCarriesContextIntoBlockageAndKeepsStaffNavigation() throws Exception {
-        users.save(new User("Petugas UI", "staff-ui@example.test", "hash", Role.PETUGAS, AccountStatus.ACTIVE));
         var report = reports.save(new com.github.kafeyangasli.prism.feature.report.model.Report(reservation.getUser(), room,
                 "AC", "Pendingin tidak berfungsi", null, com.github.kafeyangasli.prism.feature.report.model.ReportStatus.NEW));
         var repair = blockageTypes.save(new com.github.kafeyangasli.prism.feature.blockage.model.BlockageType("REPAIR", "Perbaikan", null));
@@ -155,7 +154,7 @@ class UiRenderingIntegrationTest {
         mvc.perform(get("/admin/blockage-types")).andExpect(status().isForbidden());
     }
 
-    @Test @WithMockUser(roles="ADMIN")
+    @Test @WithPrismUser(roles="ADMIN")
     void blockageTypeManagementUsesHtmlAndExistingService() throws Exception {
         assertThat(render("/admin/blockage-types", "blockage-types-empty"))
                 .contains("Belum ada jenis blokir", "Tambah jenis blokir").doesNotContain("href=\"/api/admin/blockage-types\"");
@@ -175,7 +174,7 @@ class UiRenderingIntegrationTest {
         assertThat(invalid).contains("Kode jenis blokir sudah digunakan", "value=\"Duplikat\"");
     }
 
-    @Test @WithMockUser(roles="ADMIN")
+    @Test @WithPrismUser(roles="ADMIN")
     void administrativeNavigationKeepsFeedbackTargetAndHandlesManyLongRows() throws Exception {
         for (int index = 0; index < 24; index++) {
             users.save(new User("Pengguna dengan nama lengkap panjang untuk pemeriksaan tabel administrasi " + index,
@@ -184,13 +183,13 @@ class UiRenderingIntegrationTest {
         String html = render("/admin/users", "users-many");
         assertThat(html).contains("id=\"management-feedback\"", "long-user-23@example.test")
                 .doesNotContain("hx-swap-oob=");
-        assertThat(html.split("data-label=\"Nama\"", -1).length - 1).isEqualTo(25);
+        assertThat(html.split("data-label=\"Nama\"", -1).length - 1).isEqualTo(users.count());
         var navigation = mvc.perform(get("/admin/facilities").header("HX-Request", "true").header("HX-Target", "dashboard-content"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(navigation).contains("id=\"management-feedback\"").doesNotContain("hx-swap-oob=");
     }
 
-    @Test @WithMockUser(username="ui@example.test", roles="PENGGUNA")
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
     void reservationFormsKeepBindingsAndConditionalActions() throws Exception {
         assertThat(render("/reservations/new", "reservation-form"))
             .contains("multipart/form-data", "name=\"facilityId\"", "name=\"date\"", "name=\"purpose\"", "name=\"proposal\"", "name=\"_csrf\"", "id=\"reservation-availability\"",
@@ -217,7 +216,7 @@ class UiRenderingIntegrationTest {
         mvc.perform(get("/admin/users")).andExpect(status().isForbidden());
     }
 
-    @Test @WithMockUser(username="ui@example.test", roles="PENGGUNA")
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
     void penggunaHomeRendersReservationDashboard() throws Exception {
         LocalDateTime approvedStart = LocalDateTime.now().plusDays(3).withHour(13).withMinute(0);
         reservations.save(new Reservation(reservation.getUser(), room, approvedStart, approvedStart.plusHours(1),
@@ -231,13 +230,13 @@ class UiRenderingIntegrationTest {
             .doesNotContain("Platform for Reservation and Issue Management");
     }
 
-    @Test @WithMockUser(roles="PETUGAS")
+    @Test @WithPrismUser(roles="PETUGAS")
     void staffActionsRenderWithoutAdminLinks() throws Exception {
         assertThat(render("/staff/dashboard?sort=start", "staff")).contains("/approve", "/reject", "name=\"reasonDetail\"", "Penolakan manual", "Batas pending", "name=\"_csrf\"", "Operasional", "Blokir", "Pengaturan Akun")
             .doesNotContain("href=\"/admin/users\"");
     }
 
-    @Test @WithMockUser(roles="PETUGAS")
+    @Test @WithPrismUser(roles="PETUGAS")
     void queueSortLinksRemainOnTheirOwnPage() throws Exception {
         for (String sort : java.util.List.of("created", "start")) {
             assertThat(render("/staff/dashboard?sort=" + sort, "dashboard-sort-" + sort))
@@ -251,9 +250,8 @@ class UiRenderingIntegrationTest {
         }
     }
 
-    @Test @WithMockUser(username="staff-ui@example.test", roles="PETUGAS")
+    @Test @WithPrismUser(username="staff-ui@example.test", roles="PETUGAS")
     void processedReportsRemainInHistoryAfterResolution() throws Exception {
-        users.save(new User("Petugas UI", "staff-ui@example.test", "hash", Role.PETUGAS, AccountStatus.ACTIVE));
         var report = reports.save(new com.github.kafeyangasli.prism.feature.report.model.Report(reservation.getUser(), room,
                 "History-resolved-UI", "Masalah untuk diperbaiki", null, com.github.kafeyangasli.prism.feature.report.model.ReportStatus.NEW));
         var rejected = reports.save(new com.github.kafeyangasli.prism.feature.report.model.Report(reservation.getUser(), room,
@@ -271,9 +269,8 @@ class UiRenderingIntegrationTest {
                 .doesNotContain("/status", "Mulai penanganan");
     }
 
-    @Test @WithMockUser(username="staff-ui@example.test", roles="PETUGAS")
+    @Test @WithPrismUser(username="staff-ui@example.test", roles="PETUGAS")
     void conflictingApprovalRequiresModalConfirmationAndCascadesAfterConfirmation() throws Exception {
-        users.save(new User("Petugas UI", "staff-ui@example.test", "hash", Role.PETUGAS, AccountStatus.ACTIVE));
         Reservation conflict = reservations.save(new Reservation(reservation.getUser(), room,
                 reservation.getStartAt().plusMinutes(30), reservation.getEndAt().plusHours(1),
                 "Kegiatan yang bertumpang tindih", null, ReservationStatus.PENDING,
@@ -300,7 +297,7 @@ class UiRenderingIntegrationTest {
             .isEqualTo(ReservationStatus.REJECTED);
     }
 
-    @Test @WithMockUser(roles="PETUGAS")
+    @Test @WithPrismUser(roles="PETUGAS")
     void staffOperationalNavigationUsesDedicatedPagesAndIgnoresBlankFlashMessages() throws Exception {
         String reservationsPage = mvc.perform(get("/staff/reservations")
                 .flashAttr("success", "   ")
@@ -325,7 +322,7 @@ class UiRenderingIntegrationTest {
             .andExpect(flash().attribute("error", "Alasan penolakan wajib diisi"));
     }
 
-    @Test @WithMockUser(roles="ADMIN")
+    @Test @WithPrismUser(roles="ADMIN")
     void adminPagesRenderWithFormsAndExports() throws Exception {
         users.save(new User("Pendaftar", "pending@example.test", "hash", Role.PENGGUNA, AccountStatus.PENDING));
         users.save(new User("Pengguna Nonaktif", "nonaktif@example.test", "hash", Role.PENGGUNA, AccountStatus.INACTIVE));
@@ -346,7 +343,7 @@ class UiRenderingIntegrationTest {
                 .contains("data-active-nav=\"admin-settings\"", "← Pengaturan");
     }
 
-    @Test @WithMockUser(roles="ADMIN")
+    @Test @WithPrismUser(roles="ADMIN")
     void adminUserNavigationReturnsDashboardContentWhileFiltersReturnOnlyResults() throws Exception {
         String navigation = mvc.perform(get("/admin/users")
                 .header("HX-Request", "true")
@@ -361,9 +358,9 @@ class UiRenderingIntegrationTest {
         assertThat(filtering).contains("id=\"user-results\"").doesNotContain("id=\"dashboard-content\"");
     }
 
-    @Test @WithMockUser(username="admin-ui@example.test", roles="ADMIN")
+    @Test @WithPrismUser(username="admin-ui@example.test", roles="ADMIN")
     void adminHtmxMutationsReturnFragmentsAndKeepValidationInDialogs() throws Exception {
-        User admin = users.save(new User("Admin UI", "admin-ui@example.test", "hash", Role.ADMIN, AccountStatus.ACTIVE));
+        User admin = users.findByEmailIgnoreCase("admin-ui@example.test").orElseThrow();
         User inactive = users.save(new User("Akun Tidak Aktif", "inactive-ui@example.test", "hash", Role.PENGGUNA, AccountStatus.INACTIVE));
 
         String activation = mvc.perform(post("/admin/users/" + inactive.getId() + "/activate")
@@ -398,7 +395,7 @@ class UiRenderingIntegrationTest {
         assertThat(admin.getRole()).isEqualTo(Role.ADMIN);
     }
 
-    @Test @WithMockUser(username="ui@example.test", roles="PENGGUNA")
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
     void emptyAndHtmxResultsRender() throws Exception {
         reservations.deleteAll();
         assertThat(render("/reservations", "history-empty")).contains("Belum ada reservasi");

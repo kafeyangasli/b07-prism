@@ -36,7 +36,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.test.context.support.WithMockUser;
+import com.github.kafeyangasli.prism.support.WithPrismUser;
 import org.springframework.test.context.junit.jupiter.web.SpringJUnitWebConfig;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -47,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+import static com.github.kafeyangasli.prism.support.PrismTestUsers.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -85,6 +86,8 @@ class ReportBlockageAuthorizationTest {
         @Bean java.time.Clock clock() { return java.time.Clock.system(java.time.ZoneId.of("Asia/Jakarta")); }
         @Bean FacilityBlockageRepository blockages() { return mock(FacilityBlockageRepository.class); }
         @Bean BlockageTypeService types() { return mock(BlockageTypeService.class); }
+        // This is an MVC/method-security slice with mocked persistence, not a JPA test.
+        @Bean jakarta.persistence.EntityManager entityManager() { return mock(jakarta.persistence.EntityManager.class); }
     }
 
     @Autowired WebApplicationContext context;
@@ -106,6 +109,7 @@ class ReportBlockageAuthorizationTest {
     @BeforeEach
     void setUp() {
         reset(users, reports, facilities, reservations, blockages, types);
+        when(users.existsByIdAndAccountStatus(any(), eq(AccountStatus.ACTIVE))).thenReturn(true);
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         owner = account(42L, "owner@example.com", Role.PENGGUNA);
         facility = new Facility("F01", "Room", "Room", "Floor", 10, "Room", AdministrativeStatus.ACTIVE);
@@ -145,7 +149,7 @@ class ReportBlockageAuthorizationTest {
     }
 
     @Test
-    @WithMockUser(username = "other@example.com", roles = "PENGGUNA")
+    @WithPrismUser(username = "other@example.com", roles = "PENGGUNA")
     void anotherOwnerCannotReadReport() {
         when(users.findByEmailIgnoreCase("other@example.com"))
                 .thenReturn(Optional.of(account(84L, "other@example.com", Role.PENGGUNA)));
@@ -155,7 +159,7 @@ class ReportBlockageAuthorizationTest {
     }
 
     @Test
-    @WithMockUser(roles = "PENGGUNA")
+    @WithPrismUser(roles = "PENGGUNA")
     void userCannotProcessReportsOrOperateBlockages() throws Exception {
         mvc.perform(patch("/api/staff/reports/100/status").param("status", "IN_PROGRESS").with(csrf()))
                 .andExpect(status().isForbidden());
@@ -170,15 +174,15 @@ class ReportBlockageAuthorizationTest {
                 .andExpect(status().isForbidden());
         mvc.perform(patch("/api/staff/blockages/200/complete").contentType(MediaType.APPLICATION_JSON).content("{}").with(csrf()))
                 .andExpect(status().isForbidden());
-        verifyNoInteractions(users);
+        verify(users, never()).findById(any());
     }
 
     @Test
-    @WithMockUser(roles = "PENGGUNA")
+    @WithPrismUser(roles = "PENGGUNA")
     void serviceAuthorizationAlsoRejectsOrdinaryUsers() {
         assertThrows(AccessDeniedException.class, () -> reportService.updateStatus(100L, ReportStatus.IN_PROGRESS, null));
         assertThrows(AccessDeniedException.class, () -> blockageService.getAllBlockages());
-        verifyNoInteractions(users);
+        verify(users, never()).findById(any());
     }
 
     @ParameterizedTest
@@ -195,13 +199,22 @@ class ReportBlockageAuthorizationTest {
         mvc.perform(post("/api/staff/blockages/preview").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"facilityId\":10,\"startAt\":\"2030-01-01T00:00:00\"}")
                         .with(user("staff@example.com").roles(role)).with(csrf())).andExpect(status().isOk());
+        String createPreview = mvc.perform(post("/api/staff/blockages/preview").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"facilityId":10,"blockageTypeId":11,"startAt":"2030-01-01T00:00:00","publicReason":"Maintenance"}
+                        """).with(user("staff@example.com").roles(role)).with(csrf()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String createToken = new tools.jackson.databind.ObjectMapper().readTree(createPreview).get("confirmationToken").asString();
         mvc.perform(post("/api/staff/blockages").contentType(MediaType.APPLICATION_JSON).content("""
                         {"facilityId":10,"blockageTypeId":11,"startAt":"2030-01-01T00:00:00",
-                         "publicReason":"Maintenance","createdBy":999}
-                        """).with(user("staff@example.com").roles(role)).with(csrf()))
+                         "publicReason":"Maintenance","createdBy":999,"confirmed":true,"confirmationToken":"%s"}
+                        """.formatted(createToken)).with(user("staff@example.com").roles(role)).with(csrf()))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.createdBy.id").value(73));
-        mvc.perform(put("/api/staff/blockages/200").contentType(MediaType.APPLICATION_JSON)
+        String updatePreview = mvc.perform(post("/api/staff/blockages/200/preview").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"publicReason\":\"Updated\"}").with(user("staff@example.com").roles(role)).with(csrf()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String updateToken = new tools.jackson.databind.ObjectMapper().readTree(updatePreview).get("confirmationToken").asString();
+        mvc.perform(put("/api/staff/blockages/200").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"publicReason\":\"Updated\",\"confirmed\":true,\"confirmationToken\":\"" + updateToken + "\"}").with(user("staff@example.com").roles(role)).with(csrf()))
                 .andExpect(status().isOk());
         mvc.perform(patch("/api/staff/blockages/200/complete").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"earlyCompletionReason\":\"Done\",\"endedBy\":999}")

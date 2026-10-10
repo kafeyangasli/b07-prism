@@ -49,11 +49,13 @@ class ReservationApprovalConcurrencyIntegrationTest {
     @Autowired ReservationRepository reservations;
     @Autowired FacilityRepository facilities;
     @Autowired UserRepository users;
+    @Autowired com.github.kafeyangasli.prism.feature.facility.repository.FacilityTypeRepository facilityTypes;
 
     @BeforeEach
     void cleanDatabase() {
         reservations.deleteAll();
         facilities.deleteAll();
+        facilityTypes.deleteAll();
         users.deleteAll();
     }
 
@@ -136,7 +138,7 @@ class ReservationApprovalConcurrencyIntegrationTest {
         try {
             service.approve(reservationId, actorId, true);
             return true;
-        } catch (RuntimeException exception) {
+        } catch (com.github.kafeyangasli.prism.shared.exception.BusinessRuleException exception) {
             return false;
         } finally {
             SecurityContextHolder.clearContext();
@@ -148,7 +150,8 @@ class ReservationApprovalConcurrencyIntegrationTest {
     }
 
     private Facility facility(String code) {
-        return facilities.save(new Facility(code, code, "Kelas", "Gedung C", 20,
+        var type = facilityTypes.save(new com.github.kafeyangasli.prism.feature.facility.model.FacilityType(code, "Kelas " + code, null));
+        return facilities.save(new Facility(code, code, type, "Gedung C", 20,
                 null, AdministrativeStatus.ACTIVE));
     }
 

@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.security.test.context.support.WithMockUser;
+import com.github.kafeyangasli.prism.support.WithPrismUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +33,7 @@ class ProposalTemplateSettingsIntegrationTest {
     @Autowired ApplicationSettingRepository settings;
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithPrismUser(roles = "ADMIN")
     void adminCanOpenSettingsAndPersistTemplateLink() throws Exception {
         mvc.perform(get("/admin/settings"))
                 .andExpect(status().isOk())
@@ -50,7 +50,7 @@ class ProposalTemplateSettingsIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "PENGGUNA")
+    @WithPrismUser(roles = "PENGGUNA")
     void reservationFormUsesPersistedTemplateLink() throws Exception {
         settings.save(new com.github.kafeyangasli.prism.feature.administration.model.ApplicationSetting(
                 "proposal_template_url", "https://docs.example.test/shared-proposal"));
@@ -65,7 +65,7 @@ class ProposalTemplateSettingsIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "PENGGUNA")
+    @WithPrismUser(roles = "PENGGUNA")
     void userCannotChangeTemplateLink() throws Exception {
         mvc.perform(post("/admin/settings/proposal-template")
                         .with(csrf())

@@ -46,24 +46,27 @@
                         <label class="ui-label">
                             Nama lengkap:
                             <input class="ui-input" type="text" th:field="*{name}" th:errorclass="ui-input-error"
-                                   th:aria-invalid="${#fields.hasErrors('name')}" required/>
+                                   th:aria-invalid="${#fields.hasErrors('name')}" autocomplete="name" aria-describedby="register-name-error" required/>
                         </label>
+                        <p id="register-name-error" class="ui-field-error" th:errors="*{name}"></p>
                     </div>
                     <div>
                         <label class="ui-label">
                             Email:
                             <input class="ui-input" type="email" autocomplete="username" th:field="*{email}"
                                    th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('email')}"
-                                   required/>
+                                   aria-describedby="register-email-error" required/>
                         </label>
+                        <p id="register-email-error" class="ui-field-error" th:errors="*{email}"></p>
                     </div>
                     <div>
                         <label class="ui-label">
                             Kata sandi:
                             <input class="ui-input" type="password" autocomplete="new-password" th:field="*{password}"
                                    th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('password')}"
-                                   required/>
+                                   aria-describedby="register-password-error" required/>
                         </label>
+                        <p id="register-password-error" class="ui-field-error" th:errors="*{password}"></p>
                     </div>
                     <div>
                         <button class="ui-btn ui-btn-primary" type="submit">

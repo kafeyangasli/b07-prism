@@ -2,6 +2,110 @@
   "use strict";
 
   let drawerTrigger = null;
+  const pendingPosts = new Map();
+  const postRequests = new WeakMap();
+
+  function unlockPost(owner) {
+    const pending = pendingPosts.get(owner);
+    if (!pending) return;
+    pending.controls.forEach(function (state) {
+      state.control.disabled = state.disabled;
+      if (state.html != null) state.control.innerHTML = state.html;
+      if (state.value != null) state.control.value = state.value;
+      if (state.busy == null) state.control.removeAttribute("aria-busy");
+      else state.control.setAttribute("aria-busy", state.busy);
+      state.spinner?.remove();
+    });
+    pendingPosts.delete(owner);
+  }
+
+  function lockPost(owner, submitter, xhr, deferred) {
+    if (pendingPosts.has(owner)) return false;
+    const controls = owner instanceof HTMLFormElement
+      ? Array.from(owner.elements).filter(function (control) {
+        return (control instanceof HTMLButtonElement && control.type === "submit")
+          || (control instanceof HTMLInputElement && ["submit", "image"].includes(control.type));
+      }) : [owner];
+    if (submitter && !controls.includes(submitter)) controls.push(submitter);
+    const pending = { controls: controls.map(function (control) {
+      return { control, disabled: control.disabled, busy: control.getAttribute("aria-busy") };
+    }) };
+    pendingPosts.set(owner, pending);
+    if (xhr) postRequests.set(xhr, owner);
+    function showLoading() {
+      if (pendingPosts.get(owner) !== pending) return;
+      pending.controls.forEach(function (state) { state.control.disabled = true; });
+      const state = pending.controls.find(function (state) { return state.control === submitter; });
+      if (!state) return;
+      submitter.setAttribute("aria-busy", "true");
+      const spinner = document.createElement("span");
+      spinner.className = "ui-loading-spinner";
+      spinner.setAttribute("aria-hidden", "true");
+      if (submitter instanceof HTMLInputElement) {
+        state.value = submitter.value;
+        submitter.value = "Memproses…";
+        submitter.after(spinner);
+        state.spinner = spinner;
+      } else {
+        state.html = submitter.innerHTML;
+        submitter.prepend(spinner);
+      }
+    }
+    // Native submission must serialize the clicked button's name/value and
+    // formaction before disabling it. The form is already locked against repeats.
+    if (deferred) setTimeout(showLoading, 0);
+    else showLoading();
+    return true;
+  }
+
+  document.addEventListener("submit", function (event) {
+    if (pendingPosts.has(event.target)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
+
+  document.addEventListener("submit", function (event) {
+    if (event.defaultPrevented || !(event.target instanceof HTMLFormElement)) return;
+    const form = event.target;
+    const method = event.submitter?.getAttribute("formmethod") || form.method;
+    if (method.toLowerCase() !== "post") return;
+    const submitter = event.submitter || Array.from(form.elements).find(function (control) {
+      return control instanceof HTMLButtonElement && control.type === "submit" && !control.disabled;
+    });
+    lockPost(form, submitter, null, true);
+  });
+
+  document.addEventListener("htmx:beforeRequest", function (event) {
+    if (event.detail.requestConfig?.verb?.toLowerCase() !== "post") return;
+    const element = event.detail.elt;
+    const owner = element.form || element.closest("form") || element;
+    const submitter = event.detail.requestConfig.triggeringEvent?.submitter
+      || (element.matches("button, input[type='submit']") ? element : null)
+      || Array.from(owner.elements || []).find(function (control) {
+        return control instanceof HTMLButtonElement && control.type === "submit" && !control.disabled;
+      });
+    if (!lockPost(owner, submitter, event.detail.xhr, false)) event.preventDefault();
+  });
+
+  document.addEventListener("htmx:afterRequest", function (event) {
+    const owner = postRequests.get(event.detail.xhr);
+    if (owner) {
+      unlockPost(owner);
+      postRequests.delete(event.detail.xhr);
+    }
+  });
+  window.addEventListener("pageshow", function () {
+    Array.from(pendingPosts.keys()).forEach(unlockPost);
+  });
+
+  function focusDialog(dialog) {
+    const target = dialog.querySelector("[data-form-errors]")
+      || dialog.querySelector('[aria-invalid="true"]')
+      || dialog.querySelector("[autofocus]")
+      || dialog.querySelector('input:not([type="hidden"]), select, textarea, button');
+    target?.focus();
+  }
 
   function setDrawer(open) {
     const shell = document.querySelector("[data-dashboard-shell]");
@@ -11,6 +115,7 @@
     shell.classList.toggle("ui-drawer-open", open);
     button?.setAttribute("aria-expanded", String(open));
     sidebar.setAttribute("aria-hidden", String(!open && window.innerWidth < 1024));
+    syncDrawerForViewport();
     if (open) {
       drawerTrigger = document.activeElement;
       sidebar.querySelector("a, button")?.focus();
@@ -22,13 +127,30 @@
   function syncDrawerForViewport() {
     const sidebar = document.getElementById("dashboard-sidebar");
     const shell = document.querySelector("[data-dashboard-shell]");
-    if (sidebar) sidebar.setAttribute("aria-hidden", String(
-      window.innerWidth < 1024 && !shell?.classList.contains("ui-drawer-open")
-    ));
+    const mobile = window.innerWidth < 1024;
+    const open = mobile && shell?.classList.contains("ui-drawer-open");
+    if (sidebar) {
+      sidebar.inert = mobile && !open;
+      sidebar.setAttribute("aria-hidden", String(sidebar.inert));
+    }
+    const main = document.querySelector(".ui-dashboard-main");
+    if (main) main.inert = Boolean(open);
+    if (!mobile) {
+      shell?.classList.remove("ui-drawer-open");
+      document.querySelector("[data-open-drawer]")?.setAttribute("aria-expanded", "false");
+    }
   }
 
   syncDrawerForViewport();
   window.addEventListener("resize", syncDrawerForViewport);
+
+  function initializeFilters(root) {
+    root.querySelectorAll?.("[data-responsive-filter]:not([data-filter-ready])").forEach(function (filter) {
+      filter.open = window.innerWidth >= 1024;
+      filter.dataset.filterReady = "true";
+    });
+  }
+  initializeFilters(document);
 
   function csrfToken() {
     return document.querySelector('meta[name="_csrf"]')?.content;
@@ -64,7 +186,7 @@
       const dialog = document.getElementById(openButton.dataset.openDialog);
       if (dialog && typeof dialog.showModal === "function") {
         dialog.showModal();
-        dialog.querySelector("[autofocus], input, select, textarea, button")?.focus();
+        focusDialog(dialog);
       }
       return;
     }
@@ -161,10 +283,10 @@
 
   function promoteOpenDialogs(root) {
     root.querySelectorAll?.("dialog[open]").forEach(function (dialog) {
-      if (typeof dialog.showModal !== "function") return;
+      if (!dialog.isConnected || typeof dialog.showModal !== "function" || dialog.matches(":modal")) return;
       dialog.removeAttribute("open");
       dialog.showModal();
-      dialog.querySelector("[autofocus], input, select, textarea, button")?.focus();
+      focusDialog(dialog);
     });
   }
 
@@ -187,14 +309,20 @@
 
   promoteOpenDialogs(document);
   document.addEventListener("htmx:afterSwap", function (event) {
-    promoteOpenDialogs(event.detail.target);
+    promoteOpenDialogs(document);
+    if (event.detail.target?.id === "reservation-availability") {
+      document.getElementById("reservation-availability")?.querySelector('input[name="startAt"]:checked, input[name="endAt"]')?.focus();
+    }
   });
 
-  document.addEventListener("htmx:afterSettle", function () {
+  document.addEventListener("htmx:afterSettle", function (event) {
+    initializeFilters(document);
     promoteOpenDialogs(document);
     syncActiveNavigation();
-    if (!document.querySelector("dialog[open]")) {
-      document.getElementById("dashboard-content")?.focus();
+    if (event.detail.target?.id?.endsWith("modal-region")) {
+      const dialog = document.querySelector("dialog[open]");
+      if (dialog) dialog.querySelector("[data-form-errors]")?.focus();
+      else document.getElementById("management-feedback")?.focus();
     }
   });
 
@@ -204,6 +332,8 @@
     if (event.detail.successful && event.detail.elt?.matches?.("[data-dashboard-link]")) {
       setDrawer(false);
       document.getElementById("dashboard-content")?.focus();
+      const title = document.querySelector("#dashboard-content h1")?.textContent?.trim();
+      if (title) document.title = title + " · PRISM";
     }
   });
 

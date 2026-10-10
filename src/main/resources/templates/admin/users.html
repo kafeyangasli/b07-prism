@@ -16,11 +16,12 @@
                 </header>
 
                 <th:block th:fragment="user-creation-success">
-                    <div id="management-feedback" hx-swap-oob="outerHTML">
-                        <div th:if="${successMessage != null}" class="ui-alert ui-alert-success" role="status">
-                            <p th:text="${successMessage}">Akun baru berhasil dibuat.</p>
-                            <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">Tutup</button>
-                        </div>
+                    <th:block th:if="${creationSuccess == true}">
+                        <div id="user-modal-region"></div>
+                        <div th:replace="~{admin/users :: user-results}"></div>
+                    </th:block>
+                    <div id="management-feedback" tabindex="-1" th:attr="hx-swap-oob=${creationSuccess == true ? 'outerHTML' : null}">
+                        <div th:replace="~{fragments/feedback :: flash}"></div>
                     </div>
                 </th:block>
 
@@ -79,7 +80,8 @@
                         </form>
                     </aside>
 
-                    <div id="user-results" th:fragment="user-results" class="min-w-0 space-y-8" aria-live="polite">
+                    <div id="user-results" th:fragment="user-results" class="min-w-0 space-y-8" aria-live="polite"
+                         th:attr="hx-swap-oob=${creationSuccess == true ? 'outerHTML' : null}">
                         <div th:if="${actionMessage != null}" class="ui-alert ui-alert-success" role="status">
                             <p th:text="${actionMessage}">Tindakan berhasil.</p>
                             <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">Tutup</button>
@@ -136,10 +138,13 @@
                                             <td class="align-middle" data-label="Peran" th:text="${u.role.name() == 'ADMIN' ? 'Admin' : (u.role.name() == 'PETUGAS' ? 'Petugas' : 'Pengguna')}"></td>
                                             <td class="align-middle" data-label="Status"><span th:replace="~{fragments/status :: badge(${u.accountStatus})}"></span></td>
                                             <td data-label="Aksi" class="ui-table-actions align-middle">
-                                                <form th:if="${u.accountStatus.name() == 'ACTIVE'}" th:action="@{/admin/users/{id}/deactivate(id=${u.id})}" method="post"
+                                                <details th:if="${u.accountStatus.name() == 'ACTIVE'}"><summary class="ui-link py-2">Nonaktifkan</summary>
+                                                <p class="ui-hint">Akun tidak dapat digunakan untuk masuk sampai diaktifkan kembali. Riwayat aktivitas tetap tersimpan.</p>
+                                                <form class="mt-3" th:action="@{/admin/users/{id}/deactivate(id=${u.id})}" method="post"
                                                     th:hx-post="@{/admin/users/{id}/deactivate(id=${u.id})}" hx-target="#user-results" hx-swap="outerHTML" hx-include="#user-filter-form" hx-indicator="#global-progress">
                                                     <button class="ui-btn ui-btn-danger" type="submit">Nonaktifkan</button>
                                                 </form>
+                                                </details>
                                                 <form th:if="${u.accountStatus.name() == 'INACTIVE'}" th:action="@{/admin/users/{id}/activate(id=${u.id})}" method="post"
                                                     th:hx-post="@{/admin/users/{id}/activate(id=${u.id})}" hx-target="#user-results" hx-swap="outerHTML" hx-include="#user-filter-form" hx-indicator="#global-progress">
                                                     <button class="ui-btn ui-btn-primary" type="submit">Aktifkan</button>

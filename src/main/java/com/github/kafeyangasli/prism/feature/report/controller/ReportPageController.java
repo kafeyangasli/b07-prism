@@ -64,14 +64,21 @@ public class ReportPageController {
     public Object create(@Valid @ModelAttribute("reportForm") CreateReportRequest request, BindingResult errors,
                          @RequestParam(value = "photo", required = false) MultipartFile photo,
                          @RequestHeader(name = "HX-Request", required = false) String hxRequest,
-                         Model model, RedirectAttributes redirect) {
+                         Model model, RedirectAttributes redirect,
+                         jakarta.servlet.http.HttpServletRequest servletRequest,
+                         jakarta.servlet.http.HttpServletResponse servletResponse) {
         if (photo == null || photo.isEmpty()) errors.reject("photo.required", "Foto laporan wajib diunggah.");
         if (errors.hasErrors()) return form(model, hxRequest);
         try {
             var report = reportService.createReport(request, photo);
             redirect.addFlashAttribute("success", "Laporan berhasil dikirim.");
             String detailUrl = "/reports/" + report.getId();
-            if (isHtmx(hxRequest)) return ResponseEntity.noContent().header("HX-Redirect", detailUrl).build();
+            if (isHtmx(hxRequest)) {
+                org.springframework.web.servlet.support.RequestContextUtils.getOutputFlashMap(servletRequest)
+                        .putAll(redirect.getFlashAttributes());
+                org.springframework.web.servlet.support.RequestContextUtils.saveOutputFlashMap(detailUrl, servletRequest, servletResponse);
+                return ResponseEntity.noContent().header("HX-Redirect", detailUrl).build();
+            }
             return "redirect:" + detailUrl;
         } catch (BusinessRuleException | ResourceNotFoundException e) {
             errors.reject("report.invalid", e.getMessage());

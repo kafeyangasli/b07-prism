@@ -75,7 +75,9 @@ class ProposalValidationIntegrationTest {
         requester = actor("requester", Role.PENGGUNA);
         staff = actor("staff", Role.PETUGAS);
         admin = actor("admin", Role.ADMIN);
-        facility = new Facility("PROP-101", "Ruang Proposal", "Kelas", "Gedung A", 30, null,
+        var type = new com.github.kafeyangasli.prism.feature.facility.model.FacilityType("PROP-ROOM", "Kelas", null);
+        entityManager.persist(type);
+        facility = new Facility("PROP-101", "Ruang Proposal", type, "Gedung A", 30, null,
                 AdministrativeStatus.ACTIVE);
         entityManager.persist(facility);
         String path = proposalStorage.store(new MockMultipartFile("proposal", "proposal.pdf", "application/pdf", PROPOSAL));

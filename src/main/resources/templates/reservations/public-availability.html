@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id" xmlns:th="http://www.thymeleaf.org"
+<html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{fragments/layout :: layout('Ketersediaan fasilitas', 'facilities', ~{::main})}">
 <body>
 <main>
@@ -7,27 +7,31 @@
         <header class="ui-page-header">
             <div>
                 <a class="ui-link text-sm" th:href="@{/facilities/{id}(id=${facilityId})}">← Detail fasilitas</a>
-                <h1 class="mt-4" th:text="${facilityName}">Fasilitas</h1>
-                <p class="ui-description">Ketersediaan setiap 30 menit, pukul 07:00–20:00.</p>
+                <p class="ui-eyebrow mt-4">Ketersediaan fasilitas</p>
+                <h1 th:text="${facilityName}">Fasilitas</h1>
+                <p class="ui-description">Slot 30 menit, pukul 07:00–20:00 WIB. Jadwal dapat berubah sampai reservasi disetujui.</p>
             </div>
+            <a sec:authorize="hasRole('PENGGUNA')" class="ui-btn ui-btn-primary" th:href="@{/reservations/new(facilityId=${facilityId},date=${date})}">Ajukan reservasi</a>
+            <a sec:authorize="!isAuthenticated()" class="ui-btn ui-btn-primary" th:href="@{/login}">Masuk untuk reservasi</a>
         </header>
-        <section class="ui-card ui-card-body">
-            <form method="get" th:action="@{/facilities/{id}/availability(id=${facilityId})}">
-                <label for="availability-date">Tanggal</label>
-                <input id="availability-date" type="date" name="date" th:value="${date}" required>
-                <button type="submit" class="ui-btn ui-btn-primary">Lihat ketersediaan</button>
+        <section class="ui-card ui-card-body space-y-5">
+            <form class="grid gap-3 sm:grid-cols-[minmax(12rem,20rem)_auto] sm:items-end" method="get" th:action="@{/facilities/{id}/availability(id=${facilityId})}">
+                <div><label class="ui-label" for="availability-date">Tanggal</label>
+                <input class="ui-input" id="availability-date" type="date" name="date" th:value="${date}" required></div>
+                <button type="submit" class="ui-btn ui-btn-secondary sm:justify-self-start">Lihat ketersediaan</button>
             </form>
-            <table class="ui-table">
-                <caption th:text="|Ketersediaan pada ${date}|">Ketersediaan</caption>
-                <thead><tr><th scope="col">Waktu</th><th scope="col">Status</th><th scope="col">Alasan blokir</th></tr></thead>
-                <tbody>
-                <tr th:each="slot : ${slots}" th:attr="data-start=${slot.label},data-state=${slot.state}">
-                    <th scope="row" th:text="|${slot.label}–${#temporals.format(slot.endAt, 'HH:mm')}|">07:00–07:30</th>
-                    <td th:text="${slot.stateLabel}">Tersedia</td>
-                    <td th:text="${slot.reason}"></td>
-                </tr>
-                </tbody>
-            </table>
+            <div><h2 th:text="${#temporals.format(date, 'dd MMMM yyyy')}">Tanggal</h2>
+                <p class="ui-hint">Tersedia: belum dipesan. Dipesan: reservasi disetujui. Diblokir: tidak dapat digunakan; alasan tercantum pada slot.</p></div>
+            <ul class="ui-slot-grid" aria-label="Jadwal ketersediaan">
+                <li th:each="slot : ${slots}" class="ui-slot"
+                    th:classappend="${' ui-slot-' + #strings.toLowerCase(slot.state.name())}"
+                    th:attr="data-start=${slot.label},data-state=${slot.state}">
+                    <strong th:text="|${slot.label}–${#temporals.format(slot.endAt, 'HH:mm')}|">07:00–07:30</strong>
+                    <small th:text="${slot.stateLabel}">Tersedia</small>
+                    <small th:if="${slot.reason != null}" th:text="${slot.reason}"></small>
+                </li>
+            </ul>
+            <p class="ui-hint">Identitas pemohon dan tujuan reservasi tidak ditampilkan pada jadwal publik.</p>
         </section>
     </div>
 </main>

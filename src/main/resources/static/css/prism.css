@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@source "../resources/templates";
-@source "../resources/static/js";
+@source "../../templates";
+@source "../js";
 
 /* PRISM: original logo violet #7469b6, lavender #ad88c6.
    Deeper action tones retain the identity with AA contrast on white. */
@@ -88,6 +88,7 @@
   .ui-btn-danger { @apply border-danger-border bg-danger-subtle text-danger hover:border-danger hover:bg-danger hover:text-white; }
   .ui-btn-ghost { @apply border-transparent text-muted hover:bg-ink-100 hover:text-content; }
   .ui-btn:disabled, .ui-btn[aria-disabled="true"] { @apply cursor-not-allowed border-border bg-disabled text-disabled-text; }
+  .ui-loading-spinner { display: inline-block; width: 1rem; height: 1rem; flex-shrink: 0; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: ui-loading-spin .7s linear infinite; }
   .ui-link { @apply font-semibold text-primary underline decoration-prism-200 underline-offset-4 hover:text-primary-hover hover:decoration-primary; }
   .ui-label { @apply mb-1.5 block text-sm font-semibold text-ink-700; }
   .ui-hint { @apply mt-2 block text-sm leading-6 text-muted; }
@@ -102,7 +103,7 @@
   .ui-form-grid > button[type="submit"] { @apply self-end justify-self-start; }
   .ui-label > .ui-input { @apply mt-2; }
   .ui-form-actions { @apply flex flex-wrap items-center gap-3 border-t border-border pt-5; }
-  .ui-table-wrap { @apply overflow-hidden rounded-lg border border-border bg-surface; }
+  .ui-table-wrap { @apply overflow-x-auto rounded-lg border border-border bg-surface; }
   .ui-table { @apply w-full text-left text-sm; }
   .ui-table thead { @apply border-b border-border bg-ink-100 text-xs font-semibold uppercase tracking-wide text-ink-600; }
   .ui-table th { @apply px-4 py-3.5; }
@@ -110,6 +111,7 @@
   .ui-table tbody tr { @apply border-b border-ink-100 last:border-b-0 hover:bg-prism-50/40; }
   .ui-table td form { @apply flex flex-wrap items-center gap-2; }
   .ui-table td form + form { @apply mt-2; }
+  .ui-table td form.ui-form { @apply grid; }
   .ui-table td[colspan] { @apply py-10 text-center text-muted; }
   .ui-table .ui-input { @apply min-w-0; }
   .ui-nav-link { @apply inline-flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium text-ink-600 transition-colors hover:bg-primary-subtle hover:text-primary; }
@@ -140,6 +142,7 @@
   .ui-hero { @apply grid min-h-[55vh] items-center gap-10 py-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.7fr)] lg:py-14; }
   .ui-sidebar-layout { @apply grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(15rem,0.32fr)_minmax(0,1fr)]; }
   .ui-filter-panel { @apply space-y-5 lg:sticky lg:top-5; }
+  .ui-filter-summary { @apply min-h-11 rounded-md py-2 text-xl font-semibold text-ink-950; }
   .ui-dialog { @apply m-auto w-[min(46rem,calc(100%-2rem))] max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-border bg-surface p-5 text-content shadow-xl sm:p-6; }
   .ui-dialog::backdrop { background: rgb(33 28 42 / 0.58); }
   .ui-dialog-header { @apply mb-6 flex items-start justify-between gap-5 border-b border-border pb-5; }
@@ -171,6 +174,7 @@
   .ui-slot-reserved, .ui-slot-blocked, .ui-slot-past, .ui-slot-too_soon { @apply cursor-not-allowed border-border bg-disabled text-disabled-text; }
   .ui-slot-blocked { @apply border-warning-border bg-warning-subtle text-warning; }
   .ui-slot small { @apply mt-0.5 text-xs leading-4; }
+  .ui-table-scroll .ui-table { min-width: 52rem; }
   .ui-end-grid { @apply grid grid-cols-3 gap-2 sm:grid-cols-5; }
   .ui-end-time { @apply relative flex min-h-11 cursor-pointer items-center justify-center rounded-md border border-ink-300 bg-surface text-sm font-semibold; }
   .ui-end-time input { @apply absolute inset-0 cursor-pointer opacity-0; }
@@ -196,6 +200,8 @@
   .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { @apply visible opacity-100; }
 }
 
+@keyframes ui-loading-spin { to { transform: rotate(360deg); } }
+
 /* Keep table semantics; each mobile record exposes its column labels. */
 @media (max-width: 1023px) {
   body:has(.ui-drawer-open) { overflow: hidden; }
@@ -206,13 +212,19 @@
   .ui-table tbody tr + tr { border-top: 4px solid var(--color-page); }
   .ui-table td { display: grid; grid-template-columns: minmax(6rem, 32%) minmax(0, 1fr); gap: .75rem; padding: .5rem 0; }
   .ui-table td::before { content: attr(data-label); font-size: .75rem; font-weight: 600; color: var(--color-muted); }
-  .ui-table td > * { min-width: 0; }
+  .ui-table td > * { min-width: 0; grid-column: 2; }
   .ui-table td[colspan] { display: block; }
   .ui-table td[colspan]::before { display: none; }
   .ui-table .ui-badge { justify-self: start; }
   .ui-table td.ui-table-actions { display: block; }
   .ui-table td.ui-table-actions::before { display: block; margin-bottom: .5rem; }
   .ui-table-actions .ui-btn { flex: 1; }
+  .ui-table-scroll .ui-table { display: table; }
+  .ui-table-scroll .ui-table thead { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+  .ui-table-scroll .ui-table tbody { display: table-row-group; }
+  .ui-table-scroll .ui-table tbody tr { display: table-row; padding: 0; }
+  .ui-table-scroll .ui-table td { display: table-cell; padding: 1rem; }
+  .ui-table-scroll .ui-table td::before { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }

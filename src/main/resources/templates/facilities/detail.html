@@ -16,7 +16,9 @@
                             Informasi fasilitas dan jadwal penggunaan yang telah dikonfirmasi.
                         </p>
                     </div>
-                    <a sec:authorize="hasRole('PENGGUNA')"
+                    <div class="flex flex-wrap gap-3">
+                    <a th:if="${facility.administrativeStatus.name() == 'ACTIVE'}" class="ui-btn ui-btn-secondary" th:href="@{/facilities/{id}/availability(id=${facility.id})}">Cek ketersediaan</a>
+                    <a sec:authorize="hasRole('PENGGUNA')" th:if="${facility.administrativeStatus.name() == 'ACTIVE'}"
                         th:href="@{/reservations/new(facilityId=${facility.id})}"
                         th:attr="hx-get=@{/reservations/new(facilityId=${facility.id})}"
                         hx-target="#reservation-modal-region"
@@ -25,10 +27,12 @@
                         class="ui-btn ui-btn-primary">
                         Ajukan reservasi
                     </a>
-                    <a sec:authorize="!isAuthenticated()" th:href="@{/login}" class="ui-btn ui-btn-primary">
+                    <a sec:authorize="!isAuthenticated()" th:if="${facility.administrativeStatus.name() == 'ACTIVE'}" th:href="@{/login}" class="ui-btn ui-btn-primary">
                         Masuk untuk reservasi
                     </a>
+                    </div>
                 </header>
+                <p th:if="${facility.administrativeStatus.name() != 'ACTIVE'}" class="ui-alert ui-alert-info">Fasilitas tidak aktif dan tidak dapat menerima reservasi baru.</p>
                 <section class="ui-card ui-card-body facility-gallery" aria-label="Galeri fasilitas" data-facility-gallery>
                     <img class="facility-image-main" th:src="${facility.thumbnail != null ? facility.thumbnail.url : '/images/facility-placeholder.svg'}"
                          th:alt="${'Foto utama ' + facility.name}" data-gallery-main data-facility-image>

@@ -12,6 +12,7 @@
               enctype="multipart/form-data" hx-post="/reports" hx-encoding="multipart/form-data"
               hx-target="#report-modal-region" hx-swap="outerHTML" hx-indicator="#global-progress">
             <div th:replace="~{fragments/feedback :: formErrors}"></div>
+            <p class="ui-hint">Semua kolom wajib diisi. Setelah dikirim, laporan menunggu penanganan petugas dan dapat dipantau di Laporan Saya.</p>
             <div th:if="${reservationError != null}" class="ui-alert ui-alert-error" role="alert" th:text="${reservationError}"></div>
             <div th:if="${reservationReport}">
                 <input type="hidden" th:field="*{reservationId}">
@@ -23,20 +24,24 @@
                 </div>
             </div>
             <div th:unless="${reservationReport}"><label class="ui-label" for="facilityId">Fasilitas</label>
-                <select class="ui-input" th:field="*{facilityId}" required autofocus>
+                <select class="ui-input" th:field="*{facilityId}" th:aria-invalid="${#fields.hasErrors('facilityId')}" required autofocus>
                     <option value="">Pilih fasilitas</option>
                     <option th:each="facility : ${facilities}" th:value="${facility.id}" th:text="${facility.name}"></option>
                 </select>
+                <p class="ui-field-error" th:errors="*{facilityId}"></p>
             </div>
             <div><label class="ui-label" for="category">Kategori</label>
-                <input class="ui-input" th:field="*{category}" maxlength="80" required placeholder="Contoh: AC, kebersihan, listrik">
+                <input class="ui-input" th:field="*{category}" th:aria-invalid="${#fields.hasErrors('category')}" aria-describedby="category-error" maxlength="80" required placeholder="Contoh: AC, kebersihan, listrik">
+                <p id="category-error" class="ui-field-error" th:errors="*{category}"></p>
             </div>
             <div><label class="ui-label" for="description">Deskripsi masalah</label>
-                <textarea class="ui-input" th:field="*{description}" maxlength="2000" required rows="5"></textarea>
+                <textarea class="ui-input" th:field="*{description}" th:aria-invalid="${#fields.hasErrors('description')}" aria-describedby="description-help description-error" maxlength="2000" required rows="5"></textarea>
+                <p id="description-help" class="ui-hint">Jelaskan lokasi masalah, kondisi yang terlihat, dan dampaknya pada penggunaan fasilitas.</p>
+                <p id="description-error" class="ui-field-error" th:errors="*{description}"></p>
             </div>
             <div><label class="ui-label" for="photo">Foto</label>
-                <input class="ui-input" id="photo" name="photo" type="file" accept="image/jpeg,image/png" required>
-                <p class="ui-hint">JPEG atau PNG, maksimal 10 MB dan 20 megapiksel. Pilih ulang foto jika formulir perlu diperbaiki.</p>
+                <input class="ui-input" id="photo" name="photo" type="file" aria-describedby="photo-help" accept="image/jpeg,image/png" required>
+                <p id="photo-help" class="ui-hint">JPEG atau PNG, maksimal 10 MB dan 20 megapiksel. Pilih ulang foto jika formulir perlu diperbaiki.</p>
             </div>
             <div class="ui-form-actions">
                 <button class="ui-btn ui-btn-secondary" type="button" data-close-dialog>Batal</button>

@@ -37,18 +37,19 @@
                             </span>
                     <a class="ui-btn ui-btn-neutral"
                        th:classappend="${dashboard.reservationSort == 'created'} ? 'ui-nav-link-active'"
-                       th:href="@{/staff/reservations(sort='created')}">
+                       th:href="@{/staff/dashboard(sort='created')}">
                         Waktu masuk
                     </a>
                     <a class="ui-btn ui-btn-neutral"
                        th:classappend="${dashboard.reservationSort == 'start'} ? 'ui-nav-link-active'"
-                       th:href="@{/staff/reservations(sort='start')}">
+                       th:href="@{/staff/dashboard(sort='start')}">
                         Waktu penggunaan
                     </a>
                 </nav>
             </div>
             <p class="ui-hint">
                 Perhatikan jadwal penggunaan, batas pending, dan validitas proposal sebelum memproses.
+                Label Segera menandai batas persetujuan dalam 24 jam.
             </p>
             <p class="ui-empty-state" th:if="${#lists.isEmpty(dashboard.pendingReservations)}">
                 Semua pengajuan telah ditangani. Tidak ada reservasi yang dapat diproses.
@@ -81,12 +82,14 @@
                     <tr th:each="row : ${dashboard.pendingReservations}">
                         <td data-label="Pemohon" th:text="${row.requesterName}">
                         </td>
-                        <td data-label="Fasilitas" th:text="${row.facilityName}">
+                        <td data-label="Fasilitas"><strong th:text="${row.facilityName}"></strong>
+                            <details class="mt-2" th:if="${row.purpose != null}"><summary class="ui-link py-2">Tujuan penggunaan</summary><p class="mt-2 whitespace-pre-wrap" th:text="${row.purpose}"></p></details>
                         </td>
                         <td data-label="Penggunaan"
                             th:text="${#temporals.format(row.startAt, 'dd MMM yyyy, HH:mm') + ' – ' + #temporals.format(row.endAt, 'dd MMM yyyy, HH:mm')}">
                         </td>
                         <td data-label="Masuk">
+                            <span th:if="${row.expiresAt != null and !row.expiresAt.isAfter(urgentBefore)}" class="ui-badge status-pending mb-2">Segera</span>
                             <p th:text="${row.createdAt != null ? #temporals.format(row.createdAt, 'dd MMM yyyy, HH:mm') : '—'}">
                             </p>
                             <p class="mt-2 text-xs font-semibold text-warning">

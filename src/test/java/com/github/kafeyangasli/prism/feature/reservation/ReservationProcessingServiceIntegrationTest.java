@@ -55,6 +55,7 @@ class ReservationProcessingServiceIntegrationTest {
     @Autowired ReservationProcessingService service;
     @Autowired ReservationRepository reservations;
     @Autowired FacilityRepository facilities;
+    @Autowired com.github.kafeyangasli.prism.feature.facility.repository.FacilityTypeRepository facilityTypes;
     @Autowired UserRepository users;
     @Autowired FacilityBlockageRepository blockages;
     @Autowired BlockageTypeRepository blockageTypes;
@@ -70,7 +71,9 @@ class ReservationProcessingServiceIntegrationTest {
                 Role.PENGGUNA, AccountStatus.ACTIVE));
         staff = users.save(new User("Petugas", "staff@example.test", "hash",
                 Role.PETUGAS, AccountStatus.ACTIVE));
-        facility = facilities.save(new Facility("R-101", "Ruang 101", "Kelas", "Gedung A",
+        var type = new com.github.kafeyangasli.prism.feature.facility.model.FacilityType("PROCESS-ROOM", "Kelas", null);
+        type = facilityTypes.save(type);
+        facility = facilities.save(new Facility("R-101", "Ruang 101", type, "Gedung A",
                 30, null, AdministrativeStatus.ACTIVE));
     }
 

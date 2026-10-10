@@ -40,19 +40,23 @@ class UiRenderingIntegrationTest {
     @Autowired UserRepository users;
     @Autowired FacilityRepository facilities;
     @Autowired ReservationRepository reservations;
+    @Autowired com.github.kafeyangasli.prism.feature.facility.repository.FacilityTypeRepository facilityTypes;
+    @Autowired com.github.kafeyangasli.prism.feature.report.repository.ReportRepository reports;
+    @Autowired com.github.kafeyangasli.prism.feature.blockage.repository.BlockageTypeRepository blockageTypes;
     Facility room;
     Reservation reservation;
 
     @BeforeEach void seed() {
         User user = users.save(new User("Pengguna UI", "ui@example.test", "hash", Role.PENGGUNA, AccountStatus.ACTIVE));
-        room = facilities.save(new Facility("LAB-UI", "Laboratorium Informatika", "Laboratorium", "Gedung Informatika, Lantai 2", 30, "Ruang kegiatan akademik dan diskusi mahasiswa.", AdministrativeStatus.ACTIVE));
+        var type = facilityTypes.save(new com.github.kafeyangasli.prism.feature.facility.model.FacilityType("LAB-UI", "Laboratorium", null));
+        room = facilities.save(new Facility("LAB-UI", "Laboratorium Informatika", type, "Gedung Informatika, Lantai 2", 30, "Ruang kegiatan akademik dan diskusi mahasiswa.", AdministrativeStatus.ACTIVE));
         LocalDateTime start = LocalDateTime.now().plusDays(2).withHour(9).withMinute(0);
         reservation = reservations.save(new Reservation(user, room, start, start.plusHours(2), "Diskusi kelompok mahasiswa", "proposal.pdf", ReservationStatus.PENDING, start.minusHours(12)));
     }
 
     String render(String url, String snapshot) throws Exception {
         String html = mvc.perform(get(url)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-        assertThat(html).contains("/css/prism.css", "id=\"main-content\"")
+        assertThat(html).contains("/css/app.css", "id=\"main-content\"")
             .doesNotContain("th:field=", "th:replace=", "sec:authorize=");
         assertThat(html.split("<main", -1)).hasSize(2);
         if (Boolean.getBoolean("prism.ui.snapshots")) {
@@ -71,7 +75,8 @@ class UiRenderingIntegrationTest {
         assertThat(catalog).contains("id=\"facility-results\"", "hx-target=\"#facility-results\"", "/images/prism-light.svg", "aria-label=\"Beranda PRISM\"")
             .doesNotContain("id=\"dashboard-sidebar\"", ">Beranda</a>")
             .doesNotContain("href=\"/admin/users\"", "href=\"/staff/dashboard\"");
-        render("/facilities/" + room.getId(), "facility");
+        assertThat(render("/facilities/" + room.getId(), "facility")).contains("/availability", "Cek ketersediaan");
+        render("/facilities/" + room.getId() + "/availability", "public-availability");
         assertThat(render("/login?error", "login"))
             .contains("name=\"username\"", "name=\"password\"", "name=\"_csrf\"", "href=\"/\"", "/images/prism-dark.svg", "/images/prism-light.svg")
             .doesNotContain("data-navigation");
@@ -80,6 +85,109 @@ class UiRenderingIntegrationTest {
             .doesNotContain("data-navigation");
         mvc.perform(get("/images/prism-light.svg")).andExpect(status().isOk());
         mvc.perform(get("/images/prism-dark.svg")).andExpect(status().isOk());
+        room.setAdministrativeStatus(AdministrativeStatus.INACTIVE);
+        facilities.saveAndFlush(room);
+        assertThat(render("/facilities/" + room.getId(), "facility-inactive"))
+                .contains("tidak dapat menerima reservasi baru").doesNotContain("Cek ketersediaan", "Masuk untuk reservasi");
+    }
+
+    @Test void catalogueCombinesFiltersAndExplainsInvalidIntervals() throws Exception {
+        var other = facilityTypes.save(new com.github.kafeyangasli.prism.feature.facility.model.FacilityType("CLASS-UI", "Kelas", null));
+        facilities.save(new Facility("OTHER-UI", "Kelas berbeda", other, "Gedung B", 60, null, AdministrativeStatus.ACTIVE));
+        String date = LocalDate.now().plusDays(3).toString();
+        String html = render("/facilities?type=Laboratorium&location=Informatika&capacity=20&startAt=" + date + "T09:00&endAt=" + date + "T10:00", "catalog-combined");
+        assertThat(html).contains("Laboratorium Informatika").doesNotContain("Kelas berbeda");
+        assertThat(render("/facilities?startAt=" + date + "T09:00", "catalog-invalid"))
+                .contains("Isi waktu mulai dan selesai bersama").doesNotContain("0 fasilitas ditemukan");
+        assertThat(render("/facilities?startAt=" + date + "T10:00&endAt=" + date + "T09:00", "catalog-reversed"))
+                .contains("Waktu mulai dan selesai yang valid");
+    }
+
+    @Test @WithMockUser(username="ui@example.test", roles="PENGGUNA")
+    void availabilityCarriesDateAndCancellationMatchesDeadline() throws Exception {
+        String date = LocalDate.now().plusDays(2).toString();
+        assertThat(render("/reservations/new?facilityId=" + room.getId() + "&date=" + date, "reservation-prefilled"))
+                .contains("value=\"" + date + "\"", "name=\"startAt\"", "Pengajuan akan menunggu");
+        assertThat(render("/reservations/" + reservation.getId(), "reservation-cancellation"))
+                .contains("Konfirmasi pembatalan", "tidak dapat dipulihkan", "belum divalidasi");
+        reservation.setStatus(ReservationStatus.APPROVED);
+        reservation.setStartAt(LocalDateTime.now().plusHours(12));
+        reservation.setEndAt(LocalDateTime.now().plusHours(13));
+        reservations.saveAndFlush(reservation);
+        assertThat(render("/reservations/" + reservation.getId(), "reservation-cutoff"))
+                .contains("Batas pembatalan telah terlewati").doesNotContain("/cancel");
+    }
+
+    @Test @WithMockUser(username="ui@example.test", roles="PENGGUNA")
+    void modalSubmissionCarriesSuccessFeedbackToDetailOnce() throws Exception {
+        String date = LocalDate.now().plusDays(4).toString();
+        var result = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/reservations")
+                .with(csrf()).header("HX-Request", "true")
+                .param("facilityId", room.getId().toString()).param("date", date)
+                .param("startAt", date + "T09:00").param("endAt", date + "T10:00")
+                .param("purpose", "Pengujian alur konfirmasi"))
+                .andExpect(status().isNoContent()).andReturn();
+        String url = result.getResponse().getHeader("HX-Redirect");
+        assertThat(url).startsWith("/reservations/");
+        var session = (org.springframework.mock.web.MockHttpSession) result.getRequest().getSession();
+        String detail = mvc.perform(get(url).session(session)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(detail).contains("Reservasi berhasil diajukan dan berstatus Menunggu.", "Pengujian alur konfirmasi");
+        assertThat(mvc.perform(get(url).session(session)).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .doesNotContain("Reservasi berhasil diajukan dan berstatus Menunggu.");
+    }
+
+    @Test @WithMockUser(username="staff-ui@example.test", roles="PETUGAS")
+    void reportDetailCarriesContextIntoBlockageAndKeepsStaffNavigation() throws Exception {
+        users.save(new User("Petugas UI", "staff-ui@example.test", "hash", Role.PETUGAS, AccountStatus.ACTIVE));
+        var report = reports.save(new com.github.kafeyangasli.prism.feature.report.model.Report(reservation.getUser(), room,
+                "AC", "Pendingin tidak berfungsi", null, com.github.kafeyangasli.prism.feature.report.model.ReportStatus.NEW));
+        var repair = blockageTypes.save(new com.github.kafeyangasli.prism.feature.blockage.model.BlockageType("REPAIR", "Perbaikan", null));
+        assertThat(render("/staff/reports/" + report.getId(), "report-staff"))
+                .contains("data-active-nav=\"staff-reports\"", "/staff/blockages?reportId=" + report.getId(), "Buat blokir perbaikan");
+        String html = render("/staff/blockages?reportId=" + report.getId(), "blockage-from-report");
+        assertThat(html).contains("value=\"" + report.getId() + "\"", "Perbaikan", "Alasan publik");
+        var result = mvc.perform(get("/staff/blockages").param("reportId", report.getId().toString())).andReturn();
+        var form = (com.github.kafeyangasli.prism.feature.blockage.dto.CreateBlockageRequest) result.getModelAndView().getModel().get("blockageForm");
+        assertThat(form.getFacilityId()).isEqualTo(room.getId());
+        assertThat(form.getBlockageTypeId()).isEqualTo(repair.getId());
+        assertThat(form.getReportId()).isEqualTo(report.getId());
+        mvc.perform(get("/admin/blockage-types")).andExpect(status().isForbidden());
+    }
+
+    @Test @WithMockUser(roles="ADMIN")
+    void blockageTypeManagementUsesHtmlAndExistingService() throws Exception {
+        assertThat(render("/admin/blockage-types", "blockage-types-empty"))
+                .contains("Belum ada jenis blokir", "Tambah jenis blokir").doesNotContain("href=\"/api/admin/blockage-types\"");
+        mvc.perform(post("/admin/blockage-types").with(csrf()).param("code", "UX-MAINT").param("name", "Pemeliharaan UI"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/admin/blockage-types"));
+        var type = blockageTypes.findByCodeIgnoreCase("UX-MAINT").orElseThrow();
+        assertThat(render("/admin/blockage-types", "blockage-types")).contains("Pemeliharaan UI", "Ubah jenis blokir", "/deactivate");
+        mvc.perform(post("/admin/blockage-types/" + type.getId() + "/update").with(csrf()).param("name", "Pemeliharaan diperbarui").param("description", "Catatan"))
+                .andExpect(status().is3xxRedirection());
+        assertThat(type.getName()).isEqualTo("Pemeliharaan diperbarui");
+        mvc.perform(post("/admin/blockage-types/" + type.getId() + "/deactivate").with(csrf())).andExpect(status().is3xxRedirection());
+        assertThat(type.isActive()).isFalse();
+        mvc.perform(post("/admin/blockage-types").param("code", "CSRF").param("name", "Tidak tersimpan"))
+                .andExpect(status().isForbidden());
+        String invalid = mvc.perform(post("/admin/blockage-types").with(csrf()).param("code", "UX-MAINT").param("name", "Duplikat"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(invalid).contains("Kode jenis blokir sudah digunakan", "value=\"Duplikat\"");
+    }
+
+    @Test @WithMockUser(roles="ADMIN")
+    void administrativeNavigationKeepsFeedbackTargetAndHandlesManyLongRows() throws Exception {
+        for (int index = 0; index < 24; index++) {
+            users.save(new User("Pengguna dengan nama lengkap panjang untuk pemeriksaan tabel administrasi " + index,
+                    "long-user-" + index + "@example.test", "hash", Role.PENGGUNA, AccountStatus.ACTIVE));
+        }
+        String html = render("/admin/users", "users-many");
+        assertThat(html).contains("id=\"management-feedback\"", "long-user-23@example.test")
+                .doesNotContain("hx-swap-oob=");
+        assertThat(html.split("data-label=\"Nama\"", -1).length - 1).isEqualTo(25);
+        var navigation = mvc.perform(get("/admin/facilities").header("HX-Request", "true").header("HX-Target", "dashboard-content"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(navigation).contains("id=\"management-feedback\"").doesNotContain("hx-swap-oob=");
     }
 
     @Test @WithMockUser(username="ui@example.test", roles="PENGGUNA")
@@ -118,7 +226,7 @@ class UiRenderingIntegrationTest {
         String html = mvc.perform(get("/"))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 
-        assertThat(html).contains("Ringkasan Pengguna", "Menunggu persetujuan", "Aktif &amp; akan datang",
+        assertThat(html).contains("Ringkasan reservasi", "Menunggu persetujuan", "Aktif &amp; akan datang",
                 "Laboratorium Informatika", "id=\"dashboard-content\"")
             .doesNotContain("Platform for Reservation and Issue Management");
     }
@@ -127,6 +235,40 @@ class UiRenderingIntegrationTest {
     void staffActionsRenderWithoutAdminLinks() throws Exception {
         assertThat(render("/staff/dashboard?sort=start", "staff")).contains("/approve", "/reject", "name=\"reasonDetail\"", "Penolakan manual", "Batas pending", "name=\"_csrf\"", "Operasional", "Blokir", "Pengaturan Akun")
             .doesNotContain("href=\"/admin/users\"");
+    }
+
+    @Test @WithMockUser(roles="PETUGAS")
+    void queueSortLinksRemainOnTheirOwnPage() throws Exception {
+        for (String sort : java.util.List.of("created", "start")) {
+            assertThat(render("/staff/dashboard?sort=" + sort, "dashboard-sort-" + sort))
+                    .contains("href=\"/staff/dashboard?sort=created\"", "href=\"/staff/dashboard?sort=start\"",
+                            "data-active-nav=\"dashboard\"")
+                    .doesNotContain("href=\"/staff/reservations?sort=");
+            assertThat(render("/staff/reservations?sort=" + sort, "reservations-sort-" + sort))
+                    .contains("href=\"/staff/reservations?sort=created\"", "href=\"/staff/reservations?sort=start\"",
+                            "data-active-nav=\"staff-reservations\"")
+                    .doesNotContain("href=\"/staff/dashboard?sort=");
+        }
+    }
+
+    @Test @WithMockUser(username="staff-ui@example.test", roles="PETUGAS")
+    void processedReportsRemainInHistoryAfterResolution() throws Exception {
+        users.save(new User("Petugas UI", "staff-ui@example.test", "hash", Role.PETUGAS, AccountStatus.ACTIVE));
+        var report = reports.save(new com.github.kafeyangasli.prism.feature.report.model.Report(reservation.getUser(), room,
+                "History-resolved-UI", "Masalah untuk diperbaiki", null, com.github.kafeyangasli.prism.feature.report.model.ReportStatus.NEW));
+        var rejected = reports.save(new com.github.kafeyangasli.prism.feature.report.model.Report(reservation.getUser(), room,
+                "History-rejected-UI", "Laporan ditolak", null, com.github.kafeyangasli.prism.feature.report.model.ReportStatus.REJECTED));
+        mvc.perform(post("/staff/reports/" + report.getId() + "/status").with(csrf()).param("status", "IN_PROGRESS"))
+                .andExpect(status().is3xxRedirection());
+        mvc.perform(post("/staff/reports/" + report.getId() + "/status").with(csrf())
+                .param("status", "RESOLVED").param("resolutionNote", "Masalah sudah diperbaiki"))
+                .andExpect(redirectedUrl("/staff/reports"));
+        String html = render("/staff/reports", "reports-with-history");
+        assertThat(html).contains("Tidak ada laporan terbuka", "Riwayat laporan");
+        String history = html.substring(html.indexOf("id=\"report-history-title\""));
+        assertThat(history).contains("History-resolved-UI", "History-rejected-UI",
+                "/staff/reports/" + report.getId(), "/staff/reports/" + rejected.getId())
+                .doesNotContain("/status", "Mulai penanganan");
     }
 
     @Test @WithMockUser(username="staff-ui@example.test", roles="PETUGAS")
@@ -193,7 +335,15 @@ class UiRenderingIntegrationTest {
         assertThat(render("/admin/facilities", "admin-facilities")).contains("name=\"code\"", "name=\"capacity\"", "/deactivate");
         assertThat(render("/admin/recap?startDate=2026-09-01&endDate=2026-09-30", "recap"))
             .contains("name=\"format\"", "value=\"csv\"", "value=\"xlsx\"", "value=\"pdf\"");
-        assertThat(render("/staff/dashboard", "admin-dashboard")).contains("href=\"/admin/users\"", "href=\"/admin/recap\"", "Administrasi", "Jenis Fasilitas", "Jenis Blokir");
+        assertThat(render("/staff/dashboard", "admin-dashboard"))
+                .contains("href=\"/admin/users\"", "href=\"/admin/recap\"", "href=\"/admin/settings\"", "Administrasi")
+                .doesNotContain("href=\"/admin/facility-types\"", "href=\"/admin/blockage-types\"");
+        assertThat(render("/admin/settings", "settings"))
+                .contains("href=\"/admin/facility-types\"", "href=\"/admin/blockage-types\"", "Jenis Fasilitas", "Jenis Blokir");
+        assertThat(render("/admin/facility-types", "facility-types-settings"))
+                .contains("data-active-nav=\"admin-settings\"", "← Pengaturan");
+        assertThat(render("/admin/blockage-types", "blockage-types-settings"))
+                .contains("data-active-nav=\"admin-settings\"", "← Pengaturan");
     }
 
     @Test @WithMockUser(roles="ADMIN")
@@ -242,7 +392,7 @@ class UiRenderingIntegrationTest {
         String createdFacility = mvc.perform(post("/admin/facilities")
                 .header("HX-Request", "true").with(csrf())
                 .param("code", "AUD-HTMX").param("name", "Auditorium HTMX")
-                .param("type", "Auditorium").param("location", "Gedung B").param("capacity", "100"))
+                .param("facilityTypeId", room.getFacilityType().getId().toString()).param("location", "Gedung B").param("capacity", "100"))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(createdFacility).contains("Fasilitas berhasil ditambahkan", "hx-swap-oob=\"outerHTML\"", "Auditorium HTMX");
         assertThat(admin.getRole()).isEqualTo(Role.ADMIN);

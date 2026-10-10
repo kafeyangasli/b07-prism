@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Jenis Blokir', 'admin-settings', ~{::main})}">
+<body><main><div class="ui-page">
+    <header class="ui-page-header">
+        <div>
+            <a class="ui-link text-sm" th:href="@{/admin/settings}">← Pengaturan</a>
+            <p class="ui-eyebrow mt-4">Pengaturan</p>
+            <h1>Jenis Blokir</h1>
+            <p class="ui-description">Kelola kategori yang digunakan pada blokir fasilitas.</p>
+        </div>
+    </header>
+    <div th:replace="~{fragments/feedback :: flash}"></div>
+    <section class="ui-card ui-card-body">
+        <h2>Tambah jenis blokir</h2>
+        <form class="ui-form ui-form-grid mt-4" th:object="${typeForm}" method="post" th:action="@{/admin/blockage-types}">
+            <div><label class="ui-label" for="code">Kode (wajib)</label><input class="ui-input" th:field="*{code}" maxlength="80" required></div>
+            <div><label class="ui-label" for="name">Nama (wajib)</label><input class="ui-input" th:field="*{name}" maxlength="150" required></div>
+            <div class="md:col-span-full"><label class="ui-label" for="description">Deskripsi (opsional)</label><textarea class="ui-input" th:field="*{description}" maxlength="2000"></textarea></div>
+            <div class="ui-form-actions md:col-span-full"><button class="ui-btn ui-btn-primary" type="submit">Tambah jenis blokir</button></div>
+        </form>
+    </section>
+    <section class="ui-section">
+        <h2>Daftar jenis blokir</h2>
+        <p class="ui-hint">Kode tetap digunakan sebagai acuan aturan blokir. Jenis yang tidak aktif tidak dapat dipilih untuk blokir baru.</p>
+        <div class="ui-empty-state" th:if="${#lists.isEmpty(types)}"><h3>Belum ada jenis blokir</h3><p class="mt-2">Tambahkan kategori melalui formulir di atas.</p></div>
+        <div class="ui-table-wrap" th:unless="${#lists.isEmpty(types)}"><table class="ui-table">
+            <thead><tr><th scope="col">Kode</th><th scope="col">Nama / deskripsi</th><th scope="col">Status</th><th scope="col">Tindakan</th></tr></thead>
+            <tbody><tr th:each="type : ${types}">
+                <td data-label="Kode" th:text="${type.code}"></td>
+                <td data-label="Nama / deskripsi"><strong th:text="${type.name}"></strong><p th:text="${type.description}"></p>
+                    <details class="mt-3"><summary class="ui-link py-2">Ubah jenis blokir</summary>
+                        <form class="ui-form mt-3" method="post" th:action="@{/admin/blockage-types/{id}/update(id=${type.id})}">
+                            <div><label class="ui-label" th:for="${'blockage-name-' + type.id}">Nama</label><input class="ui-input" th:id="${'blockage-name-' + type.id}" name="name" th:value="${type.name}" maxlength="150" required></div>
+                            <div><label class="ui-label" th:for="${'blockage-description-' + type.id}">Deskripsi (opsional)</label><textarea class="ui-input" th:id="${'blockage-description-' + type.id}" name="description" th:text="${type.description}" maxlength="2000"></textarea></div>
+                            <button class="ui-btn ui-btn-secondary" type="submit">Simpan perubahan</button>
+                        </form>
+                    </details>
+                </td>
+                <td data-label="Status"><span th:replace="~{fragments/status :: badge(${type.active ? 'ACTIVE' : 'INACTIVE'})}"></span></td>
+                <td data-label="Tindakan" class="ui-table-actions">
+                    <details th:if="${type.active}"><summary class="ui-link py-2">Nonaktifkan</summary>
+                        <p class="ui-hint">Jenis ini tidak dapat dipilih untuk blokir baru. Blokir yang sudah tercatat tetap tersimpan.</p>
+                        <form class="mt-3" method="post" th:action="@{/admin/blockage-types/{id}/deactivate(id=${type.id})}"><button class="ui-btn ui-btn-danger" type="submit">Konfirmasi nonaktifkan</button></form>
+                    </details>
+                    <span th:unless="${type.active}" class="text-muted">Tidak tersedia untuk blokir baru</span>
+                </td>
+            </tr></tbody>
+        </table></div>
+    </section>
+</div></main></body></html>

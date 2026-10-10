@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
 
 @Controller
 public class FacilityController {
@@ -49,13 +52,19 @@ public class FacilityController {
                                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startAt,
                                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endAt,
                                     Model model) {
-        if (startAt != null && endAt != null) {
-            model.addAttribute("facilities", facilityService.getAvailableFacilities(startAt, endAt));
-        } else if (type != null || location != null || capacity != null) {
-            model.addAttribute("facilities", facilityService.searchCatalogue(type, location, capacity));
-        } else {
-            model.addAttribute("facilities", facilityService.getPublicCatalogue());
+        var results = facilityService.searchCatalogue(type, location, capacity);
+        if ((startAt == null) != (endAt == null)) {
+            model.addAttribute("filterError", "Isi waktu mulai dan selesai bersama untuk memeriksa ketersediaan.");
+        } else if (startAt != null) {
+            try {
+                var availableIds = facilityService.getAvailableFacilities(startAt, endAt).stream()
+                        .map(facility -> facility.getId()).collect(Collectors.toSet());
+                results = results.stream().filter(facility -> availableIds.contains(facility.getId())).toList();
+            } catch (BusinessRuleException exception) {
+                model.addAttribute("filterError", exception.getMessage());
+            }
         }
+        model.addAttribute("facilities", model.containsAttribute("filterError") ? List.of() : results);
         model.addAttribute("type", type);
         model.addAttribute("location", location);
         model.addAttribute("capacity", capacity);

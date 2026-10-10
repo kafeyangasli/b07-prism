@@ -11,11 +11,15 @@
         <textarea class="ui-input" th:id="${'resolution-' + id}" name="resolutionNote" maxlength="2000" rows="2" required></textarea>
         <button class="ui-btn ui-btn-primary" type="submit">Selesaikan laporan</button>
     </form>
-    <form class="ui-form" th:if="${status.name() == 'NEW' or status.name() == 'IN_PROGRESS'}" th:action="@{/staff/reports/{id}/status(id=${id})}" method="post">
+    <details th:if="${status.name() == 'NEW' or status.name() == 'IN_PROGRESS'}">
+    <summary class="ui-link py-2">Tolak laporan</summary>
+    <form class="ui-form mt-3" th:action="@{/staff/reports/{id}/status(id=${id})}" method="post">
+        <p class="ui-hint">Laporan akan berstatus Ditolak dan keluar dari antrean laporan terbuka. Catatan dapat dibaca pelapor.</p>
         <input type="hidden" name="status" value="REJECTED">
         <label class="ui-label" th:for="${'rejection-' + id}">Catatan penolakan (opsional)</label>
         <textarea class="ui-input" th:id="${'rejection-' + id}" name="resolutionNote" maxlength="2000" rows="2"></textarea>
-        <button class="ui-btn ui-btn-secondary" type="submit">Tolak laporan</button>
+        <button class="ui-btn ui-btn-danger" type="submit">Konfirmasi penolakan</button>
     </form>
+    </details>
 </div>
 </body></html>

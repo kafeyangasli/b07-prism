@@ -65,7 +65,9 @@
                 <tr
                         th:if="${#lists.isEmpty(reservations)}">
                     <td colspan="5">
-                        Belum ada reservasi.
+                        <h3>Belum ada reservasi</h3>
+                        <p class="mt-2">Temukan fasilitas dan pilih jadwal untuk mengajukan reservasi pertama Anda.</p>
+                        <a class="ui-btn ui-btn-secondary mt-4" th:href="@{/facilities}">Lihat fasilitas</a>
                     </td>
                 </tr>
                 </tbody>

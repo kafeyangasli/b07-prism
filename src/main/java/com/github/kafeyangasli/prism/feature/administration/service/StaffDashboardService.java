@@ -49,7 +49,7 @@ public class StaffDashboardService {
                         Duration.between(r.getStartAt(), r.getEndAt()).toHours() >= 6
                                 || "Aula".equalsIgnoreCase(r.getFacility().getFacilityType().getName()),
                         r.getProposalValidatedAt() != null && r.getProposalValidatedBy() != null,
-                        countPendingConflicts(r, pendingReservations)))
+                        countPendingConflicts(r, pendingReservations), r.getPurpose()))
                 .toList();
         var reports = reportRepository.findUnresolvedQueue(
                         EnumSet.of(ReportStatus.NEW, ReportStatus.IN_PROGRESS))
@@ -67,5 +67,15 @@ public class StaffDashboardService {
                 .filter(other -> other.getStartAt().isBefore(candidate.getEndAt())
                         && other.getEndAt().isAfter(candidate.getStartAt()))
                 .count();
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('PETUGAS','ADMIN')")
+    public List<UnresolvedReportRow> reportHistory() {
+        return reportRepository.findByStatusInOrderByCreatedAtAsc(EnumSet.of(ReportStatus.RESOLVED, ReportStatus.REJECTED))
+                .stream().sorted(java.util.Comparator.comparing(com.github.kafeyangasli.prism.feature.report.model.Report::getCreatedAt).reversed())
+                .map(r -> new UnresolvedReportRow(r.getId(), r.getFacility().getName(),
+                        r.getCategory(), r.getStatus(), r.getCreatedAt()))
+                .toList();
     }
 }

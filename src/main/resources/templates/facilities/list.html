@@ -23,8 +23,9 @@
 
         <div class="ui-sidebar-layout">
             <aside class="ui-card ui-card-body ui-filter-panel" aria-labelledby="filter-title">
+                <details open data-responsive-filter class="space-y-4">
+                <summary class="ui-filter-summary"><h2 id="filter-title" class="inline">Filter fasilitas</h2></summary>
                 <div>
-                    <h2 id="filter-title">Filter fasilitas</h2>
                     <p class="ui-hint">Semua filter bersifat opsional. Waktu mulai dan selesai harus diisi
                         berpasangan.</p>
                 </div>
@@ -71,9 +72,14 @@
                                 Memperbarui hasil…
                             </span>
                 </form>
+                </details>
             </aside>
 
             <section id="facility-results" aria-labelledby="result-title" aria-live="polite" class="min-w-0 space-y-4">
+                <div th:if="${filterError != null}" class="ui-alert ui-alert-error" role="alert">
+                    <p th:text="${filterError}"></p>
+                </div>
+                <th:block th:if="${filterError == null}">
                 <div class="ui-section-heading">
                     <div>
                         <h2 id="result-title">Daftar fasilitas</h2>
@@ -129,6 +135,7 @@
                         lain.</p>
                     <a th:href="@{/facilities}" class="ui-btn ui-btn-secondary mt-5">Hapus semua filter</a>
                 </div>
+                </th:block>
             </section>
         </div>
     </div>

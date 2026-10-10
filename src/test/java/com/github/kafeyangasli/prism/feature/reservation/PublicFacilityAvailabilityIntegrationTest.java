@@ -152,7 +152,7 @@ class PublicFacilityAvailabilityIntegrationTest {
 
     @Test
     void invalidDatesAndMissingFacilityReturnClientErrors() throws Exception {
-        mvc.perform(get(route())).andExpect(status().isBadRequest());
+        mvc.perform(get(route())).andExpect(status().isOk());
         mvc.perform(get(route()).param("date", "invalid")).andExpect(status().isBadRequest());
         mvc.perform(get(route()).param("date", "2026-09-23")).andExpect(status().isBadRequest());
         mvc.perform(get(route()).param("date", "2027-04-01")).andExpect(status().isBadRequest());

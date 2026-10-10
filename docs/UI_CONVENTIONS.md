@@ -63,6 +63,12 @@ Render enums with `fragments/status :: badge(status)`. The badge always includes
 - `fragments/navigation` is authoritative. Visibility uses Spring Security dialect checks, while `SecurityConfig` remains the access-control authority.
 - Do not create a live link until a matching HTML route is available to that role. A disabled label may communicate planned navigation without sending users to a JSON API or forbidden route.
 - Authenticated pages render inside the persistent dashboard sidebar; public pages retain the compact public navbar. Dashboard links target `#dashboard-content`, select the same stable region from full-page responses, and use the server-rendered `data-active-nav` value to synchronize active state after a swap.
+- Closed mobile sidebars are inert. Move focus to dashboard content only for navigation; preserve focus for filters and slot updates. Promote only connected dialogs that are not already modal, and focus validation summaries after form replacements.
+- For successful admin modal creation, return an empty modal region plus existing results and feedback as out-of-band fragments. Only mark those fragments `hx-swap-oob` in the mutation response; regular navigation must retain the feedback target.
+- HTMX reservation/report redirects must save the existing Spring flash map for the destination before returning `HX-Redirect`.
+- POST submissions use the shared request guard in `app.js`: disable submit controls while pending and show a spinner on the clicked control. Preserve submitter name/value and `formaction`; restore original disabled states after HTMX completion or browser Back navigation. GET filters do not lock.
+- Queue sort links must keep the current page's route. Staff report pages retain completed/rejected reports in a separate history section; the dashboard only summarizes open work.
+- Jenis Fasilitas and Jenis Blokir are reached through Pengaturan. Their management pages use `admin-settings` as the active navigation key and provide a return link to Pengaturan; keep their existing routes and forms.
 - Supported `activeNav` keys currently include `minimal` (Pengguna dashboard), `facilities`, `reservations`, `dashboard`, `staff-reservations`, `staff-reports`, `users`, `admin-facilities`, and `recap`.
 
 ## Frontend build

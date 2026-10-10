@@ -11,17 +11,23 @@
         <form th:if="${preview == null}" class="ui-form" th:object="${blockageForm}" method="post"
               th:action="${blockageId == null ? '/staff/blockages/preview' : '/staff/blockages/' + blockageId + '/preview'}">
             <div th:replace="~{fragments/feedback :: formErrors}"></div>
-            <div th:if="${blockageId == null}">
+            <div th:if="${blockageId == null}" class="ui-form-grid">
+                <div>
                 <label class="ui-label" for="facilityId">Fasilitas</label>
                 <select class="ui-input" th:field="*{facilityId}" required><option value="">Pilih fasilitas</option>
                     <option th:each="facility : ${facilities}" th:value="${facility.id}" th:text="${facility.name}"></option></select>
+                </div><div>
                 <label class="ui-label" for="blockageTypeId">Jenis blokir</label>
                 <select class="ui-input" th:field="*{blockageTypeId}" required><option value="">Pilih jenis</option>
                     <option th:each="type : ${types}" th:value="${type.id}" th:text="${type.name}"></option></select>
-                <label class="ui-label" for="reportId">ID laporan (wajib untuk REPAIR)</label>
+                </div><div>
+                <label class="ui-label" for="reportId">Nomor laporan (wajib untuk perbaikan / REPAIR)</label>
                 <input class="ui-input" th:field="*{reportId}" type="number" min="1">
+                <p class="ui-hint">Nomor tersedia pada detail laporan. Fasilitas harus sesuai dengan laporan.</p>
+                </div><div>
                 <label class="ui-label" for="startAt">Waktu mulai</label>
                 <input class="ui-input" th:field="*{startAt}" type="datetime-local" required>
+                </div>
             </div>
             <div><label class="ui-label" for="plannedEndAt">Rencana selesai</label>
                 <input class="ui-input" th:field="*{plannedEndAt}" type="datetime-local">
@@ -29,13 +35,14 @@
                 <label th:if="${blockageId != null}"><input type="checkbox" th:field="*{openEnded}"> Tanpa batas waktu (kosongkan rencana selesai)</label>
             </div>
             <div><label class="ui-label" for="publicReason">Alasan publik</label>
-                <textarea class="ui-input" th:field="*{publicReason}" maxlength="1000" required></textarea></div>
-            <div><label class="ui-label" for="internalNote">Catatan internal</label>
+                <textarea class="ui-input" th:field="*{publicReason}" aria-describedby="public-reason-help" maxlength="1000" required></textarea>
+                <p id="public-reason-help" class="ui-hint">Ditampilkan kepada pengunjung pada jadwal fasilitas. Jangan sertakan identitas pemohon atau catatan internal.</p></div>
+            <div><label class="ui-label" for="internalNote">Catatan internal (opsional)</label>
                 <textarea class="ui-input" th:field="*{internalNote}" maxlength="2000"></textarea></div>
             <button class="ui-btn ui-btn-primary" type="submit">Lihat dampak reservasi</button>
             <a th:if="${blockageId != null}" class="ui-btn ui-btn-secondary" th:href="@{/staff/blockages}">Batal</a>
         </form>
-        <div th:if="${preview != null}">
+        <div th:if="${preview != null}" class="space-y-4">
             <h3>Konfirmasi dampak</h3>
             <p th:text="${preview.facilityName}"></p>
             <div th:if="${blockageId == null}">
@@ -45,8 +52,11 @@
             <p th:text="${'Rencana selesai: ' + (preview.plannedEndAt != null ? #temporals.format(preview.plannedEndAt, 'dd MMM yyyy, HH:mm') : 'tanpa batas waktu')}"></p>
             <p th:text="${blockageForm.publicReason}"></p>
             <p th:if="${!#strings.isEmpty(blockageForm.internalNote)}" th:text="${blockageForm.internalNote}"></p>
-            <p>Reservasi APPROVED yang akan dibatalkan: <strong th:text="${preview.approvedCount}"></strong></p>
-            <p>Reservasi PENDING yang akan ditolak: <strong th:text="${preview.pendingCount}"></strong></p>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div class="ui-stat"><p>Reservasi disetujui yang akan dibatalkan</p><p class="ui-stat-value" th:text="${preview.approvedCount}"></p></div>
+                <div class="ui-stat"><p>Pengajuan menunggu yang akan ditolak</p><p class="ui-stat-value" th:text="${preview.pendingCount}"></p></div>
+            </div>
+            <p class="ui-alert ui-alert-info">Menyimpan blokir akan menutup slot pada periode ini dan memproses reservasi terdampak. Membuka kembali fasilitas tidak memulihkan reservasi tersebut.</p>
             <p th:if="${preview.startAt != null}" th:text="${'Interval terdampak: ' + #temporals.format(preview.startAt, 'dd MMM yyyy, HH:mm') + ' — ' + (preview.plannedEndAt != null ? #temporals.format(preview.plannedEndAt, 'dd MMM yyyy, HH:mm') : 'tanpa batas waktu')}"></p>
             <p th:if="${preview.startAt == null}">Tidak ada interval baru yang dicakup. Tidak ada reservasi baru yang diproses.</p>
             <p class="ui-hint">Pratinjau berlaku 15 menit. Jika dampak berubah, Anda harus melihat pratinjau dan mengonfirmasi kembali.</p>
@@ -81,6 +91,7 @@
                 <td data-label="Tindakan"><div th:if="${blockage.status.name() == 'ACTIVE' or blockage.status.name() == 'SCHEDULED'}">
                     <a class="ui-btn ui-btn-secondary" th:href="@{/staff/blockages/{id}/edit(id=${blockage.id})}">Ubah / perpanjang</a>
                     <form class="ui-form" th:action="@{/staff/blockages/{id}/complete(id=${blockage.id})}" method="post">
+                        <p class="ui-hint">Slot mendatang dibuka kembali. Reservasi yang dibatalkan atau ditolak tidak dipulihkan.</p>
                         <label class="ui-label" th:for="${'completion-' + blockage.id}">Alasan penyelesaian awal</label>
                         <textarea class="ui-input" th:id="${'completion-' + blockage.id}" name="earlyCompletionReason" maxlength="1000" required></textarea>
                         <button class="ui-btn ui-btn-secondary" type="submit">Selesaikan lebih awal</button>

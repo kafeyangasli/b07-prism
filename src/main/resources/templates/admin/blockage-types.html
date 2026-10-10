@@ -1,8 +1,15 @@
 <!doctype html>
 <html lang="id" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout('Jenis Blokir', 'admin-blockage-types', ~{::main})}">
+      th:replace="~{fragments/layout :: layout('Jenis Blokir', 'admin-settings', ~{::main})}">
 <body><main><div class="ui-page">
-    <header th:replace="~{fragments/page :: heading('Administrasi', 'Jenis Blokir', 'Kelola kategori yang digunakan pada blokir fasilitas.')}"></header>
+    <header class="ui-page-header">
+        <div>
+            <a class="ui-link text-sm" th:href="@{/admin/settings}">← Pengaturan</a>
+            <p class="ui-eyebrow mt-4">Pengaturan</p>
+            <h1>Jenis Blokir</h1>
+            <p class="ui-description">Kelola kategori yang digunakan pada blokir fasilitas.</p>
+        </div>
+    </header>
     <div th:replace="~{fragments/feedback :: flash}"></div>
     <section class="ui-card ui-card-body">
         <h2>Tambah jenis blokir</h2>

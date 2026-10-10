@@ -8,11 +8,27 @@
             <div>
                 <p class="ui-eyebrow">Administrasi</p>
                 <h1>Pengaturan</h1>
-                <p class="ui-description">Kelola tautan dan pengaturan yang digunakan pada alur reservasi.</p>
+                <p class="ui-description">Kelola jenis fasilitas, jenis blokir, dan templat proposal.</p>
             </div>
         </header>
 
         <div th:replace="~{fragments/feedback :: flash}"></div>
+
+        <section class="ui-section" aria-labelledby="settings-types-title">
+            <h2 id="settings-types-title">Jenis fasilitas dan blokir</h2>
+            <div class="grid gap-4 md:grid-cols-2">
+                <article class="ui-card ui-card-body space-y-4">
+                    <h3>Jenis Fasilitas</h3>
+                    <p class="text-sm text-muted">Kelola kategori yang dapat dipilih saat membuat atau mengubah fasilitas.</p>
+                    <a class="ui-btn ui-btn-secondary" th:href="@{/admin/facility-types}">Kelola jenis fasilitas</a>
+                </article>
+                <article class="ui-card ui-card-body space-y-4">
+                    <h3>Jenis Blokir</h3>
+                    <p class="text-sm text-muted">Kelola kategori yang digunakan untuk memblokir fasilitas.</p>
+                    <a class="ui-btn ui-btn-secondary" th:href="@{/admin/blockage-types}">Kelola jenis blokir</a>
+                </article>
+            </div>
+        </section>
 
         <section class="ui-card ui-card-body">
             <h2>Templat proposal</h2>

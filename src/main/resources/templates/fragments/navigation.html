@@ -92,17 +92,6 @@
                hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
                th:classappend="${activeNav == 'admin-facilities'} ? ' ui-sidebar-link-active'"
                th:aria-current="${activeNav == 'admin-facilities'} ? 'page' : null">Kelola Fasilitas</a>
-            <a th:href="@{/admin/facility-types}" class="ui-sidebar-link" data-dashboard-link
-               data-nav-key="admin-facility-types"
-               hx-get="/admin/facility-types" hx-target="#dashboard-content" hx-select="#dashboard-content"
-               hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
-               th:classappend="${activeNav == 'admin-facility-types'} ? ' ui-sidebar-link-active'"
-               th:aria-current="${activeNav == 'admin-facility-types'} ? 'page' : null">Jenis Fasilitas</a>
-            <a th:href="@{/admin/blockage-types}" class="ui-sidebar-link" data-dashboard-link data-nav-key="admin-blockage-types"
-               hx-get="/admin/blockage-types" hx-target="#dashboard-content" hx-select="#dashboard-content"
-               hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
-               th:classappend="${activeNav == 'admin-blockage-types'} ? ' ui-sidebar-link-active'"
-               th:aria-current="${activeNav == 'admin-blockage-types'} ? 'page' : null">Jenis Blokir</a>
             <a th:href="@{/admin/recap}" class="ui-sidebar-link" data-dashboard-link data-nav-key="recap"
                hx-get="/admin/recap" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
                hx-push-url="true" hx-indicator="#global-progress"

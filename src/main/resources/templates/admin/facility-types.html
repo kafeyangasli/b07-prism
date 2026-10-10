@@ -1,13 +1,14 @@
 <!doctype html>
 <html lang="id" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout('Tipe Fasilitas', 'admin-facility-types', ~{::main})}">
+      th:replace="~{fragments/layout :: layout('Jenis Fasilitas', 'admin-settings', ~{::main})}">
 <body>
 <main>
     <div class="ui-page">
         <header class="ui-page-header">
             <div>
-                <p class="ui-eyebrow">Administrasi</p>
-                <h1>Tipe Fasilitas</h1>
+                <a class="ui-link text-sm" th:href="@{/admin/settings}">← Pengaturan</a>
+                <p class="ui-eyebrow mt-4">Pengaturan</p>
+                <h1>Jenis Fasilitas</h1>
                 <p class="ui-description">Kelola kategori yang dapat dipilih untuk fasilitas.</p>
             </div>
         </header>

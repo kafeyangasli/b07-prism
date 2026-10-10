@@ -68,6 +68,7 @@ Render enums with `fragments/status :: badge(status)`. The badge always includes
 - HTMX reservation/report redirects must save the existing Spring flash map for the destination before returning `HX-Redirect`.
 - POST submissions use the shared request guard in `app.js`: disable submit controls while pending and show a spinner on the clicked control. Preserve submitter name/value and `formaction`; restore original disabled states after HTMX completion or browser Back navigation. GET filters do not lock.
 - Queue sort links must keep the current page's route. Staff report pages retain completed/rejected reports in a separate history section; the dashboard only summarizes open work.
+- Jenis Fasilitas and Jenis Blokir are reached through Pengaturan. Their management pages use `admin-settings` as the active navigation key and provide a return link to Pengaturan; keep their existing routes and forms.
 - Supported `activeNav` keys currently include `minimal` (Pengguna dashboard), `facilities`, `reservations`, `dashboard`, `staff-reservations`, `staff-reports`, `users`, `admin-facilities`, and `recap`.
 
 ## Frontend build

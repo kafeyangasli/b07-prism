@@ -335,7 +335,15 @@ class UiRenderingIntegrationTest {
         assertThat(render("/admin/facilities", "admin-facilities")).contains("name=\"code\"", "name=\"capacity\"", "/deactivate");
         assertThat(render("/admin/recap?startDate=2026-09-01&endDate=2026-09-30", "recap"))
             .contains("name=\"format\"", "value=\"csv\"", "value=\"xlsx\"", "value=\"pdf\"");
-        assertThat(render("/staff/dashboard", "admin-dashboard")).contains("href=\"/admin/users\"", "href=\"/admin/recap\"", "Administrasi", "Jenis Fasilitas", "Jenis Blokir");
+        assertThat(render("/staff/dashboard", "admin-dashboard"))
+                .contains("href=\"/admin/users\"", "href=\"/admin/recap\"", "href=\"/admin/settings\"", "Administrasi")
+                .doesNotContain("href=\"/admin/facility-types\"", "href=\"/admin/blockage-types\"");
+        assertThat(render("/admin/settings", "settings"))
+                .contains("href=\"/admin/facility-types\"", "href=\"/admin/blockage-types\"", "Jenis Fasilitas", "Jenis Blokir");
+        assertThat(render("/admin/facility-types", "facility-types-settings"))
+                .contains("data-active-nav=\"admin-settings\"", "← Pengaturan");
+        assertThat(render("/admin/blockage-types", "blockage-types-settings"))
+                .contains("data-active-nav=\"admin-settings\"", "← Pengaturan");
     }
 
     @Test @WithMockUser(roles="ADMIN")

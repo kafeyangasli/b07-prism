@@ -29,6 +29,10 @@ prism:
   storage:
     proposals: ${PRISM_PROPOSAL_STORAGE:./storage/proposals}
     facilities: ${PRISM_FACILITY_STORAGE:./storage/facilities}
+    avatars: ${PRISM_AVATAR_STORAGE:./storage/avatars}
+
+  avatars:
+    max-bytes: ${PRISM_AVATAR_MAX_BYTES:5242880}
 
   facility-images:
     max-bytes: ${PRISM_FACILITY_IMAGE_MAX_BYTES:5242880}

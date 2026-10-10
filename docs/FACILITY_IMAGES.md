@@ -55,7 +55,7 @@ Modified:
 
 Added:
 
-- `docs/facility-images.md`
+- `docs/FACILITY_IMAGES.md`
 - `src/main/java/com/github/kafeyangasli/prism/feature/facility/controller/FacilityImageController.java`
 - `src/main/java/com/github/kafeyangasli/prism/feature/facility/controller/FacilityImageExceptionHandler.java`
 - `src/main/java/com/github/kafeyangasli/prism/feature/facility/model/FacilityImage.java`

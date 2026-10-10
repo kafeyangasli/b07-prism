@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -28,21 +29,48 @@ public class AccountSettingsService {
     private final PasswordEncoder encoder;
     private final Clock clock;
     private final Validator validator;
+    private final AvatarStorage avatars;
 
     public AccountSettingsService(UserRepository users, ReservationRepository reservations,
-                                  PasswordEncoder encoder, Clock clock, Validator validator) {
+                                  PasswordEncoder encoder, Clock clock, Validator validator, AvatarStorage avatars) {
         this.users = users;
         this.reservations = reservations;
         this.encoder = encoder;
         this.clock = clock;
         this.validator = validator;
+        this.avatars = avatars;
     }
 
     @Transactional(readOnly = true)
     public AccountSettingsView currentAccount() {
         User user = requireActive(users.findByEmailIgnoreCase(authenticatedEmail())
                 .orElseThrow(() -> new AccessDeniedException("Akun tidak tersedia.")));
-        return new AccountSettingsView(user.getName(), user.getEmail(), user.getRole(), user.getAccountStatus());
+        return new AccountSettingsView(user.getName(), user.getEmail(), user.getRole(), user.getAccountStatus(),
+                user.getProfilePicturePath() != null);
+    }
+
+    public void updateAvatar(MultipartFile upload) {
+        User user = lockedAccount();
+        String previous = user.getProfilePicturePath();
+        String name = avatars.storeForTransaction(upload);
+        user.setProfilePicturePath(name);
+        users.save(user);
+        avatars.deleteAfterCommit(previous);
+    }
+
+    public void removeAvatar() {
+        User user = lockedAccount();
+        String previous = user.getProfilePicturePath();
+        user.setProfilePicturePath(null);
+        users.save(user);
+        avatars.deleteAfterCommit(previous);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] currentAvatar() {
+        User user = requireActive(users.findByEmailIgnoreCase(authenticatedEmail())
+                .orElseThrow(() -> new AccessDeniedException("Akun tidak tersedia.")));
+        return user.getProfilePicturePath() == null ? null : avatars.load(user.getProfilePicturePath());
     }
 
     public void updateProfile(AccountProfileForm form) {

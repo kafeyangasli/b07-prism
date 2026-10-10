@@ -8,7 +8,9 @@ import com.github.kafeyangasli.prism.feature.blockage.model.FacilityBlockage;
 import com.github.kafeyangasli.prism.feature.blockage.repository.FacilityBlockageRepository;
 import com.github.kafeyangasli.prism.feature.facility.model.AdministrativeStatus;
 import com.github.kafeyangasli.prism.feature.facility.model.Facility;
+import com.github.kafeyangasli.prism.feature.facility.model.FacilityType;
 import com.github.kafeyangasli.prism.feature.facility.repository.FacilityRepository;
+import com.github.kafeyangasli.prism.feature.facility.repository.FacilityTypeRepository;
 import com.github.kafeyangasli.prism.feature.report.repository.ReportRepository;
 import com.github.kafeyangasli.prism.feature.reservation.model.Reservation;
 import com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus;
@@ -45,17 +47,20 @@ public class AdministrationReportService {
     private final FacilityBlockageRepository blockageRepository;
     private final ReportRepository reportRepository;
     private final Clock clock;
+    private final FacilityTypeRepository facilityTypeRepository;
 
     public AdministrationReportService(FacilityRepository facilityRepository,
                                        ReservationRepository reservationRepository,
                                        FacilityBlockageRepository blockageRepository,
                                        ReportRepository reportRepository,
-                                       Clock clock) {
+                                       Clock clock,
+                                       FacilityTypeRepository facilityTypeRepository) {
         this.facilityRepository = facilityRepository;
         this.reservationRepository = reservationRepository;
         this.blockageRepository = blockageRepository;
         this.reportRepository = reportRepository;
         this.clock = clock;
+        this.facilityTypeRepository = facilityTypeRepository;
     }
 
     @Transactional(readOnly = true)
@@ -98,7 +103,7 @@ public class AdministrationReportService {
                     : BigDecimal.valueOf(counts.approved * 100.0 / counts.bookable)
                             .setScale(2, RoundingMode.HALF_UP);
             rows.add(new FacilityRecapRow(facility.getId(), facility.getCode(), facility.getName(),
-                    facility.getType(), facility.getLocation(), counts.approved,
+                    facility.getFacilityType().getName(), facility.getLocation(), counts.approved,
                     counts.bookable, percent, issueCount));
             totalApproved += counts.approved;
             totalBookable += counts.bookable;
@@ -114,6 +119,13 @@ public class AdministrationReportService {
         return facilityRepository.findAll().stream()
                 .sorted(java.util.Comparator.comparing(Facility::getName))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<FacilityType> typesForFilter() {
+        // Historical recaps also include facilities whose type has been deactivated.
+        return facilityTypeRepository.findAllByOrderByNameAsc();
     }
 
     private RecapFilter validate(RecapFilter filter) {

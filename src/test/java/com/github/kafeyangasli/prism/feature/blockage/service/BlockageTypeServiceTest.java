@@ -8,6 +8,16 @@ import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
 import com.github.kafeyangasli.prism.shared.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
+import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Timestamp;
+import java.util.UUID;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -169,5 +179,72 @@ class BlockageTypeServiceTest {
         when(blockageTypeRepository.findById(1L)).thenReturn(Optional.of(blockageType));
 
         assertThrows(BusinessRuleException.class, () -> blockageTypeService.deleteBlockageType(1L));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6, 7})
+    void baselineMigrationSeedsMissingTypesAndPreservesExistingRows(int existingMask) throws Exception {
+        List<String> codes = List.of("REPAIR", "PLANNED_MAINTENANCE", "FORCE_MAJEURE");
+        Timestamp originalTimestamp = Timestamp.valueOf("2026-01-01 00:00:00");
+        try (Connection connection = DriverManager.getConnection(
+                "jdbc:h2:mem:blockage_seed_" + UUID.randomUUID() + ";MODE=MySQL")) {
+            // Execute the original table definition so the seed test follows the real schema.
+            String schema = new ClassPathResource(
+                    "db/migration/V20260917010346__create_prism_core_tables.sql")
+                    .getContentAsString(StandardCharsets.UTF_8);
+            int start = schema.indexOf("CREATE TABLE blockage_types (");
+            int end = schema.indexOf(");", start) + 2;
+            assertTrue(start >= 0 && end > start);
+            ScriptUtils.executeSqlScript(connection,
+                    new ByteArrayResource(schema.substring(start, end).getBytes(StandardCharsets.UTF_8)));
+
+            try (var insert = connection.prepareStatement("""
+                    INSERT INTO blockage_types (code, name, description, is_active, created_at, updated_at)
+                    VALUES (?, 'Existing name', 'Existing description', FALSE, ?, ?)
+                    """)) {
+                for (int i = 0; i < codes.size(); i++) {
+                    if ((existingMask & (1 << i)) == 0) continue;
+                    insert.setString(1, codes.get(i));
+                    insert.setTimestamp(2, originalTimestamp);
+                    insert.setTimestamp(3, originalTimestamp);
+                    insert.executeUpdate();
+                }
+                insert.setString(1, "CUSTOM_TYPE");
+                insert.setTimestamp(2, originalTimestamp);
+                insert.setTimestamp(3, originalTimestamp);
+                insert.executeUpdate();
+            }
+
+            var migration = new ClassPathResource("db/migration/V20261010210000__seed_blockage_types.sql");
+            ScriptUtils.executeSqlScript(connection, migration);
+            ScriptUtils.executeSqlScript(connection, migration);
+
+            try (var query = connection.prepareStatement("SELECT * FROM blockage_types WHERE code = ?")) {
+                for (int i = 0; i < codes.size(); i++) {
+                    query.setString(1, codes.get(i));
+                    try (var rows = query.executeQuery()) {
+                        assertTrue(rows.next(), "Missing baseline code: " + codes.get(i));
+                        if ((existingMask & (1 << i)) != 0) {
+                            assertEquals("Existing name", rows.getString("name"));
+                            assertEquals("Existing description", rows.getString("description"));
+                            assertFalse(rows.getBoolean("is_active"));
+                            assertEquals(originalTimestamp, rows.getTimestamp("created_at"));
+                            assertEquals(originalTimestamp, rows.getTimestamp("updated_at"));
+                        } else {
+                            assertTrue(rows.getBoolean("is_active"));
+                            assertNotNull(rows.getString("name"));
+                            assertNotNull(rows.getTimestamp("created_at"));
+                            assertNotNull(rows.getTimestamp("updated_at"));
+                        }
+                        assertFalse(rows.next(), "Duplicate baseline code: " + codes.get(i));
+                    }
+                }
+            }
+            try (var statement = connection.createStatement();
+                 var rows = statement.executeQuery("SELECT COUNT(*) FROM blockage_types")) {
+                assertTrue(rows.next());
+                assertEquals(4, rows.getInt(1), "Three baseline types and the existing custom type must remain");
+            }
+        }
     }
 }

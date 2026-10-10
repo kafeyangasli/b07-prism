@@ -195,9 +195,7 @@ class ProposalValidationIntegrationTest {
 
     @Test
     void aulaRequiresValidationEvenForShortReservation() throws Exception {
-        var aula = new com.github.kafeyangasli.prism.feature.facility.model.FacilityType("AULA", "Aula", null);
-        entityManager.persist(aula);
-        facility.setFacilityType(aula);
+        facility.getFacilityType().updateDetails("Aula", null);
         pending.setEndAt(pending.getStartAt().plusHours(1));
         entityManager.flush();
         mvc.perform(post("/staff/reservations/{id}/approve", pending.getId())

@@ -194,7 +194,7 @@ class UiRenderingIntegrationTest {
     void reservationFormsKeepBindingsAndConditionalActions() throws Exception {
         assertThat(render("/reservations/new", "reservation-form"))
             .contains("multipart/form-data", "name=\"facilityId\"", "name=\"date\"", "name=\"purpose\"", "name=\"proposal\"", "name=\"_csrf\"", "id=\"reservation-availability\"",
-                "id=\"dashboard-sidebar\"", "id=\"dashboard-content\"", "Laporan Saya", "aria-disabled=\"true\"")
+                "id=\"dashboard-sidebar\"", "id=\"dashboard-content\"", "Laporan Saya", "href=\"/account\"", "Pengaturan Akun")
             .doesNotContain("type=\"datetime-local\"");
         String day = LocalDate.now().plusDays(2).toString();
         String availability = mvc.perform(get("/reservations/availability")
@@ -233,7 +233,7 @@ class UiRenderingIntegrationTest {
 
     @Test @WithMockUser(roles="PETUGAS")
     void staffActionsRenderWithoutAdminLinks() throws Exception {
-        assertThat(render("/staff/dashboard?sort=start", "staff")).contains("/approve", "/reject", "name=\"reasonDetail\"", "Penolakan manual", "Batas pending", "name=\"_csrf\"", "Operasional", "Blokir", "Segera")
+        assertThat(render("/staff/dashboard?sort=start", "staff")).contains("/approve", "/reject", "name=\"reasonDetail\"", "Penolakan manual", "Batas pending", "name=\"_csrf\"", "Operasional", "Blokir", "Pengaturan Akun")
             .doesNotContain("href=\"/admin/users\"");
     }
 

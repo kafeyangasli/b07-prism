@@ -42,6 +42,15 @@
                 <div th:if="${param.logout}" class="ui-alert ui-alert-success" role="status">
                     Anda berhasil keluar.
                 </div>
+                <div th:if="${param.passwordChanged}" class="ui-alert ui-alert-success" role="status">
+                    Kata sandi berhasil diubah. Sesi ini telah berakhir; masuk kembali dengan kata sandi baru.
+                </div>
+                <div th:if="${param.accountDeactivated}" class="ui-alert ui-alert-success" role="status">
+                    Akun berhasil dinonaktifkan. Riwayat reservasi dan laporan tetap tersimpan.
+                </div>
+                <div th:if="${param.inactive}" class="ui-alert ui-alert-error" role="alert">
+                    Sesi berakhir karena akun sudah tidak aktif.
+                </div>
                 <form class="ui-form" th:action="@{/login}" method="post">
                     <div>
                         <label class="ui-label">

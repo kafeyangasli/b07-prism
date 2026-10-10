@@ -23,10 +23,14 @@
                     <div id="management-feedback" tabindex="-1" th:attr="hx-swap-oob=${creationSuccess == true ? 'outerHTML' : null}">
                         <div th:replace="~{fragments/feedback :: flash}"></div>
                     </div>
+                    <th:block th:if="${facilityCreationSuccess == true}">
+                        <section th:replace="~{admin/facilities :: facility-list}"></section>
+                        <div th:replace="~{admin/facilities :: facility-modal}"></div>
+                    </th:block>
                 </th:block>
 
                 <section id="facility-list" th:fragment="facility-list" class="ui-section" aria-live="polite"
-                         th:attr="hx-swap-oob=${creationSuccess == true ? 'outerHTML' : null}">
+                         th:attr="hx-swap-oob=${facilityCreationSuccess == true ? 'outerHTML' : null}">
                     <div class="ui-section-heading">
                         <div>
                             <h2>Seluruh fasilitas</h2>
@@ -77,6 +81,7 @@
                                                 <input type="hidden" name="administrativeStatus" th:value="${f.administrativeStatus}">
                                                 <button class="ui-btn ui-btn-primary" type="submit">Simpan</button>
                                             </form>
+                                            <section th:replace="~{admin/facility-images :: manager}"></section>
                                         </details>
                                         <details th:if="${f.administrativeStatus.name() == 'ACTIVE'}"><summary class="ui-link py-2">Nonaktifkan</summary>
                                         <p class="ui-hint">Fasilitas tidak ditampilkan dalam katalog aktif dan tidak menerima reservasi baru. Reservasi yang sudah tercatat tetap tersimpan.</p>
@@ -112,6 +117,7 @@
                             <button class="ui-btn ui-btn-ghost" type="button" data-close-dialog aria-label="Tutup dialog">×</button>
                         </div>
                         <form class="ui-form ui-form-grid" th:action="@{/admin/facilities}" th:object="${facilityDto}" method="post"
+                            enctype="multipart/form-data" hx-encoding="multipart/form-data" data-image-upload
                             hx-post="/admin/facilities" hx-target="#facility-modal-region" hx-swap="outerHTML" hx-indicator="#global-progress">
                             <div class="md:col-span-full" th:replace="~{fragments/feedback :: formErrors}"></div>
                             <div>
@@ -150,6 +156,12 @@
                             <div class="md:col-span-full">
                                 <label class="ui-label" for="facility-description">Deskripsi</label>
                                 <textarea id="facility-description" class="ui-input" th:field="*{description}" placeholder="Jelaskan fasilitas dan perlengkapan yang tersedia"></textarea>
+                            </div>
+                            <div class="md:col-span-full">
+                                <label class="ui-label" for="facility-upload-images">Gambar fasilitas (opsional)</label>
+                                <input id="facility-upload-images" class="ui-input" type="file" name="images" multiple accept="image/jpeg,image/png" data-image-input>
+                                <p class="ui-hint">JPEG atau PNG, maksimal 5 MB per gambar dan 20 gambar. Pilih thumbnail di pratinjau; tanpa pilihan, gambar pertama digunakan.</p>
+                                <div class="facility-image-grid" data-image-previews></div>
                             </div>
                             <div class="ui-form-actions md:col-span-full">
                                 <button class="ui-btn ui-btn-secondary" type="button" data-close-dialog>Batal</button>

@@ -90,6 +90,8 @@
                 <div th:if="${!#lists.isEmpty(facilities)}" class="grid gap-4 xl:grid-cols-2">
                     <article th:each="facility : ${facilities}" class="ui-card flex flex-col overflow-hidden">
                         <div class="h-1 bg-accent" aria-hidden="true"></div>
+                        <img class="facility-image-card" th:src="${facility.thumbnail != null ? facility.thumbnail.url : '/images/facility-placeholder.svg'}"
+                             th:alt="${'Foto ' + facility.name}" loading="lazy" data-facility-image>
                         <div class="ui-card-body flex flex-1 flex-col">
                             <div class="flex items-start justify-between gap-4">
                                 <div class="min-w-0">

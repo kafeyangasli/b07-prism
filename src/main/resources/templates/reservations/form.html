@@ -84,12 +84,16 @@
     <div>
         <div class="flex flex-wrap items-center justify-between gap-2">
             <label class="ui-label mb-0" for="proposal">Proposal bertanda tangan</label>
-            <a class="ui-link text-sm" th:href="@{/reservations/proposal-template}">Unduh templat</a>
+            <a th:if="${proposalTemplateUrl != null}" class="ui-link text-sm" th:href="${proposalTemplateUrl}"
+               target="_blank" rel="noopener noreferrer">Buka templat</a>
+            <span th:unless="${proposalTemplateUrl != null}" class="ui-hint">Templat belum tersedia</span>
         </div>
         <input class="ui-input mt-2" id="proposal" type="file" name="proposal" aria-describedby="proposal-help"
                accept=".pdf,.doc,.docx">
-        <small id="proposal-help" class="ui-hint">Berkas tetap opsional kecuali durasi mencapai 6 jam atau fasilitas
-            bertipe Aula.</small>
+        <small id="proposal-help" class="ui-hint">Proposal wajib untuk durasi 6 jam atau lebih atau fasilitas bertipe Aula.
+            Buka templat melalui tautan, isi, tambahkan tanda tangan, lalu simpan atau pindai sebagai PDF, DOC, atau DOCX (maksimal 10 MB).
+            Proposal tidak dapat diganti setelah reservasi diajukan. Jika pengajuan gagal, pilih kembali berkas sebelum
+            mengajukan ulang.</small>
     </div>
     <div class="ui-form-actions">
         <button th:if="${modal}" class="ui-btn ui-btn-secondary" type="button" data-close-dialog>Batal</button>

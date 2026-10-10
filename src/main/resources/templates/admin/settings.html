@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Pengaturan', 'admin-settings', ~{::main})}">
+<body>
+<main>
+    <div class="ui-page">
+        <header class="ui-page-header">
+            <div>
+                <p class="ui-eyebrow">Administrasi</p>
+                <h1>Pengaturan</h1>
+                <p class="ui-description">Kelola tautan dan pengaturan yang digunakan pada alur reservasi.</p>
+            </div>
+        </header>
+
+        <div th:replace="~{fragments/feedback :: flash}"></div>
+
+        <section class="ui-card ui-card-body">
+            <h2>Templat proposal</h2>
+            <p class="ui-hint mt-2">Masukkan tautan berbagi dokumen yang dapat dibuka oleh seluruh pengguna.</p>
+            <form class="ui-form mt-4" th:action="@{/admin/settings/proposal-template}" method="post">
+                <div>
+                    <label class="ui-label" for="proposal-template-url">Tautan templat</label>
+                    <input id="proposal-template-url" class="ui-input" type="url" name="proposalTemplateUrl"
+                           th:value="${proposalTemplateUrl}" maxlength="2000" required
+                           placeholder="https://docs.example.com/proposal-template">
+                    <p class="ui-hint">Gunakan URL HTTP atau HTTPS tanpa informasi login pada alamatnya.</p>
+                </div>
+                <div class="ui-form-actions">
+                    <a th:if="${proposalTemplateUrl != null and !#strings.isEmpty(proposalTemplateUrl)}"
+                       class="ui-btn ui-btn-secondary" th:href="${proposalTemplateUrl}"
+                       target="_blank" rel="noopener noreferrer">Uji tautan</a>
+                    <button class="ui-btn ui-btn-primary" type="submit">Simpan tautan</button>
+                </div>
+            </form>
+        </section>
+    </div>
+</main>
+</body>
+</html>

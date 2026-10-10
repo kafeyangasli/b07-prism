@@ -1,14 +1,15 @@
 package com.github.kafeyangasli.prism.feature.reservation.controller;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -28,6 +29,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.github.kafeyangasli.prism.feature.facility.model.AdministrativeStatus;
 import com.github.kafeyangasli.prism.feature.facility.model.Facility;
 import com.github.kafeyangasli.prism.feature.facility.repository.FacilityRepository;
+import com.github.kafeyangasli.prism.feature.administration.service.ProposalTemplateSettingService;
 import com.github.kafeyangasli.prism.feature.reservation.dto.ReservationForm;
 import com.github.kafeyangasli.prism.feature.reservation.dto.ReservationAvailabilityView;
 import com.github.kafeyangasli.prism.feature.reservation.model.Reservation;
@@ -48,6 +50,7 @@ public class ReservationController {
     private final ReservationAvailabilityService availabilityService;
     private final FacilityRepository facilityRepository;
     private final ProposalStorageService proposalStorageService;
+    private final ProposalTemplateSettingService proposalTemplateSettings;
 
     public ReservationController(
             ReservationSubmissionService submissionService,
@@ -55,7 +58,8 @@ public class ReservationController {
             ReservationQueryService queryService,
             ReservationAvailabilityService availabilityService,
             FacilityRepository facilityRepository,
-            ProposalStorageService proposalStorageService
+            ProposalStorageService proposalStorageService,
+            ProposalTemplateSettingService proposalTemplateSettings
     ) {
 
         this.submissionService = submissionService;
@@ -64,6 +68,7 @@ public class ReservationController {
         this.availabilityService = availabilityService;
         this.facilityRepository = facilityRepository;
         this.proposalStorageService = proposalStorageService;
+        this.proposalTemplateSettings = proposalTemplateSettings;
     }
 
     /*
@@ -185,6 +190,7 @@ public class ReservationController {
         model.addAttribute("minimumDate", availabilityService.minimumDate());
         model.addAttribute("maximumDate", availabilityService.maximumDate());
         model.addAttribute("availability", availability);
+        model.addAttribute("proposalTemplateUrl", proposalTemplateSettings.getUrl().orElse(null));
         if (form.getFacilityId() != null) {
             facilities.stream()
                     .filter(facility -> facility.getId().equals(form.getFacilityId()))
@@ -351,31 +357,15 @@ public class ReservationController {
     }
 
     /*
-     * Download template proposal.
+     * Backward-compatible redirect for previously shared template URLs.
      */
     @GetMapping("/proposal-template")
-    public ResponseEntity<Resource> proposalTemplate()
-            throws MalformedURLException {
-
-        Resource resource =
-                new ClassPathResource(
-                        "static/templates/proposal-template.txt"
-                );
-
-        return ResponseEntity.ok()
-                .header(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition
-                                .attachment()
-                                .filename(
-                                        "proposal-template.txt"
-                                )
-                                .build()
-                                .toString()
-                )
-                .contentType(
-                        MediaType.TEXT_PLAIN
-                )
-                .body(resource);
+    public ResponseEntity<Void> proposalTemplate() {
+        String url = proposalTemplateSettings.getUrl()
+                .orElseThrow(() -> new ResourceNotFoundException("Tautan templat proposal belum diatur"));
+        return ResponseEntity.status(HttpStatus.SEE_OTHER)
+                .location(URI.create(url))
+                .build();
     }
+
 }

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Ketersediaan fasilitas', 'facilities', ~{::main})}">
+<body>
+<main>
+    <div class="ui-page">
+        <header class="ui-page-header">
+            <div>
+                <a class="ui-link text-sm" th:href="@{/facilities/{id}(id=${facilityId})}">← Detail fasilitas</a>
+                <h1 class="mt-4" th:text="${facilityName}">Fasilitas</h1>
+                <p class="ui-description">Ketersediaan setiap 30 menit, pukul 07:00–20:00.</p>
+            </div>
+        </header>
+        <section class="ui-card ui-card-body">
+            <form method="get" th:action="@{/facilities/{id}/availability(id=${facilityId})}">
+                <label for="availability-date">Tanggal</label>
+                <input id="availability-date" type="date" name="date" th:value="${date}" required>
+                <button type="submit" class="ui-btn ui-btn-primary">Lihat ketersediaan</button>
+            </form>
+            <table class="ui-table">
+                <caption th:text="|Ketersediaan pada ${date}|">Ketersediaan</caption>
+                <thead><tr><th scope="col">Waktu</th><th scope="col">Status</th><th scope="col">Alasan blokir</th></tr></thead>
+                <tbody>
+                <tr th:each="slot : ${slots}" th:attr="data-start=${slot.label},data-state=${slot.state}">
+                    <th scope="row" th:text="|${slot.label}–${#temporals.format(slot.endAt, 'HH:mm')}|">07:00–07:30</th>
+                    <td th:text="${slot.stateLabel}">Tersedia</td>
+                    <td th:text="${slot.reason}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+</main>
+</body>
+</html>

@@ -39,7 +39,7 @@
         </button>
     </div>
 </div>
-<div th:fragment="formErrors" th:if="${#fields.hasAnyErrors()}" class="ui-alert ui-alert-error" role="alert">
+<div th:fragment="formErrors" th:if="${#fields.hasAnyErrors()}" class="ui-alert ui-alert-error" role="alert" tabindex="-1" data-form-errors>
     <div>
         <p class="font-semibold">
             Periksa kembali data berikut:

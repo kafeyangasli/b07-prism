@@ -9,21 +9,19 @@
         <div th:replace="~{fragments/feedback :: flash}">
         </div>
         <section class="ui-card ui-card-body">
+            <div class="ui-section-heading mb-4">
+                <h2 th:text="${reservation.facility.name}">Fasilitas</h2>
+                <span th:replace="~{fragments/status :: badge(${reservation.status})}"></span>
+            </div>
+            <div class="ui-alert ui-alert-info mb-6" th:switch="${reservation.status.name()}">
+                <p th:case="'PENDING'">Pengajuan menunggu persetujuan petugas. Jadwal belum dikonfirmasi; pantau status sebelum menggunakan fasilitas.</p>
+                <p th:case="'APPROVED'">Reservasi disetujui. Gunakan fasilitas sesuai jadwal yang tercantum.</p>
+                <p th:case="'REJECTED'">Pengajuan ditolak. Periksa alasan di bawah sebelum memilih jadwal atau mengajukan kembali.</p>
+                <p th:case="'EXPIRED'">Batas persetujuan telah terlewati. Pilih jadwal baru jika masih memerlukan fasilitas.</p>
+                <p th:case="'CANCELLED'">Reservasi dibatalkan. Ajukan reservasi baru jika masih memerlukan fasilitas.</p>
+                <p th:case="'COMPLETED'">Jadwal reservasi telah selesai. Reservasi tetap tersedia dalam riwayat Anda.</p>
+            </div>
             <dl class="ui-details">
-                <div>
-                    <dt>
-                        Fasilitas
-                    </dt>
-                    <dd th:text="${reservation.facility.name}">
-                    </dd>
-                </div>
-                <div>
-                    <dt>
-                        Lokasi
-                    </dt>
-                    <dd th:text="${reservation.facility.location}">
-                    </dd>
-                </div>
                 <div>
                     <dt>
                         Mulai
@@ -39,22 +37,17 @@
                     </dd>
                 </div>
                 <div>
+                    <dt>Lokasi</dt>
+                    <dd th:text="${reservation.facility.location}"></dd>
+                </div>
+                <div>
                     <dt>
                         Tujuan
                     </dt>
                     <dd th:text="${reservation.purpose}">
                     </dd>
                 </div>
-                <div>
-                    <dt>
-                        Status
-                    </dt>
-                    <dd>
-                                <span th:replace="~{fragments/status :: badge(${reservation.status})}">
-                                </span>
-                    </dd>
-                </div>
-                <div>
+                <div th:if="${reservation.reasonDetail != null and !#strings.isEmpty(reservation.reasonDetail)}">
                     <dt>
                         Alasan
                     </dt>
@@ -63,9 +56,12 @@
                                 : '-'}">
                     </dd>
                 </div>
-                <div>
+                <div><dt>Proposal</dt>
+                    <dd th:text="${reservation.proposalPath == null ? 'Tidak dilampirkan' : (reservation.proposalValidatedAt != null ? 'Sudah divalidasi petugas' : 'Dilampirkan · belum divalidasi petugas')}"></dd>
+                </div>
+                <div th:if="${reservation.status.name() == 'PENDING'}">
                     <dt>
-                        Batas waktu menunggu
+                        Batas waktu persetujuan
                     </dt>
                     <dd th:text="${reservation.expiresAt != null
                                 ? #temporals.format(reservation.expiresAt, 'dd MMM yyyy, HH:mm')
@@ -85,16 +81,22 @@
             <a class="ui-btn ui-btn-neutral" th:href="@{/reservations}">
                 Kembali ke riwayat
             </a>
-            <form class="ui-form"
-                  th:if="${reservation.status.name() == 'PENDING'
-                        or reservation.status.name() == 'APPROVED'}"
-                  th:action="@{/reservations/{id}/cancel(id=${reservation.id})}"
-                  method="post">
-                <button class="ui-btn ui-btn-danger" type="submit">
-                    Batalkan reservasi
-                </button>
-            </form>
         </div>
+        <section th:if="${reservation.status.name() == 'PENDING' or reservation.status.name() == 'APPROVED'}" class="ui-card ui-card-body space-y-3">
+            <h2>Pembatalan reservasi</h2>
+            <p class="ui-hint" th:if="${reservation.status.name() == 'PENDING'}">Pengajuan menunggu dapat dibatalkan sebelum statusnya berubah.</p>
+            <p class="ui-hint" th:if="${reservation.status.name() == 'APPROVED'}"
+               th:text="${'Pembatalan hanya dapat dilakukan sebelum ' + #temporals.format(cancellationDeadline, 'dd MMM yyyy, HH:mm') + ' WIB (lebih dari 24 jam sebelum mulai).'}"></p>
+            <p th:unless="${canCancel}" class="ui-hint">Batas pembatalan telah terlewati. Reservasi ini tidak dapat dibatalkan sendiri.</p>
+            <details th:if="${canCancel}">
+                <summary class="ui-link py-2">Batalkan reservasi</summary>
+                <form class="ui-form mt-3" th:action="@{/reservations/{id}/cancel(id=${reservation.id})}" method="post">
+                    <p class="ui-alert ui-alert-info">Reservasi ini akan berstatus Dibatalkan dan tidak dapat dipulihkan. Jika masih membutuhkan fasilitas, Anda harus mengajukan reservasi baru.</p>
+                    <label class="flex items-start gap-3"><input class="mt-1" type="checkbox" required> Saya memahami konsekuensi pembatalan.</label>
+                    <button class="ui-btn ui-btn-danger justify-self-start" type="submit">Konfirmasi pembatalan</button>
+                </form>
+            </details>
+        </section>
         <div id="report-modal-region"></div>
     </div>
 </main>

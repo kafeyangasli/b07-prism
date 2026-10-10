@@ -129,6 +129,7 @@ public class AdminUserController {
             if (isHtmx(htmxRequest)) {
                 model.addAttribute("createUserDto", new AdminCreateUserDto());
                 model.addAttribute("successMessage", "Akun baru berhasil dibuat.");
+                model.addAttribute("creationSuccess", true);
                 populatePage(model, search, role, status, sort, direction);
                 return "admin/users :: user-creation-success";
             }

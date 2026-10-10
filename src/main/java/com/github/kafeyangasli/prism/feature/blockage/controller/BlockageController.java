@@ -22,6 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BlockageController {
     private final BlockageService blockageService;
+    private final com.github.kafeyangasli.prism.feature.report.service.ReportService reportService;
 
     @PostMapping("/api/staff/blockages/preview") @ResponseBody
     public BlockageImpactPreviewResponse previewBlockageImpact(@RequestBody BlockageImpactPreviewRequest request) {
@@ -75,7 +76,21 @@ public class BlockageController {
     }
 
     @GetMapping("/staff/blockages")
-    public String page(Model model) { return page(model, new CreateBlockageRequest(), null); }
+    public String page(@RequestParam(required = false) Long reportId, Model model) {
+        var request = new CreateBlockageRequest();
+        if (reportId != null) {
+            try {
+                var report = reportService.getStaffReportDetail(reportId);
+                request.setFacilityId(report.getFacility().getId());
+                request.setReportId(report.getId());
+                blockageService.getActiveTypes().stream().filter(type -> "REPAIR".equals(type.getCode()))
+                        .findFirst().ifPresent(type -> request.setBlockageTypeId(type.getId()));
+            } catch (BusinessRuleException | ResourceNotFoundException exception) {
+                model.addAttribute("error", exception.getMessage());
+            }
+        }
+        return page(model, request, null);
+    }
 
     @GetMapping("/staff/blockages/{id}/edit")
     public String edit(@PathVariable Long id, Model model) {

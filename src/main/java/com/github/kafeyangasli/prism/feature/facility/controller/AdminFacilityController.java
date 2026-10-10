@@ -53,6 +53,7 @@ public class AdminFacilityController {
                 model.addAttribute("facilities", facilityService.getAllFacilities());
                 model.addAttribute("facilityTypes", facilityTypeService.getActive());
                 model.addAttribute("successMessage", "Fasilitas berhasil ditambahkan.");
+                model.addAttribute("creationSuccess", true);
                 return "admin/facilities :: facility-creation-success";
             }
             redirectAttributes.addFlashAttribute("successMessage", "Fasilitas berhasil ditambahkan.");

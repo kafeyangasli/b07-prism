@@ -48,6 +48,21 @@ class ReportWorkflowIntegrationTest {
     @Autowired java.time.Clock clock;
     @Autowired jakarta.persistence.EntityManager entityManager;
 
+    @Test void modalReportSuccessSurvivesHtmxRedirect() throws Exception {
+        var owner = users.save(new User("Owner", "report-flash@example.test", "hash", Role.PENGGUNA, AccountStatus.ACTIVE));
+        var type = types.save(new FacilityType("FLASH_ROOM", "Flash Room", null));
+        var facility = facilities.save(new Facility("FLASH01", "Flash Facility", type, "Floor 1", 10, null, AdministrativeStatus.ACTIVE));
+        var output = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(2, 2, BufferedImage.TYPE_INT_RGB), "png", output);
+        var result = mvc.perform(multipart("/reports").file(new MockMultipartFile("photo", "photo.png", "image/png", output.toByteArray()))
+                .param("facilityId", facility.getId().toString()).param("category", "AC").param("description", "Broken AC")
+                .header("HX-Request", "true").with(user(owner.getEmail()).roles("PENGGUNA")).with(csrf()))
+                .andExpect(status().isNoContent()).andReturn();
+        var session = (org.springframework.mock.web.MockHttpSession) result.getRequest().getSession();
+        mvc.perform(get(result.getResponse().getHeader("HX-Redirect")).session(session).with(user(owner.getEmail()).roles("PENGGUNA")))
+                .andExpect(status().isOk()).andExpect(content().string(containsString("Laporan berhasil dikirim.")));
+    }
+
     @Test void submitViewAndProcessThroughRealRepositories() throws Exception {
         var owner = users.save(new User("Owner", "report-owner@example.test", "hash", Role.PENGGUNA, AccountStatus.ACTIVE));
         var staff = users.save(new User("Staff", "report-staff@example.test", "hash", Role.PETUGAS, AccountStatus.ACTIVE));

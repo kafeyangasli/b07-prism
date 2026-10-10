@@ -63,7 +63,7 @@
                 <div class="ui-section-heading">
                     <div>
                         <h2 id="recap-result-title">Hasil rekap fasilitas</h2>
-                        <p class="ui-hint">Ringkasan penggunaan dan laporan sesuai konfigurasi.</p>
+                        <p class="ui-hint" th:text="${'Periode ' + #temporals.format(filter.startDate, 'dd MMM yyyy') + ' – ' + #temporals.format(filter.endDate, 'dd MMM yyyy')}"></p>
                     </div>
                 </div>
 
@@ -77,16 +77,18 @@
                     <input type="hidden" name="location" th:value="${filter.location}">
                     <div>
                         <label class="ui-label" for="export-format">Format ekspor</label>
+                        <p class="ui-hint mb-2">Ekspor menggunakan periode dan filter hasil yang sedang ditampilkan.</p>
                         <select id="export-format" class="ui-input" name="format" required>
                             <option value="csv">CSV</option>
                             <option value="xlsx">XLSX</option>
                             <option value="pdf">PDF</option>
                         </select>
                     </div>
-                    <button class="ui-btn ui-btn-secondary" type="submit">Ekspor</button>
+                    <button class="ui-btn ui-btn-secondary" type="submit">Unduh rekap</button>
                 </form>
 
-                <div th:if="${recap != null}" class="ui-table-wrap">
+                <p th:if="${recap != null and !#lists.isEmpty(recap.rows)}" class="ui-hint lg:hidden" id="recap-scroll-help">Geser tabel ke samping untuk membandingkan penggunaan dan laporan.</p>
+                <div th:if="${recap != null and !#lists.isEmpty(recap.rows)}" class="ui-table-wrap ui-table-scroll" tabindex="0" role="region" aria-label="Rekap fasilitas" aria-describedby="recap-scroll-help">
                     <table class="ui-table">
                         <thead>
                         <tr>

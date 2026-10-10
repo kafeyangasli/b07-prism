@@ -6,7 +6,7 @@
     <div th:replace="~{fragments/feedback :: flash}"></div>
     <a class="ui-btn ui-btn-primary" th:href="@{/reports/new}" hx-get="/reports/new"
        hx-target="#report-modal-region" hx-swap="outerHTML" hx-indicator="#global-progress">Buat laporan</a>
-    <p class="ui-empty-state" th:if="${#lists.isEmpty(reports)}">Anda belum mengirim laporan.</p>
+    <div class="ui-empty-state" th:if="${#lists.isEmpty(reports)}"><h3>Anda belum mengirim laporan</h3><p class="mt-2 text-sm">Menemukan masalah fasilitas? Gunakan Buat laporan dan sertakan foto agar petugas dapat menindaklanjuti.</p></div>
     <div class="ui-table-wrap" th:unless="${#lists.isEmpty(reports)}"><table class="ui-table">
         <thead><tr><th>Fasilitas</th><th>Kategori</th><th>Status</th><th>Masuk</th><th>Detail</th></tr></thead>
         <tbody><tr th:each="report : ${reports}">

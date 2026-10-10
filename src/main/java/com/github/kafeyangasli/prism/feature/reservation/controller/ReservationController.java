@@ -3,6 +3,7 @@ package com.github.kafeyangasli.prism.feature.reservation.controller;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.time.LocalDate;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -51,6 +52,7 @@ public class ReservationController {
     private final FacilityRepository facilityRepository;
     private final ProposalStorageService proposalStorageService;
     private final ProposalTemplateSettingService proposalTemplateSettings;
+    private final Clock clock;
 
     public ReservationController(
             ReservationSubmissionService submissionService,
@@ -59,7 +61,8 @@ public class ReservationController {
             ReservationAvailabilityService availabilityService,
             FacilityRepository facilityRepository,
             ProposalStorageService proposalStorageService,
-            ProposalTemplateSettingService proposalTemplateSettings
+            ProposalTemplateSettingService proposalTemplateSettings,
+            Clock clock
     ) {
 
         this.submissionService = submissionService;
@@ -69,6 +72,7 @@ public class ReservationController {
         this.facilityRepository = facilityRepository;
         this.proposalStorageService = proposalStorageService;
         this.proposalTemplateSettings = proposalTemplateSettings;
+        this.clock = clock;
     }
 
     /*
@@ -77,13 +81,15 @@ public class ReservationController {
     @GetMapping("/new")
     public String newReservation(
             @RequestParam(name = "facilityId", required = false) Long facilityId,
+            @RequestParam(name = "date", required = false) String date,
             @RequestHeader(name = "HX-Request", required = false) String hxRequest,
             Model model
     ) {
         ReservationForm form = new ReservationForm();
         form.setFacilityId(facilityId);
+        form.setDate(date);
         form.setFacilityFixed(facilityId != null);
-        populateFormModel(model, form, null);
+        populateFormModel(model, form, availabilityFor(form));
         model.addAttribute("openReservationDialog", true);
         return isHtmx(hxRequest)
                 ? "reservations/form :: reservation-modal"
@@ -135,7 +141,9 @@ public class ReservationController {
             @RequestHeader(name = "HX-Request", required = false) String hxRequest,
             Authentication authentication,
             Model model,
-            RedirectAttributes redirect
+            RedirectAttributes redirect,
+            jakarta.servlet.http.HttpServletRequest request,
+            jakarta.servlet.http.HttpServletResponse response
     ) {
 
         try {
@@ -154,6 +162,9 @@ public class ReservationController {
 
             String detailUrl = "/reservations/" + reservation.getId();
             if (isHtmx(hxRequest)) {
+                org.springframework.web.servlet.support.RequestContextUtils.getOutputFlashMap(request)
+                        .putAll(redirect.getFlashAttributes());
+                org.springframework.web.servlet.support.RequestContextUtils.saveOutputFlashMap(detailUrl, request, response);
                 return ResponseEntity.noContent()
                         .header("HX-Redirect", detailUrl)
                         .build();
@@ -251,13 +262,12 @@ public class ReservationController {
             Model model
     ) {
 
-        model.addAttribute(
-                "reservation",
-                queryService.findOwnReservation(
-                        authentication.getName(),
-                        id
-                )
-        );
+        var reservation = queryService.findOwnReservation(authentication.getName(), id);
+        model.addAttribute("reservation", reservation);
+        model.addAttribute("cancellationDeadline", reservation.getStartAt().minusHours(24));
+        model.addAttribute("canCancel", reservation.getStatus().name().equals("PENDING")
+                || (reservation.getStatus().name().equals("APPROVED")
+                    && LocalDateTime.now(clock).isBefore(reservation.getStartAt().minusHours(24))));
 
         return "reservations/detail";
     }

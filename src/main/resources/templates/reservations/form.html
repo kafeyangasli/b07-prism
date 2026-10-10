@@ -39,6 +39,7 @@
         </div>
         <form class="ui-form" th:action="@{/reservations}" th:object="${reservationForm}"
               method="post" enctype="multipart/form-data" hx-post="/reservations"
+              hx-encoding="multipart/form-data"
               hx-target="#reservation-modal-region" hx-swap="outerHTML" hx-indicator="#global-progress">
             <div th:replace="~{reservations/form :: reservation-fields(true)}"></div>
         </form>
@@ -46,6 +47,7 @@
 </div>
 
 <th:block th:fragment="reservation-fields(modal)">
+    <p class="ui-hint">Fasilitas, tanggal, waktu, dan tujuan wajib diisi. Pengajuan akan menunggu persetujuan petugas.</p>
     <div th:replace="~{fragments/feedback :: formErrors}"></div>
     <div th:if="${error != null}" class="ui-alert ui-alert-error" role="alert"><p th:text="${error}">Reservasi tidak
         dapat diajukan.</p></div>
@@ -74,6 +76,7 @@
                hx-get="/reservations/availability" hx-include="closest form" hx-target="#reservation-availability"
                hx-swap="outerHTML" hx-indicator="#global-progress" hx-vals='{"reset":"true"}'>
         <p class="ui-hint" th:text="${'Dapat dipilih sampai ' + #temporals.format(maximumDate, 'dd MMMM yyyy')}"></p>
+        <p class="ui-hint">Satu tanggal, pukul 07:00–20:00 WIB, dalam interval 30 menit. Ajukan minimal 30 menit sebelum mulai. Aula dipesan sehari penuh (07:00–20:00).</p>
     </div>
     <div th:replace="~{reservations/availability :: availability}"></div>
     <div>
@@ -100,6 +103,7 @@
         <a th:unless="${modal}" class="ui-btn ui-btn-secondary" th:href="@{/reservations}">Kembali</a>
         <button class="ui-btn ui-btn-primary" type="submit">Ajukan reservasi</button>
     </div>
+    <p class="ui-hint">Setelah dikirim, detail reservasi menampilkan status dan batas waktu persetujuan. Maksimal 7 reservasi disetujui yang belum berakhir.</p>
 </th:block>
 </body>
 </html>

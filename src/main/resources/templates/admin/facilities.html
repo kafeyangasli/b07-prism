@@ -16,15 +16,17 @@
                 </header>
 
                 <th:block th:fragment="facility-creation-success">
-                    <div id="management-feedback" hx-swap-oob="outerHTML">
-                        <div th:if="${successMessage != null}" class="ui-alert ui-alert-success" role="status">
-                            <p th:text="${successMessage}">Fasilitas berhasil ditambahkan.</p>
-                            <button type="button" class="font-semibold" data-dismiss-alert aria-label="Tutup pesan">Tutup</button>
-                        </div>
+                    <th:block th:if="${creationSuccess == true}">
+                        <div id="facility-modal-region"></div>
+                        <div th:replace="~{admin/facilities :: facility-list}"></div>
+                    </th:block>
+                    <div id="management-feedback" tabindex="-1" th:attr="hx-swap-oob=${creationSuccess == true ? 'outerHTML' : null}">
+                        <div th:replace="~{fragments/feedback :: flash}"></div>
                     </div>
                 </th:block>
 
-                <section id="facility-list" th:fragment="facility-list" class="ui-section" aria-live="polite">
+                <section id="facility-list" th:fragment="facility-list" class="ui-section" aria-live="polite"
+                         th:attr="hx-swap-oob=${creationSuccess == true ? 'outerHTML' : null}">
                     <div class="ui-section-heading">
                         <div>
                             <h2>Seluruh fasilitas</h2>
@@ -76,10 +78,13 @@
                                                 <button class="ui-btn ui-btn-primary" type="submit">Simpan</button>
                                             </form>
                                         </details>
-                                        <form th:if="${f.administrativeStatus.name() == 'ACTIVE'}"
+                                        <details th:if="${f.administrativeStatus.name() == 'ACTIVE'}"><summary class="ui-link py-2">Nonaktifkan</summary>
+                                        <p class="ui-hint">Fasilitas tidak ditampilkan dalam katalog aktif dan tidak menerima reservasi baru. Reservasi yang sudah tercatat tetap tersimpan.</p>
+                                        <form class="mt-3"
                                             th:action="@{/admin/facilities/{id}/deactivate(id=${f.id})}" method="post">
                                             <button class="ui-btn ui-btn-danger" type="submit">Nonaktifkan</button>
                                         </form>
+                                        </details>
                                         <form th:if="${f.administrativeStatus.name() != 'ACTIVE'}"
                                               th:action="@{/admin/facilities/{id}/activate(id=${f.id})}" method="post">
                                             <button class="ui-btn ui-btn-primary" type="submit">Aktifkan</button>

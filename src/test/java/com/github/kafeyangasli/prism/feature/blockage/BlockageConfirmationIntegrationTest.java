@@ -96,8 +96,8 @@ class BlockageConfirmationIntegrationTest {
                         .param("startAt", start.toString()).param("plannedEndAt", end.toString()).param("publicReason", "Maintenance")
                         .with(user(staff.getEmail()).roles("PETUGAS")).with(csrf()))
                 .andExpect(status().isOk()).andExpect(view().name("staff/blockages"))
-                .andExpect(content().string(containsString("APPROVED yang akan dibatalkan")))
-                .andExpect(content().string(containsString("PENDING yang akan ditolak")))
+                .andExpect(content().string(containsString("Reservasi disetujui yang akan dibatalkan")))
+                .andExpect(content().string(containsString("Pengajuan menunggu yang akan ditolak")))
                 .andExpect(content().string(containsString("name=\"confirmed\"")))
                 .andExpect(content().string(containsString("name=\"_csrf\"")))
                 .andReturn();

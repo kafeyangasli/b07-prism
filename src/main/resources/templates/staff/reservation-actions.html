@@ -2,6 +2,8 @@
 <html lang="id" xmlns:th="http://www.thymeleaf.org">
 <body>
 <td th:fragment="actions(row)" data-label="Tindakan" class="ui-table-actions">
+    <p th:if="${row.proposalRequired and !row.proposalValidated}" class="ui-hint mb-3">Tinjau lalu validasi proposal untuk mengaktifkan persetujuan.</p>
+    <p th:if="${row.conflictingPendingCount > 0}" class="ui-hint mb-3" th:text="${row.conflictingPendingCount + ' pengajuan menunggu bertumpang tindih. Persetujuan akan menolaknya otomatis.'}"></p>
     <a th:if="${row.proposalRequired}" class="ui-btn ui-btn-secondary"
        th:href="@{/staff/reservations/{id}/proposal(id=${row.id})}">Unduh proposal</a>
     <form th:if="${row.proposalRequired and !row.proposalValidated}"

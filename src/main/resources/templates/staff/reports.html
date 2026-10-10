@@ -48,6 +48,23 @@
                 </table>
             </div>
         </section>
+        <section class="ui-section" aria-labelledby="report-history-title">
+            <h2 id="report-history-title">Riwayat laporan</h2>
+            <p class="ui-hint">Laporan yang telah selesai atau ditolak tetap dapat dilihat di sini.</p>
+            <p class="ui-empty-state" th:if="${#lists.isEmpty(reportHistory)}">Belum ada laporan yang selesai atau ditolak.</p>
+            <div class="ui-table-wrap" th:unless="${#lists.isEmpty(reportHistory)}">
+                <table class="ui-table">
+                    <thead><tr><th scope="col">Fasilitas</th><th scope="col">Kategori</th><th scope="col">Status</th><th scope="col">Masuk</th><th scope="col">Detail</th></tr></thead>
+                    <tbody><tr th:each="row : ${reportHistory}">
+                        <td data-label="Fasilitas" th:text="${row.facilityName}"></td>
+                        <td data-label="Kategori" th:text="${row.category}"></td>
+                        <td data-label="Status"><span th:replace="~{fragments/status :: badge(${row.status})}"></span></td>
+                        <td data-label="Masuk" th:text="${row.createdAt != null ? #temporals.format(row.createdAt, 'dd MMM yyyy, HH:mm') : '—'}"></td>
+                        <td data-label="Detail"><a class="ui-btn ui-btn-secondary" th:href="@{/staff/reports/{id}(id=${row.id})}">Lihat laporan</a></td>
+                    </tr></tbody>
+                </table>
+            </div>
+        </section>
     </div>
 </main>
 </body>

@@ -18,6 +18,7 @@ import com.github.kafeyangasli.prism.feature.user.model.Role;
 import com.github.kafeyangasli.prism.feature.user.model.User;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
+import com.github.kafeyangasli.prism.shared.exception.storage.ProposalStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -56,6 +58,7 @@ class ReservationProcessingServiceIntegrationTest {
     @Autowired UserRepository users;
     @Autowired FacilityBlockageRepository blockages;
     @Autowired BlockageTypeRepository blockageTypes;
+    @Autowired ProposalStorageService proposalStorage;
 
     private User requester;
     private User staff;
@@ -101,17 +104,26 @@ class ReservationProcessingServiceIntegrationTest {
     }
 
     @Test
-    void proposalRequiredReservationNeedsStaffValidation() {
+    void proposalRequiredReservationNeedsStaffValidation() throws Exception {
         Reservation pending = saveReservation(requester, facility, NOW.plusDays(1).withHour(7),
                 NOW.plusDays(1).withHour(13), ReservationStatus.PENDING, NOW.plusHours(12));
         assertThatThrownBy(() -> service.approve(pending.getId(), staff.getId(), false))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Proposal");
 
-        pending.setProposalValidatedAt(NOW.minusMinutes(1));
-        pending.setProposalValidatedBy(staff);
-        reservations.saveAndFlush(pending);
-        assertThat(service.approve(pending.getId(), staff.getId(), false).getStatus())
-                .isEqualTo(ReservationStatus.APPROVED);
+        String path = proposalStorage.store(new MockMultipartFile("proposal", "review.pdf",
+                "application/pdf", "Proposal untuk ditinjau".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        try {
+            pending.setProposalPath(path);
+            reservations.saveAndFlush(pending);
+            service.validateProposal(pending.getId(), staff.getId());
+            assertThat(pending.getStatus()).isEqualTo(ReservationStatus.PENDING);
+            assertThat(pending.getProposalValidatedAt()).isEqualTo(NOW);
+            assertThat(pending.getProposalValidatedBy().getId()).isEqualTo(staff.getId());
+            assertThat(service.approve(pending.getId(), staff.getId(), false).getStatus())
+                    .isEqualTo(ReservationStatus.APPROVED);
+        } finally {
+            java.nio.file.Files.deleteIfExists(proposalStorage.load(path).getFile().toPath());
+        }
     }
 
     @Test

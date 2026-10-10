@@ -23,6 +23,7 @@
                         <th scope="col">Kategori</th>
                         <th scope="col">Status</th>
                         <th scope="col">Masuk</th>
+                        <th scope="col">Tindakan</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -37,6 +38,10 @@
                         </td>
                         <td data-label="Masuk"
                             th:text="${row.createdAt != null ? #temporals.format(row.createdAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                        </td>
+                        <td data-label="Tindakan">
+                            <a class="ui-btn ui-btn-secondary" th:href="@{/staff/reports/{id}(id=${row.id})}">Detail dan foto</a>
+                            <div th:replace="~{reports/actions :: actions(${row.id}, ${row.status})}"></div>
                         </td>
                     </tr>
                     </tbody>

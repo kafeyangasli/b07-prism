@@ -49,6 +49,12 @@ class ReportServiceTest {
     @Mock
     private StaffActorResolver staffActorResolver;
 
+    @Mock
+    private ReportPhotoStorage photoStorage;
+
+    @Mock
+    private ReportReservationService reportReservationService;
+
     @InjectMocks
     private ReportService reportService;
 
@@ -86,6 +92,7 @@ class ReportServiceTest {
 
         MockMultipartFile photo = new MockMultipartFile("photo", "test.jpg", "image/jpeg", "dummy image content".getBytes());
 
+        when(photoStorage.store(photo)).thenReturn("generated.jpg");
         Report result = reportService.createReport(request, photo);
 
         assertNotNull(result);
@@ -95,7 +102,7 @@ class ReportServiceTest {
         assertEquals("AC is blowing warm air", result.getDescription());
         assertEquals(ReportStatus.NEW, result.getStatus());
         assertNotNull(result.getPhotoPath());
-        assertTrue(result.getPhotoPath().endsWith("test.jpg"));
+        assertEquals("generated.jpg", result.getPhotoPath());
         assertFalse(result.getPhotoPath().contains(".."));
     }
 
@@ -103,6 +110,8 @@ class ReportServiceTest {
     void createReport_UserNotFound_ThrowsException() {
         CreateReportRequest request = new CreateReportRequest();
         request.setFacilityId(10L);
+        request.setCategory("AC");
+        request.setDescription("Broken AC");
 
         when(userRepository.findByEmailIgnoreCase("user1@example.com")).thenReturn(Optional.empty());
 
@@ -110,15 +119,18 @@ class ReportServiceTest {
     }
 
     @Test
-    void createReport_PathTraversalPhoto_ThrowsException() {
+    void createReport_InvalidPhoto_ThrowsException() {
         CreateReportRequest request = new CreateReportRequest();
         request.setFacilityId(10L);
+        request.setCategory("AC");
+        request.setDescription("Broken AC");
 
         when(userRepository.findByEmailIgnoreCase("user1@example.com")).thenReturn(Optional.of(user1));
         when(facilityRepository.findById(10L)).thenReturn(Optional.of(facility));
 
         MockMultipartFile photo = new MockMultipartFile("photo", "../secret.txt", "text/plain", "data".getBytes());
 
+        when(photoStorage.store(photo)).thenThrow(new BusinessRuleException("Invalid photo"));
         assertThrows(BusinessRuleException.class, () -> reportService.createReport(request, photo));
     }
 
@@ -164,7 +176,7 @@ class ReportServiceTest {
         Report report = new Report(user1, facility, "Category", "Desc", null, ReportStatus.NEW);
         ReflectionTestUtils.setField(report, "id", 100L);
 
-        when(reportRepository.findById(100L)).thenReturn(Optional.of(report));
+        when(reportRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(report));
         authenticate("staff@example.com", "PETUGAS");
         when(staffActorResolver.resolveId("staff@example.com")).thenReturn(3L);
         when(userRepository.findById(3L)).thenReturn(Optional.of(staff));
@@ -182,7 +194,7 @@ class ReportServiceTest {
         Report report = new Report(user1, facility, "Category", "Desc", null, ReportStatus.NEW);
         ReflectionTestUtils.setField(report, "id", 100L);
 
-        when(reportRepository.findById(100L)).thenReturn(Optional.of(report));
+        when(reportRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(report));
         authenticate("staff@example.com", "PETUGAS");
         when(staffActorResolver.resolveId("staff@example.com")).thenReturn(3L);
         when(userRepository.findById(3L)).thenReturn(Optional.of(staff));
@@ -201,7 +213,7 @@ class ReportServiceTest {
         ReflectionTestUtils.setField(report, "id", 100L);
         report.setHandledBy(staff);
 
-        when(reportRepository.findById(100L)).thenReturn(Optional.of(report));
+        when(reportRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(report));
         authenticate("staff@example.com", "PETUGAS");
         when(staffActorResolver.resolveId("staff@example.com")).thenReturn(3L);
         when(userRepository.findById(3L)).thenReturn(Optional.of(staff));
@@ -219,7 +231,7 @@ class ReportServiceTest {
         Report report = new Report(user1, facility, "Category", "Desc", null, ReportStatus.IN_PROGRESS);
         ReflectionTestUtils.setField(report, "id", 100L);
 
-        when(reportRepository.findById(100L)).thenReturn(Optional.of(report));
+        when(reportRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(report));
 
         assertThrows(BusinessRuleException.class, () -> reportService.updateStatus(100L, ReportStatus.RESOLVED, "   "));
     }
@@ -229,7 +241,7 @@ class ReportServiceTest {
         Report report = new Report(user1, facility, "Category", "Desc", null, ReportStatus.NEW);
         ReflectionTestUtils.setField(report, "id", 100L);
 
-        when(reportRepository.findById(100L)).thenReturn(Optional.of(report));
+        when(reportRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(report));
 
         assertThrows(BusinessRuleException.class, () -> reportService.updateStatus(100L, ReportStatus.RESOLVED, "Done"));
     }
@@ -239,9 +251,87 @@ class ReportServiceTest {
         Report report = new Report(user1, facility, "Category", "Desc", null, ReportStatus.RESOLVED);
         ReflectionTestUtils.setField(report, "id", 100L);
 
-        when(reportRepository.findById(100L)).thenReturn(Optional.of(report));
+        when(reportRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(report));
 
         assertThrows(BusinessRuleException.class, () -> reportService.updateStatus(100L, ReportStatus.IN_PROGRESS, null));
+    }
+
+    @Test
+    void allStatusPairsEnforceExactlyTheFourAllowedTransitions() {
+        for (ReportStatus current : ReportStatus.values()) {
+            for (ReportStatus next : ReportStatus.values()) {
+                boolean allowed = current == ReportStatus.NEW && (next == ReportStatus.IN_PROGRESS || next == ReportStatus.REJECTED)
+                        || current == ReportStatus.IN_PROGRESS && (next == ReportStatus.RESOLVED || next == ReportStatus.REJECTED);
+                if (allowed) assertDoesNotThrow(() -> reportService.validateTransition(current, next));
+                else assertThrows(BusinessRuleException.class, () -> reportService.validateTransition(current, next));
+            }
+        }
+        assertThrows(BusinessRuleException.class, () -> reportService.validateTransition(ReportStatus.NEW, null));
+    }
+
+    @Test
+    void finalActionAuditsCurrentActorEvenWhenAnotherStaffStartedHandling() {
+        Report report = new Report(user1, facility, "AC", "Broken", null, ReportStatus.IN_PROGRESS);
+        report.setHandledBy(user2);
+        var oldTime = java.time.LocalDateTime.now().minusDays(1);
+        report.setHandledAt(oldTime);
+        when(reportRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(report));
+        authenticate("staff@example.com", "PETUGAS");
+        when(staffActorResolver.resolveId("staff@example.com")).thenReturn(3L);
+        when(userRepository.findById(3L)).thenReturn(Optional.of(staff));
+        when(reportRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var result = reportService.updateStatus(100L, ReportStatus.REJECTED, "Duplicate");
+        assertEquals(staff, result.getHandledBy());
+        assertTrue(result.getHandledAt().isAfter(oldTime));
+        assertEquals(result.getHandledAt(), result.getUpdatedAt());
+        assertNull(result.getResolvedAt());
+    }
+
+    @Test
+    void saveFailureRemovesUploadedPhoto() {
+        var request = new CreateReportRequest();
+        request.setFacilityId(10L);
+        request.setCategory("AC");
+        request.setDescription("Broken");
+        when(userRepository.findByEmailIgnoreCase("user1@example.com")).thenReturn(Optional.of(user1));
+        when(facilityRepository.findById(10L)).thenReturn(Optional.of(facility));
+        when(photoStorage.store(any())).thenReturn("generated.jpg");
+        when(reportRepository.save(any())).thenThrow(new IllegalStateException("DB unavailable"));
+        assertThrows(IllegalStateException.class, () -> reportService.createReport(request, new MockMultipartFile("photo", new byte[]{1})));
+        verify(photoStorage).delete("generated.jpg");
+    }
+
+    @Test
+    void reservationReportUsesAuthenticatedOwnerAndReservationFacility() {
+        var request = new CreateReportRequest();
+        request.setReservationId(25L);
+        request.setFacilityId(999L);
+        request.setCategory("AC");
+        request.setDescription("Broken");
+        var end = java.time.LocalDateTime.now().minusHours(1);
+        var reservation = new com.github.kafeyangasli.prism.feature.reservation.model.Reservation(user1, facility,
+                end.minusHours(1), end, "Meeting", null,
+                com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus.COMPLETED, null);
+        when(userRepository.findByEmailIgnoreCase("user1@example.com")).thenReturn(Optional.of(user1));
+        when(reportReservationService.eligibleReservation(25L, 1L)).thenReturn(reservation);
+        when(photoStorage.store(any())).thenReturn("generated.jpg");
+        when(reportRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var result = reportService.createReport(request, new MockMultipartFile("photo", new byte[]{1}));
+        assertEquals(user1, result.getUser());
+        assertEquals(facility, result.getFacility());
+        verifyNoInteractions(facilityRepository);
+    }
+
+    @Test
+    void expiredReservationIsRejectedBeforePhotoStorage() {
+        var request = new CreateReportRequest();
+        request.setReservationId(25L);
+        request.setCategory("AC");
+        request.setDescription("Broken");
+        when(userRepository.findByEmailIgnoreCase("user1@example.com")).thenReturn(Optional.of(user1));
+        when(reportReservationService.eligibleReservation(25L, 1L)).thenThrow(new BusinessRuleException("Expired"));
+        assertThrows(BusinessRuleException.class, () -> reportService.createReport(request, new MockMultipartFile("photo", new byte[]{1})));
+        verifyNoInteractions(photoStorage, reportRepository);
     }
     @AfterEach
     void clearAuthentication() {

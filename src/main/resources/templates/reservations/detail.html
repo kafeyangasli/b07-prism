@@ -81,6 +81,7 @@
             </div>
         </section>
         <div class="ui-form-actions">
+            <a th:replace="~{reports/form :: reservation-action(${reservation})}"></a>
             <a class="ui-btn ui-btn-neutral" th:href="@{/reservations}">
                 Kembali ke riwayat
             </a>
@@ -94,6 +95,7 @@
                 </button>
             </form>
         </div>
+        <div id="report-modal-region"></div>
     </div>
 </main>
 </body>

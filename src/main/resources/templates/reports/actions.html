@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"><body>
+<div th:fragment="actions(id, status)" class="space-y-3">
+    <form th:if="${status.name() == 'NEW'}" th:action="@{/staff/reports/{id}/status(id=${id})}" method="post">
+        <input type="hidden" name="status" value="IN_PROGRESS">
+        <button class="ui-btn ui-btn-primary" type="submit">Mulai penanganan</button>
+    </form>
+    <form class="ui-form" th:if="${status.name() == 'IN_PROGRESS'}" th:action="@{/staff/reports/{id}/status(id=${id})}" method="post">
+        <input type="hidden" name="status" value="RESOLVED">
+        <label class="ui-label" th:for="${'resolution-' + id}">Catatan penyelesaian</label>
+        <textarea class="ui-input" th:id="${'resolution-' + id}" name="resolutionNote" maxlength="2000" rows="2" required></textarea>
+        <button class="ui-btn ui-btn-primary" type="submit">Selesaikan laporan</button>
+    </form>
+    <form class="ui-form" th:if="${status.name() == 'NEW' or status.name() == 'IN_PROGRESS'}" th:action="@{/staff/reports/{id}/status(id=${id})}" method="post">
+        <input type="hidden" name="status" value="REJECTED">
+        <label class="ui-label" th:for="${'rejection-' + id}">Catatan penolakan (opsional)</label>
+        <textarea class="ui-input" th:id="${'rejection-' + id}" name="resolutionNote" maxlength="2000" rows="2"></textarea>
+        <button class="ui-btn ui-btn-secondary" type="submit">Tolak laporan</button>
+    </form>
+</div>
+</body></html>

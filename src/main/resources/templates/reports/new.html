@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Laporan Baru', 'reports', ~{::main})}">
+<body><main><div class="ui-page">
+    <header th:replace="~{fragments/page :: heading('Laporan', 'Laporkan Masalah Fasilitas', 'Sertakan deskripsi dan foto agar petugas dapat menindaklanjuti.')}"></header>
+    <a class="ui-btn ui-btn-secondary" th:href="@{/reports}">Laporan saya</a>
+    <div th:replace="~{reports/form :: report-modal}"></div>
+</div></main></body></html>

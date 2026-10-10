@@ -1,0 +1,7 @@
+.facility-image-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-block: 1rem; }
+.facility-image-small { width: 100%; height: 110px; object-fit: cover; border-radius: .5rem; }
+.facility-image-main { width: 100%; max-height: 480px; aspect-ratio: 16 / 9; object-fit: contain; border-radius: .75rem; background: #f1f5f9; }
+.facility-image-card { width: 100%; height: 180px; object-fit: cover; }
+.facility-image-strip { display: flex; gap: .75rem; overflow-x: auto; padding-block: 1rem; }
+.facility-image-strip a { flex: 0 0 140px; }
+.facility-image-grid label:has(input:checked) { outline: 3px solid #2563eb; border-radius: .5rem; }

@@ -29,6 +29,18 @@
                         Masuk untuk reservasi
                     </a>
                 </header>
+                <section class="ui-card ui-card-body facility-gallery" aria-label="Galeri fasilitas" data-facility-gallery>
+                    <img class="facility-image-main" th:src="${facility.thumbnail != null ? facility.thumbnail.url : '/images/facility-placeholder.svg'}"
+                         th:alt="${'Foto utama ' + facility.name}" data-gallery-main data-facility-image>
+                    <p th:if="${#lists.isEmpty(facility.images)}" class="ui-hint">Belum ada gambar fasilitas.</p>
+                    <div class="facility-image-strip">
+                        <a th:each="image : ${facility.images}" th:href="${image.url}" data-gallery-choice
+                           th:aria-label="${'Lihat foto ' + facility.name + ' ke-' + (image.displayOrder + 1)}">
+                            <img class="facility-image-small" th:src="${image.url}"
+                                 th:alt="${'Foto ' + facility.name + ' ke-' + (image.displayOrder + 1)}" loading="lazy" data-facility-image>
+                        </a>
+                    </div>
+                </section>
                 <section class="ui-card ui-card-body">
                     <dl class="ui-details">
                         <div>

@@ -22,12 +22,17 @@ spring:
     
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 12MB
+      max-file-size: ${PRISM_MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${PRISM_MULTIPART_MAX_REQUEST_SIZE:110MB}
 
 prism:
   storage:
     proposals: ${PRISM_PROPOSAL_STORAGE:./storage/proposals}
+    facilities: ${PRISM_FACILITY_STORAGE:./storage/facilities}
+
+  facility-images:
+    max-bytes: ${PRISM_FACILITY_IMAGE_MAX_BYTES:5242880}
+    max-count: ${PRISM_FACILITY_IMAGE_MAX_COUNT:20}
 
   scheduler:
     reservation-lifecycle-ms: ${PRISM_RESERVATION_LIFECYCLE_MS:60000}

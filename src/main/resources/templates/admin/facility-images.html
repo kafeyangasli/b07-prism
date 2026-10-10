@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section th:fragment="manager" th:id="${'facility-images-' + f.id}" class="ui-section mt-4"
+         th:with="managedImages=${galleryImages != null ? galleryImages : f.images}"
+         th:attr="hx-target=${'#facility-images-' + f.id}" hx-swap="outerHTML">
+    <h3>Galeri gambar</h3>
+    <p class="ui-hint">JPEG atau PNG, maksimal 5 MB per gambar dan 20 gambar per fasilitas.</p>
+    <p th:if="${imageSuccess != null}" class="ui-alert ui-alert-success" role="status" th:text="${imageSuccess}"></p>
+    <p th:if="${imageError != null}" class="ui-alert ui-alert-error" role="alert" th:text="${imageError}"></p>
+    <p th:if="${#lists.isEmpty(managedImages)}" class="ui-hint">Belum ada gambar.</p>
+    <div class="facility-image-grid">
+        <article th:each="image : ${managedImages}" class="ui-card ui-card-body">
+            <a th:href="${image.url}" target="_blank" rel="noopener">
+                <img class="facility-image-small" th:src="${image.url}" th:alt="${'Foto ' + f.name + ' ke-' + (image.displayOrder + 1)}" data-facility-image>
+            </a>
+            <p th:if="${image.thumbnail}" class="ui-badge" aria-label="Thumbnail saat ini">Thumbnail saat ini</p>
+            <form th:unless="${image.thumbnail}" method="post"
+                  th:action="@{/admin/facilities/{f}/images/{i}/thumbnail(f=${f.id},i=${image.id})}"
+                  th:attr="hx-post=@{/admin/facilities/{f}/images/{i}/thumbnail(f=${f.id},i=${image.id})}">
+                <button class="ui-btn ui-btn-secondary" type="submit">Jadikan thumbnail</button>
+            </form>
+            <form method="post" enctype="multipart/form-data" hx-encoding="multipart/form-data"
+                  th:action="@{/admin/facilities/{f}/images/{i}/replace(f=${f.id},i=${image.id})}"
+                  th:attr="hx-post=@{/admin/facilities/{f}/images/{i}/replace(f=${f.id},i=${image.id})}">
+                <label class="ui-label" th:for="${'replace-image-' + image.id}">Ganti gambar</label>
+                <input class="ui-input" type="file" name="image" accept="image/jpeg,image/png" required th:id="${'replace-image-' + image.id}">
+                <button class="ui-btn ui-btn-secondary" type="submit">Ganti</button>
+            </form>
+            <form method="post" th:action="@{/admin/facilities/{f}/images/{i}/delete(f=${f.id},i=${image.id})}"
+                  th:attr="hx-post=@{/admin/facilities/{f}/images/{i}/delete(f=${f.id},i=${image.id})}">
+                <button class="ui-btn ui-btn-danger" type="submit">Hapus gambar</button>
+            </form>
+        </article>
+    </div>
+    <form class="ui-form mt-3" method="post" enctype="multipart/form-data" hx-encoding="multipart/form-data"
+          th:action="@{/admin/facilities/{id}/images(id=${f.id})}"
+          th:attr="hx-post=@{/admin/facilities/{id}/images(id=${f.id})}" data-image-upload>
+        <label class="ui-label" th:for="${'add-images-' + f.id}">Tambah gambar</label>
+        <input class="ui-input" type="file" name="images" multiple accept="image/jpeg,image/png" th:id="${'add-images-' + f.id}" data-image-input>
+        <p class="ui-hint">Thumbnail saat ini dipertahankan kecuali Anda memilih thumbnail baru.</p>
+        <div class="facility-image-grid" data-image-previews></div>
+        <button class="ui-btn ui-btn-primary" type="submit">Unggah gambar</button>
+    </form>
+</section>
+</body>
+</html>

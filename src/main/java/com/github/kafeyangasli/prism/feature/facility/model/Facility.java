@@ -15,6 +15,15 @@ import java.time.LocalDateTime;
 
 public class Facility {
 
+    @OneToMany(mappedBy = "facility", fetch = FetchType.LAZY)
+    @OrderBy("displayOrder ASC, id ASC")
+    private java.util.List<FacilityImage> images = new java.util.ArrayList<>();
+
+    @Transient
+    public FacilityImage getThumbnail() {
+        return images.stream().filter(FacilityImage::isThumbnail).findFirst().orElse(null);
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

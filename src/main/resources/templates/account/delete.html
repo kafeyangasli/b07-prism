@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Hapus Akun', 'account', ~{::main})}">
+<body><main><div class="ui-page space-y-6 max-w-2xl">
+    <h1 class="text-3xl font-bold tracking-tight">Hapus Akun</h1>
+    <div th:replace="~{fragments/feedback :: flash}"></div>
+    <section class="ui-card border-red-300"><div class="ui-card-body space-y-5">
+        <div class="ui-alert ui-alert-error" role="alert"><p>Akun akan dinonaktifkan dan Anda akan keluar. Anda tidak dapat masuk atau membuat aktivitas baru. Riwayat reservasi, laporan, dan catatan administrasi tetap tersimpan. Aktivasi kembali hanya dapat dilakukan oleh Admin.</p></div>
+        <p class="text-sm text-slate-600">Selesaikan reservasi disetujui yang masih berlangsung atau akan datang terlebih dahulu. Reservasi tidak dibatalkan secara otomatis.</p>
+        <form th:action="@{/account/delete}" method="post" class="ui-form">
+            <div><label for="delete-password" class="ui-label">Kata sandi saat ini</label>
+                <input id="delete-password" name="currentPassword" type="password" autocomplete="current-password" class="ui-input" required></div>
+            <label class="flex items-start gap-3"><input type="checkbox" name="confirmed" value="true" required th:checked="${confirmed == true}">
+                <span>Saya memahami konsekuensinya dan menyetujui penonaktifan akun saya.</span></label>
+            <div class="flex flex-wrap gap-3"><button class="ui-btn ui-btn-danger" type="submit">Hapus Akun dan Keluar</button>
+                <a th:href="@{/account}" class="ui-btn ui-btn-secondary">Batal</a></div>
+        </form>
+    </div></section>
+</div></main></body></html>

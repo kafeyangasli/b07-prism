@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Pengaturan Akun', 'account', ~{::main})}">
+<body><main>
+    <div class="ui-page space-y-6">
+        <div><h1 class="text-3xl font-bold tracking-tight">Pengaturan Akun</h1>
+            <p class="ui-description">Kelola nama tampilan dan keamanan akun Anda.</p></div>
+        <div th:replace="~{fragments/feedback :: flash}"></div>
+        <section class="ui-card"><div class="ui-card-body space-y-5">
+            <h2 class="text-xl font-semibold">Informasi Profil</h2>
+            <dl class="grid gap-4 sm:grid-cols-3">
+                <div><dt class="ui-label">Email</dt><dd class="break-all" th:text="${account.email}"></dd></div>
+                <div><dt class="ui-label">Peran</dt><dd th:text="${account.role}"></dd></div>
+                <div><dt class="ui-label">Status akun</dt><dd><span th:replace="~{fragments/status :: badge(${account.accountStatus})}"></span></dd></div>
+            </dl>
+            <form th:action="@{/account/profile}" th:object="${profileForm}" method="post" class="ui-form max-w-xl">
+                <div th:replace="~{fragments/feedback :: formErrors}"></div>
+                <div><label for="name" class="ui-label">Nama tampilan</label>
+                    <input id="name" th:field="*{name}" type="text" class="ui-input" autocomplete="name" required maxlength="120"
+                           th:classappend="${#fields.hasErrors('name')} ? ' ui-input-error'"
+                           th:attr="aria-invalid=${#fields.hasErrors('name')}" aria-describedby="name-hint name-error">
+                    <p id="name-hint" class="ui-hint">Maksimal 120 karakter. Email, peran, dan status hanya dapat dikelola melalui administrasi.</p>
+                    <p id="name-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="ui-field-error"></p>
+                </div>
+                <div><button class="ui-btn ui-btn-primary" type="submit">Simpan Perubahan</button></div>
+            </form>
+        </div></section>
+        <section class="ui-card"><div class="ui-card-body space-y-4">
+            <h2 class="text-xl font-semibold">Keamanan</h2>
+            <p class="text-sm text-slate-600">Ubah kata sandi dengan memverifikasi kata sandi saat ini. Setelah berhasil, Anda harus masuk kembali.</p>
+            <a th:href="@{/account/password}" class="ui-btn ui-btn-secondary">Ubah Kata Sandi</a>
+        </div></section>
+        <section th:if="${account.role.name() == 'PENGGUNA'}" class="ui-card border-red-300"><div class="ui-card-body space-y-4">
+            <h2 class="text-xl font-semibold text-red-700">Zona Bahaya</h2>
+            <p class="text-sm text-slate-600">Hapus akses akun dengan menonaktifkannya. Riwayat reservasi dan laporan tetap tersimpan. Reservasi disetujui yang belum berakhir harus diselesaikan terlebih dahulu.</p>
+            <a th:href="@{/account/delete}" class="ui-btn ui-btn-danger">Hapus Akun</a>
+        </div></section>
+    </div>
+</main></body></html>

@@ -17,6 +17,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Authentication and self-registration (email is normalized by the entity callback).
     Optional<User> findByEmailIgnoreCase(String email);
 
+    // Same controlling user-row lock as approval/admin management. No facility is
+    // acquired after this lock. Resolve directly to avoid a pre-lock snapshot.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where u.email = :email")
+    Optional<User> findByEmailForUpdate(@Param("email") String email);
+
+    boolean existsByIdAndAccountStatus(Long id, AccountStatus accountStatus);
+
     boolean existsByEmailIgnoreCase(String email);
 
     // Admin user management and registration verification.

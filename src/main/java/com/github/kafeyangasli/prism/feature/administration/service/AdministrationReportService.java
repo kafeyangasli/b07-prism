@@ -73,7 +73,7 @@ public class AdministrationReportService {
                 filter.facilityId(), filter.facilityType(), filter.location());
 
         if (facilities.isEmpty()) {
-            return new RecapResult(filter, List.of(), 0, 0, 0, LocalDateTime.now(clock));
+            return new RecapResult(filter, List.of(), 0, 0L, 0, LocalDateTime.now(clock));
         }
 
         List<Long> facilityIds = facilities.stream().map(Facility::getId).toList();
@@ -93,23 +93,25 @@ public class AdministrationReportService {
         long totalApproved = 0;
         long totalBookable = 0;
         long totalIssues = 0;
+        boolean capacityKnown = true;
         for (Facility facility : facilities) {
             SlotCounts counts = countSlots(facility, filter.startDate(), filter.endDate(),
                     reservationsByFacility.getOrDefault(facility.getId(), List.of()),
                     blockagesByFacility.getOrDefault(facility.getId(), List.of()));
             long issueCount = issuesByFacility.getOrDefault(facility.getId(), 0L);
-            BigDecimal percent = counts.bookable == 0
-                    ? BigDecimal.ZERO
-                    : BigDecimal.valueOf(counts.approved * 100.0 / counts.bookable)
-                            .setScale(2, RoundingMode.HALF_UP);
+            BigDecimal percent = counts.bookable == null || counts.bookable == 0
+                    ? null
+                    : BigDecimal.valueOf(counts.approved).multiply(BigDecimal.valueOf(100))
+                            .divide(BigDecimal.valueOf(counts.bookable), 2, RoundingMode.HALF_UP);
             rows.add(new FacilityRecapRow(facility.getId(), facility.getCode(), facility.getName(),
                     facility.getFacilityType().getName(), facility.getLocation(), counts.approved,
                     counts.bookable, percent, issueCount));
             totalApproved += counts.approved;
-            totalBookable += counts.bookable;
+            if (counts.bookable == null) capacityKnown = false;
+            else totalBookable += counts.bookable;
             totalIssues += issueCount;
         }
-        return new RecapResult(filter, List.copyOf(rows), totalApproved, totalBookable,
+        return new RecapResult(filter, List.copyOf(rows), totalApproved, capacityKnown ? totalBookable : null,
                 totalIssues, LocalDateTime.now(clock));
     }
 
@@ -148,25 +150,38 @@ public class AdministrationReportService {
                                   List<FacilityBlockage> blockages) {
         Set<LocalDateTime> approvedSlots = new HashSet<>();
         long bookableSlots = 0;
+        boolean capacityKnown = true;
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            if (date.getDayOfWeek() == DayOfWeek.SATURDAY
-                    || date.getDayOfWeek() == DayOfWeek.SUNDAY) {
-                continue;
-            }
+            boolean weekday = date.getDayOfWeek() != DayOfWeek.SATURDAY
+                    && date.getDayOfWeek() != DayOfWeek.SUNDAY;
             for (LocalDateTime slotStart = date.atTime(OPEN_TIME);
                  slotStart.isBefore(date.atTime(CLOSE_TIME));
                  slotStart = slotStart.plusMinutes(SLOT_MINUTES)) {
                 LocalDateTime slotEnd = slotStart.plusMinutes(SLOT_MINUTES);
                 boolean blocked = overlapsAnyBlockage(slotStart, slotEnd, blockages);
-                if (facility.getAdministrativeStatus() == AdministrativeStatus.ACTIVE && !blocked) {
-                    bookableSlots++;
+                if (weekday && !blocked) {
+                    Boolean active = activeThroughout(facility, slotStart, slotEnd);
+                    if (active == null) capacityKnown = false;
+                    else if (active) bookableSlots++;
                 }
                 if (overlapsAnyReservation(slotStart, slotEnd, reservations)) {
                     approvedSlots.add(slotStart);
                 }
             }
         }
-        return new SlotCounts(approvedSlots.size(), bookableSlots);
+        return new SlotCounts(approvedSlots.size(), capacityKnown ? bookableSlots : null);
+    }
+
+    private Boolean activeThroughout(Facility facility, LocalDateTime start, LocalDateTime end) {
+        // Before creation capacity is known to be zero. Legacy observations never imply earlier status.
+        if (!facility.getStatusHistory().isEmpty() && facility.getStatusHistory().getFirst().isAtCreation()
+                && facility.getStatusHistory().getFirst().getEffectiveAt().isAfter(start)) return false;
+        AdministrativeStatus status = null;
+        for (var event : facility.getStatusHistory()) {
+            if (!event.getEffectiveAt().isAfter(start)) status = event.getStatus();
+            else if (event.getEffectiveAt().isBefore(end) && event.getStatus() == AdministrativeStatus.INACTIVE) return false;
+        }
+        return status == null ? null : status == AdministrativeStatus.ACTIVE;
     }
 
     private boolean overlapsAnyReservation(LocalDateTime slotStart, LocalDateTime slotEnd,
@@ -199,6 +214,6 @@ public class AdministrationReportService {
         return grouped;
     }
 
-    private record SlotCounts(long approved, long bookable) {
+    private record SlotCounts(long approved, Long bookable) {
     }
 }

@@ -3,7 +3,7 @@ package com.github.kafeyangasli.prism.feature.reservation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static com.github.kafeyangasli.prism.support.PrismTestUsers.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -24,7 +24,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.test.context.support.WithMockUser;
+import com.github.kafeyangasli.prism.support.WithPrismUser;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -112,7 +112,7 @@ class ProposalValidationIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "PENGGUNA")
+    @WithPrismUser(roles = "PENGGUNA")
     void penggunaCannotValidateOrDownloadThroughRouteOrService() throws Exception {
         assertThatThrownBy(() -> service.validateProposal(pending.getId(), staff.getId()))
                 .isInstanceOf(AccessDeniedException.class);

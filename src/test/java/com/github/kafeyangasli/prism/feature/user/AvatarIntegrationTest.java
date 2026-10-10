@@ -27,6 +27,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+import static com.github.kafeyangasli.prism.support.PrismTestUsers.user;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -173,7 +174,7 @@ class AvatarIntegrationTest {
         assertThat(current().getAccountStatus()).isEqualTo(AccountStatus.INACTIVE);
         assertThat(current().getProfilePicturePath()).isEqualTo(name); assertThat(directory.resolve(name)).exists();
         mvc.perform(get("/account/avatar")).andExpect(redirectedUrl("/login"));
-        mvc.perform(get("/account/avatar").with(user(owner.getEmail()).roles("PENGGUNA"))).andExpect(status().isForbidden());
+        mvc.perform(get("/account/avatar").with(user(owner.getEmail()).roles("PENGGUNA"))).andExpect(redirectedUrl("/login?inactive"));
         asOwner();
         assertThatThrownBy(accounts::removeAvatar).isInstanceOf(AccessDeniedException.class);
         assertThatThrownBy(() -> accounts.updateAvatar(AvatarStorageTest.picture("png"))).isInstanceOf(AccessDeniedException.class);

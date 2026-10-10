@@ -23,6 +23,7 @@ import javax.imageio.ImageIO;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+import static com.github.kafeyangasli.prism.support.PrismTestUsers.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 

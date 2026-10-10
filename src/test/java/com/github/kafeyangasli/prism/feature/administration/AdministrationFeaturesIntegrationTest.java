@@ -34,7 +34,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
-import org.springframework.security.test.context.support.WithMockUser;
+import com.github.kafeyangasli.prism.support.WithPrismUser;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.test.web.servlet.MockMvc;
 import jakarta.persistence.EntityManager;
@@ -49,7 +49,7 @@ import java.util.zip.ZipInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static com.github.kafeyangasli.prism.support.PrismTestUsers.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -94,10 +94,16 @@ class AdministrationFeaturesIntegrationTest {
         FacilityType laboratory = facilityTypes.save(new FacilityType("LAB", "Laboratorium", null));
         room = facilities.save(new Facility("LAB-1", "Laboratorium 1", laboratory,
                 "Gedung B", 25, null, AdministrativeStatus.ACTIVE));
+        // This historical fixture existed and was active at the start of the reporting period.
+        var created = REPORT_DATE.atStartOfDay();
+        org.springframework.test.util.ReflectionTestUtils.setField(room, "createdAt", created);
+        org.springframework.test.util.ReflectionTestUtils.setField(room.getStatusHistory().getFirst(), "effectiveAt", created);
+        entityManager.createNativeQuery("update facilities set created_at = :at where id = :id")
+                .setParameter("at", created).setParameter("id", room.getId()).executeUpdate();
     }
 
     @Test
-    @WithMockUser(roles = "PETUGAS")
+    @WithPrismUser(roles = "PETUGAS")
     void dashboardExcludesExpiredAndReachedStartAndShowsOnlyUnresolvedReportsWithSorting() {
         Reservation laterUse = reservations.save(new Reservation(requester, room,
                 NOW.plusDays(2).withHour(9), NOW.plusDays(2).withHour(10), "B", null,
@@ -127,7 +133,7 @@ class AdministrationFeaturesIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithPrismUser(roles = "ADMIN")
     void recapCountsApprovedAndCompletedSlotsSubtractsBlockageAndAppliesFilters() {
         LocalDateTime open = REPORT_DATE.atTime(7, 0);
         reservations.save(new Reservation(requester, room, open, open.plusHours(1), "Approved", null,
@@ -172,7 +178,7 @@ class AdministrationFeaturesIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithPrismUser(roles = "ADMIN")
     void relationNamesCodesAndInactiveTypesRemainAvailableForHistoricalRecaps() throws Exception {
         FacilityType type = room.getFacilityType();
         type.updateDetails("Laboratorium Baru", null);
@@ -200,7 +206,7 @@ class AdministrationFeaturesIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithPrismUser(roles = "ADMIN")
     void filteredExportsConsumeTheSameRecapRows() throws Exception {
         FacilityType other = facilityTypes.save(new FacilityType("HALL", "Aula", null));
         facilities.save(new Facility("HALL-2", "Excluded Hall", other, "Gedung A", 100, null,
@@ -221,8 +227,10 @@ class AdministrationFeaturesIntegrationTest {
             if (format.equals("xlsx")) {
                 assertThat(readZipEntry(actual, "xl/worksheets/sheet1.xml"))
                         .isEqualTo(expectedSheet);
+            } else if (format.equals("pdf")) {
+                assertThat(pdfText(actual)).isEqualTo(pdfText(expectedPdf));
             } else {
-                assertThat(actual).isEqualTo(format.equals("csv") ? expectedCsv : expectedPdf);
+                assertThat(actual).isEqualTo(expectedCsv);
             }
         }
         var model = mockMvc.perform(get("/admin/recap").param("facilityType", "LAB")
@@ -236,7 +244,7 @@ class AdministrationFeaturesIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithPrismUser(roles = "ADMIN")
     void csvXlsxAndPdfExportsAreValidWithDataAndWhenEmpty() throws Exception {
         RecapResult empty = reportService.generate(new RecapFilter(REPORT_DATE, REPORT_DATE,
                 null, "Tidak Ada", null));
@@ -249,12 +257,11 @@ class AdministrationFeaturesIntegrationTest {
         assertThat(xlsx).startsWith(new byte[]{'P', 'K'});
         assertThat(readZipEntry(xlsx, "xl/worksheets/sheet1.xml"))
                 .contains("Kode Fasilitas", "Frekuensi Laporan");
-        assertThat(new String(pdf, 0, 8, StandardCharsets.ISO_8859_1)).isEqualTo("%PDF-1.4");
-        assertThat(new String(pdf, StandardCharsets.ISO_8859_1)).contains("Kode Fasilitas");
+        assertThat(pdfText(pdf)).contains("Kode", "Fasilitas", "Tidak ada data");
     }
 
     @Test
-    @WithMockUser(roles = "PETUGAS")
+    @WithPrismUser(roles = "PETUGAS")
     void dashboardTemplateRenders() throws Exception {
         mockMvc.perform(get("/staff/dashboard"))
                 .andExpect(status().isOk())
@@ -262,7 +269,7 @@ class AdministrationFeaturesIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "PETUGAS")
+    @WithPrismUser(roles = "PETUGAS")
     void operationalPagesRenderIndependently() throws Exception {
         mockMvc.perform(get("/staff/reservations"))
                 .andExpect(status().isOk())
@@ -274,7 +281,7 @@ class AdministrationFeaturesIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "PENGGUNA")
+    @WithPrismUser(roles = "PENGGUNA")
     void facilityCatalogueRendersSharedLayoutAndRoleAwareNavigation() throws Exception {
         String html = mockMvc.perform(get("/facilities"))
                 .andExpect(status().isOk())
@@ -296,7 +303,7 @@ class AdministrationFeaturesIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithPrismUser(roles = "ADMIN")
     void recapTemplateRenders() throws Exception {
         mockMvc.perform(get("/admin/recap"))
                 .andExpect(status().isOk())
@@ -304,14 +311,14 @@ class AdministrationFeaturesIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "PETUGAS")
+    @WithPrismUser(roles = "PETUGAS")
     void recapRejectsNonAdmin() throws Exception {
         mockMvc.perform(get("/admin/recap"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(roles = "PENGGUNA")
+    @WithPrismUser(roles = "PENGGUNA")
     void dashboardRejectsOrdinaryUser() throws Exception {
         mockMvc.perform(get("/staff/dashboard"))
                 .andExpect(status().isForbidden());
@@ -326,6 +333,86 @@ class AdministrationFeaturesIntegrationTest {
             }
         }
         throw new AssertionError("Missing XLSX entry " + expectedName);
+    }
+
+    private String pdfText(byte[] bytes) throws Exception {
+        try (var pdf = org.apache.pdfbox.Loader.loadPDF(bytes)) {
+            return new org.apache.pdfbox.text.PDFTextStripper().getText(pdf);
+        }
+    }
+
+    @Test @WithPrismUser(roles = "ADMIN")
+    void laterDeactivationCannotEraseHistoricalCapacity() {
+        var filter = new RecapFilter(REPORT_DATE, REPORT_DATE, room.getId(), null, null);
+        var start = REPORT_DATE.atTime(9, 0);
+        reservations.save(new Reservation(requester, room, start, start.plusHours(1), "Historical", null,
+                ReservationStatus.COMPLETED, NOW.minusDays(1)));
+        var before = reportService.generate(filter).rows().getFirst();
+        assertThat(before.bookableSlots()).isEqualTo(26);
+        room.changeAdministrativeStatus(AdministrativeStatus.INACTIVE, REPORT_DATE.plusDays(1).atStartOfDay());
+        facilities.saveAndFlush(room);
+        entityManager.clear();
+        assertThat(reportService.generate(filter).rows().getFirst()).isEqualTo(before);
+        var inactive = reportService.generate(new RecapFilter(REPORT_DATE.plusDays(1), REPORT_DATE.plusDays(1), room.getId(), null, null)).rows().getFirst();
+        assertThat(inactive.bookableSlots()).isZero();
+        assertThat(inactive.occupancyPercent()).isNull();
+    }
+
+    @Test @WithPrismUser(roles = "ADMIN")
+    void historicalWeekendReservationsCountWithoutChangingBookingCalendar() {
+        LocalDate saturday = LocalDate.of(2026, 9, 26);
+        var start = saturday.atTime(9, 0);
+        reservations.save(new Reservation(requester, room, start, start.plusHours(1), "Legacy", null,
+                ReservationStatus.APPROVED, NOW));
+        reservations.save(new Reservation(requester, room, start.plusMinutes(30), start.plusHours(1), "Duplicate interval", null,
+                ReservationStatus.COMPLETED, NOW));
+        var row = reportService.generate(new RecapFilter(saturday, saturday, room.getId(), null, null)).rows().getFirst();
+        assertThat(row.approvedSlots()).isEqualTo(2);
+        assertThat(row.bookableSlots()).isZero();
+        assertThat(row.occupancyPercent()).isNull();
+        assertThat(row.occupancyDisplay()).contains("kapasitas nol");
+    }
+
+    @Test @WithPrismUser(roles = "ADMIN")
+    void partialOverlappingBlockagesRemoveEachTouchedSlotOnlyOnce() {
+        var open = REPORT_DATE.atTime(7, 0);
+        var type = blockageTypes.save(new BlockageType("PARTIAL", "Partial", null));
+        blockages.save(new FacilityBlockage(room, type, null, open.plusMinutes(10), open.plusMinutes(20),
+                BlockageStatus.COMPLETED, "Partial", null, staff));
+        blockages.save(new FacilityBlockage(room, type, null, open.plusMinutes(15), open.plusMinutes(45),
+                BlockageStatus.COMPLETED, "Overlap", null, staff));
+        blockages.save(new FacilityBlockage(room, type, null, open.plusHours(1), open.plusHours(2),
+                BlockageStatus.CANCELLED, "Cancelled", null, staff));
+        var row = reportService.generate(new RecapFilter(REPORT_DATE, REPORT_DATE, room.getId(), null, null)).rows().getFirst();
+        assertThat(row.bookableSlots()).isEqualTo(24);
+        assertThat(row.approvedSlots()).isZero();
+        assertThat(row.occupancyPercent()).isEqualByComparingTo("0.00");
+    }
+
+    @Test @WithPrismUser(roles = "ADMIN")
+    void missingLegacyStatusHistoryIsIndeterminateInAllFormatsAndTotals() throws Exception {
+        org.springframework.test.util.ReflectionTestUtils.setField(room.getStatusHistory().getFirst(), "effectiveAt", REPORT_DATE.plusDays(1).atStartOfDay());
+        org.springframework.test.util.ReflectionTestUtils.setField(room.getStatusHistory().getFirst(), "atCreation", false);
+        var start = REPORT_DATE.atTime(9, 0);
+        reservations.save(new Reservation(requester, room, start, start.plusHours(1), "Legacy", null,
+                ReservationStatus.APPROVED, NOW));
+        var recap = reportService.generate(new RecapFilter(REPORT_DATE, REPORT_DATE, room.getId(), null, null));
+        assertThat(recap.rows().getFirst().approvedSlots()).isEqualTo(2);
+        assertThat(recap.rows().getFirst().bookableSlots()).isNull();
+        assertThat(recap.rows().getFirst().occupancyPercent()).isNull();
+        assertThat(recap.totalBookableSlots()).isNull();
+        assertThat(new String(exportService.toCsv(recap), StandardCharsets.UTF_8)).contains("Tidak diketahui");
+        assertThat(readZipEntry(exportService.toXlsx(recap), "xl/worksheets/sheet1.xml")).contains("Tidak diketahui");
+        assertThat(pdfText(exportService.toPdf(recap))).contains("Tidak diketahui");
+    }
+
+    @Test @WithPrismUser(roles = "ADMIN")
+    void intradayStatusTransitionsRequireWholeSlotsToBeActive() {
+        room.changeAdministrativeStatus(AdministrativeStatus.INACTIVE, REPORT_DATE.atTime(7, 15));
+        room.changeAdministrativeStatus(AdministrativeStatus.ACTIVE, REPORT_DATE.atTime(7, 45));
+        facilities.saveAndFlush(room);
+        var row = reportService.generate(new RecapFilter(REPORT_DATE, REPORT_DATE, room.getId(), null, null)).rows().getFirst();
+        assertThat(row.bookableSlots()).isEqualTo(24);
     }
 
     @TestConfiguration

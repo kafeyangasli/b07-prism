@@ -8,9 +8,7 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -82,17 +80,8 @@ public class ReportExportService {
     }
 
     public byte[] toPdf(RecapResult result) {
-        List<String> lines = new ArrayList<>();
-        lines.add("REKAP ADMINISTRASI PRISM");
-        lines.add("Periode: " + result.filter().startDate() + " s.d. " + result.filter().endDate());
-        lines.add(String.join(" | ", HEADERS));
-        for (FacilityRecapRow row : result.rows()) {
-            lines.add(String.join(" | ", cells(row)));
-        }
-        if (result.rows().isEmpty()) {
-            lines.add("Tidak ada data untuk filter yang dipilih.");
-        }
-        return simplePdf(lines);
+        return RecapPdfTable.render("Periode: " + result.filter().startDate() + " s.d. " + result.filter().endDate(),
+                List.of(HEADERS), result.rows().stream().map(this::cells).toList());
     }
 
     private String worksheetXml(RecapResult result) {
@@ -123,8 +112,8 @@ public class ReportExportService {
 
     private List<String> cells(FacilityRecapRow row) {
         return List.of(row.facilityCode(), row.facilityName(), row.facilityType(), row.location(),
-                Long.toString(row.approvedSlots()), Long.toString(row.bookableSlots()),
-                row.occupancyPercent().toPlainString(), Long.toString(row.issueCount()));
+                Long.toString(row.approvedSlots()), row.capacityDisplay(),
+                row.occupancyDisplay(), Long.toString(row.issueCount()));
     }
 
     private void appendCsvRow(StringBuilder csv, List<String> cells) {
@@ -152,71 +141,4 @@ public class ReportExportService {
                 .replace(">", "&gt;").replace("\"", "&quot;");
     }
 
-    private byte[] simplePdf(List<String> allLines) {
-        final int linesPerPage = 48;
-        int pageCount = Math.max(1, (allLines.size() + linesPerPage - 1) / linesPerPage);
-        int fontObject = 3 + pageCount * 2;
-        List<byte[]> objects = new ArrayList<>();
-        objects.add(bytes("<< /Type /Catalog /Pages 2 0 R >>"));
-        StringBuilder kids = new StringBuilder();
-        for (int page = 0; page < pageCount; page++) {
-            kids.append(3 + page * 2).append(" 0 R ");
-        }
-        objects.add(bytes("<< /Type /Pages /Kids [" + kids + "] /Count " + pageCount + " >>"));
-        for (int page = 0; page < pageCount; page++) {
-            int pageObject = 3 + page * 2;
-            int contentObject = pageObject + 1;
-            objects.add(bytes("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] "
-                    + "/Resources << /Font << /F1 " + fontObject + " 0 R >> >> "
-                    + "/Contents " + contentObject + " 0 R >>"));
-            String content = pdfPageContent(allLines.subList(page * linesPerPage,
-                    Math.min(allLines.size(), (page + 1) * linesPerPage)));
-            byte[] contentBytes = bytes(content);
-            objects.add(bytes("<< /Length " + contentBytes.length + " >>\nstream\n"
-                    + content + "\nendstream"));
-        }
-        objects.add(bytes("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"));
-
-        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-            output.write(bytes("%PDF-1.4\n"));
-            List<Integer> offsets = new ArrayList<>();
-            for (int index = 0; index < objects.size(); index++) {
-                offsets.add(output.size());
-                output.write(bytes((index + 1) + " 0 obj\n"));
-                output.write(objects.get(index));
-                output.write(bytes("\nendobj\n"));
-            }
-            int xref = output.size();
-            output.write(bytes("xref\n0 " + (objects.size() + 1) + "\n"));
-            output.write(bytes("0000000000 65535 f \n"));
-            for (Integer offset : offsets) {
-                output.write(bytes(String.format(Locale.ROOT, "%010d 00000 n \n", offset)));
-            }
-            output.write(bytes("trailer\n<< /Size " + (objects.size() + 1)
-                    + " /Root 1 0 R >>\nstartxref\n" + xref + "\n%%EOF"));
-            return output.toByteArray();
-        } catch (IOException exception) {
-            throw new IllegalStateException("Gagal membuat ekspor PDF", exception);
-        }
-    }
-
-    private String pdfPageContent(List<String> lines) {
-        StringBuilder content = new StringBuilder("BT /F1 8 Tf 30 560 Td");
-        for (String line : lines) {
-            content.append(" (").append(pdfEscape(ascii(line))).append(") Tj 0 -11 Td");
-        }
-        return content.append(" ET").toString();
-    }
-
-    private String ascii(String value) {
-        return value.replaceAll("[^\\x20-\\x7E]", "?");
-    }
-
-    private String pdfEscape(String value) {
-        return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)");
-    }
-
-    private byte[] bytes(String value) {
-        return value.getBytes(StandardCharsets.ISO_8859_1);
-    }
 }

@@ -20,4 +20,17 @@ public class BlockageImpactPreviewResponse {
     private long approvedCount;
     private long pendingCount;
     private long totalAffectedCount;
+    private String confirmationToken;
+    private java.time.Instant expiresAt;
+
+    public BlockageImpactPreviewResponse(Long facilityId, String facilityName, LocalDateTime startAt,
+                                        LocalDateTime plannedEndAt, long approvedCount, long pendingCount, long totalAffectedCount) {
+        this.facilityId = facilityId;
+        this.facilityName = facilityName;
+        this.startAt = startAt;
+        this.plannedEndAt = plannedEndAt;
+        this.approvedCount = approvedCount;
+        this.pendingCount = pendingCount;
+        this.totalAffectedCount = totalAffectedCount;
+    }
 }

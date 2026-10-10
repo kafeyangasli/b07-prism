@@ -59,6 +59,7 @@
                            th:href="@{/reservations/{id}(id=${reservation.id})}">
                             Lihat
                         </a>
+                        <a th:replace="~{reports/form :: reservation-action(${reservation})}"></a>
                     </td>
                 </tr>
                 <tr
@@ -70,6 +71,7 @@
                 </tbody>
             </table>
         </div>
+        <div id="report-modal-region"></div>
     </div>
 </main>
 </body>

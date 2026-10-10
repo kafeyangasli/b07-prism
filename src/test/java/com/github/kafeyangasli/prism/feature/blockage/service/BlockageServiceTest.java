@@ -69,6 +69,8 @@ class BlockageServiceTest {
     @Mock
     private StaffActorResolver staffActorResolver;
 
+    @Mock private jakarta.persistence.EntityManager entityManager;
+
     @InjectMocks
     private BlockageService blockageService;
 
@@ -110,6 +112,8 @@ class BlockageServiceTest {
         Reservation resPending = new Reservation(user, facility, startAt.plusHours(2), startAt.plusHours(4), "Discussion", null, ReservationStatus.PENDING, null);
 
         when(facilityRepository.findById(10L)).thenReturn(Optional.of(facility));
+        ReflectionTestUtils.setField(resApproved, "id", 30L);
+        ReflectionTestUtils.setField(resPending, "id", 31L);
         when(reservationRepository.findOverlapping(eq(10L), eq(startAt), eq(plannedEndAt), anyCollection()))
                 .thenReturn(List.of(resApproved, resPending));
 
@@ -133,9 +137,12 @@ class BlockageServiceTest {
         when(staffActorResolver.resolveId("staff@example.com")).thenReturn(2L);
         when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
         when(facilityBlockageRepository.save(any(FacilityBlockage.class))).thenAnswer(inv -> inv.getArgument(0));
+        ReflectionTestUtils.setField(resApproved, "id", 30L);
+        ReflectionTestUtils.setField(resPending, "id", 31L);
         when(reservationRepository.findOverlapping(eq(10L), eq(startAt), eq(plannedEndAt), anyCollection()))
                 .thenReturn(List.of(resApproved, resPending));
 
+        confirmCreate(request);
         FacilityBlockage result = blockageService.createBlockage(request);
 
         assertNotNull(result);
@@ -157,10 +164,9 @@ class BlockageServiceTest {
     void createBlockage_RepairWithoutReport_ThrowsException() {
         CreateBlockageRequest request = new CreateBlockageRequest(10L, 100L, null, startAt, plannedEndAt, "Repair AC", null);
 
-        when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
+        when(facilityRepository.findById(10L)).thenReturn(Optional.of(facility));
         when(blockageTypeService.validateAndGetActiveBlockageType(100L)).thenReturn(repairType);
-
-        assertThrows(BusinessRuleException.class, () -> blockageService.createBlockage(request));
+        assertThrows(BusinessRuleException.class, () -> blockageService.previewBlockageImpact(previewRequest(request)));
     }
 
     @Test
@@ -177,6 +183,7 @@ class BlockageServiceTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
         when(facilityBlockageRepository.save(any(FacilityBlockage.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        confirmCreate(request);
         FacilityBlockage result = blockageService.createBlockage(request);
 
         assertNotNull(result);
@@ -185,6 +192,7 @@ class BlockageServiceTest {
 
     @Test
     void reconcileBlockageLifecycle_ActivatesScheduledAndCompletesPlanned() {
+        when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
         LocalDateTime pastStart = LocalDateTime.now().minusHours(2);
         LocalDateTime pastEnd = LocalDateTime.now().minusHours(1);
 
@@ -215,10 +223,12 @@ class BlockageServiceTest {
         when(staffActorResolver.resolveId("staff@example.com")).thenReturn(2L);
         when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
         when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
+        ReflectionTestUtils.setField(newApproved, "id", 32L);
         when(reservationRepository.findOverlapping(eq(10L), eq(plannedEndAt), eq(newEndAt), anyCollection()))
                 .thenReturn(List.of(newApproved));
         when(facilityBlockageRepository.save(any(FacilityBlockage.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        confirmUpdate(200L, request);
         FacilityBlockage result = blockageService.updateOrExtendBlockage(200L, request);
 
         assertEquals(newEndAt, result.getPlannedEndAt());
@@ -239,12 +249,14 @@ class BlockageServiceTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
         when(facilityBlockageRepository.save(any(FacilityBlockage.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
         FacilityBlockage result = blockageService.earlyCompleteBlockage(200L, request);
 
         assertEquals(BlockageStatus.COMPLETED, result.getStatus());
         assertNotNull(result.getActualEndAt());
         assertEquals(staff, result.getEndedBy());
         assertEquals("Repairs finished early", result.getEarlyCompletionReason());
+        verifyNoInteractions(reservationRepository);
     }
 
     @Test
@@ -257,11 +269,161 @@ class BlockageServiceTest {
 
         assertThrows(BusinessRuleException.class, () -> blockageService.earlyCompleteBlockage(200L, request));
     }
+
+    @Test
+    void confirmationIsMandatoryEvenForZeroImpact() {
+        var request = new CreateBlockageRequest(10L, 101L, null, startAt, plannedEndAt, "Reason", null);
+        assertEquals("CONFIRMATION_REQUIRED", assertThrows(BusinessRuleException.class,
+                () -> blockageService.createBlockage(request)).getCode());
+        request.setConfirmed(true);
+        assertThrows(BusinessRuleException.class, () -> blockageService.createBlockage(request));
+        verifyNoInteractions(facilityBlockageRepository, reservationRepository);
+    }
+
+    private CreateBlockageRequest prepareCreation() {
+        when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
+        when(blockageTypeService.validateAndGetActiveBlockageType(101L)).thenReturn(maintenanceType);
+        when(staffActorResolver.resolveId("staff@example.com")).thenReturn(2L);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
+        var request = new CreateBlockageRequest(10L, 101L, null, startAt, plannedEndAt, "Reason", null);
+        confirmCreate(request);
+        clearInvocations(facilityRepository, reservationRepository, entityManager);
+        return request;
+    }
+
+    @Test
+    void changedImpactFailsAfterFacilityLockAndDoesNotMutate() {
+        var request = prepareCreation();
+        var pending = new Reservation(user, facility, startAt, plannedEndAt, "Meeting", null, ReservationStatus.PENDING, null);
+        ReflectionTestUtils.setField(pending, "id", 40L);
+        when(reservationRepository.findOverlapping(eq(10L), eq(startAt), eq(plannedEndAt), anyCollection())).thenReturn(List.of(pending));
+        assertEquals("IMPACT_CHANGED", assertThrows(BusinessRuleException.class,
+                () -> blockageService.createBlockage(request)).getCode());
+        var order = inOrder(facilityRepository, reservationRepository, entityManager);
+        order.verify(facilityRepository).findByIdForUpdate(10L);
+        order.verify(reservationRepository).findOverlapping(eq(10L), eq(startAt), eq(plannedEndAt), anyCollection());
+        order.verify(entityManager).refresh(pending, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        verify(facilityBlockageRepository, never()).save(any());
+        verify(reservationRepository, never()).save(any());
+        assertEquals(ReservationStatus.PENDING, pending.getStatus());
+    }
+
+    @Test
+    void identicalCountsWithDifferentReservationsStillRequireConfirmation() {
+        var first = new Reservation(user, facility, startAt, plannedEndAt, "Meeting", null, ReservationStatus.APPROVED, null);
+        var second = new Reservation(user, facility, startAt, plannedEndAt, "Meeting", null, ReservationStatus.APPROVED, null);
+        ReflectionTestUtils.setField(first, "id", 40L);
+        ReflectionTestUtils.setField(second, "id", 41L);
+        when(reservationRepository.findOverlapping(eq(10L), eq(startAt), eq(plannedEndAt), anyCollection())).thenReturn(List.of(first));
+        var request = prepareCreation();
+        when(reservationRepository.findOverlapping(eq(10L), eq(startAt), eq(plannedEndAt), anyCollection())).thenReturn(List.of(second));
+        assertEquals("IMPACT_CHANGED", assertThrows(BusinessRuleException.class,
+                () -> blockageService.createBlockage(request)).getCode());
+        verify(facilityBlockageRepository, never()).save(any());
+    }
+
+    @Test
+    void changedInputsAndDifferentActorCannotReusePreview() {
+        var request = prepareCreation();
+        request.setPublicReason("Changed");
+        assertEquals("PREVIEW_CHANGED", assertThrows(BusinessRuleException.class,
+                () -> blockageService.createBlockage(request)).getCode());
+        request.setPublicReason("Reason");
+        authenticate("other@example.com", "ADMIN");
+        when(staffActorResolver.resolveId("other@example.com")).thenReturn(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        assertEquals("PREVIEW_CHANGED", assertThrows(BusinessRuleException.class,
+                () -> blockageService.createBlockage(request)).getCode());
+        verify(facilityBlockageRepository, never()).save(any());
+    }
+
+    @Test
+    void successfulPreviewCannotBeSubmittedTwice() {
+        var request = prepareCreation();
+        when(facilityBlockageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        blockageService.createBlockage(request);
+        assertEquals("PREVIEW_EXPIRED", assertThrows(BusinessRuleException.class,
+                () -> blockageService.createBlockage(request)).getCode());
+        verify(facilityBlockageRepository, times(1)).save(any());
+    }
+
+    @Test
+    void closingAnOpenEndedBlockageHasNoNewImpactOrRestoration() {
+        var blockage = new FacilityBlockage(facility, maintenanceType, null, startAt, null, BlockageStatus.ACTIVE, "Reason", null, staff);
+        ReflectionTestUtils.setField(blockage, "id", 200L);
+        when(facilityBlockageRepository.findById(200L)).thenReturn(Optional.of(blockage));
+        when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
+        when(staffActorResolver.resolveId("staff@example.com")).thenReturn(2L);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
+        when(facilityBlockageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var request = new UpdateBlockageRequest(plannedEndAt, "Shortened", null);
+        var preview = blockageService.previewUpdate(200L, request);
+        assertEquals(0, preview.getApprovedCount());
+        assertEquals(0, preview.getPendingCount());
+        request.setConfirmed(true);
+        request.setConfirmationToken(preview.getConfirmationToken());
+        blockageService.updateOrExtendBlockage(200L, request);
+        assertEquals(plannedEndAt, blockage.getPlannedEndAt());
+        assertEquals(facility, blockage.getFacility());
+        assertEquals(maintenanceType, blockage.getBlockageType());
+        assertEquals(startAt, blockage.getStartAt());
+        verifyNoInteractions(reservationRepository);
+    }
+
+    @Test
+    void extendingToOpenEndedUsesOnlyOldEndOnward() {
+        var blockage = new FacilityBlockage(facility, maintenanceType, null, startAt, plannedEndAt, BlockageStatus.ACTIVE, "Reason", null, staff);
+        ReflectionTestUtils.setField(blockage, "id", 200L);
+        when(facilityBlockageRepository.findById(200L)).thenReturn(Optional.of(blockage));
+        when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
+        when(staffActorResolver.resolveId("staff@example.com")).thenReturn(2L);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(staff));
+        when(facilityBlockageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var request = new UpdateBlockageRequest();
+        request.setOpenEnded(true);
+        confirmUpdate(200L, request);
+        blockageService.updateOrExtendBlockage(200L, request);
+        assertNull(blockage.getPlannedEndAt());
+        verify(reservationRepository, times(2)).findOverlapping(eq(10L), eq(plannedEndAt), isNull(), anyCollection());
+        verify(reservationRepository, never()).findOverlapping(eq(10L), eq(startAt), any(), anyCollection());
+    }
+
+    @Test
+    void repairReportMustBelongToSameFacility() {
+        var otherFacility = new Facility("OTHER", "Other", "Room", "Other", 5, null, AdministrativeStatus.ACTIVE);
+        ReflectionTestUtils.setField(otherFacility, "id", 99L);
+        var report = new Report(user, otherFacility, "AC", "Broken", null, ReportStatus.NEW);
+        when(facilityRepository.findById(10L)).thenReturn(Optional.of(facility));
+        when(blockageTypeService.validateAndGetActiveBlockageType(100L)).thenReturn(repairType);
+        when(reportRepository.findById(50L)).thenReturn(Optional.of(report));
+        var request = new CreateBlockageRequest(10L, 100L, 50L, startAt, plannedEndAt, "Repair", null);
+        assertThrows(BusinessRuleException.class, () -> blockageService.previewBlockageImpact(previewRequest(request)));
+        verify(facilityBlockageRepository, never()).save(any());
+    }
     @AfterEach
     void clearAuthentication() {
         SecurityContextHolder.clearContext();
     }
 
+    private BlockageImpactPreviewRequest previewRequest(CreateBlockageRequest request) {
+        var preview = new BlockageImpactPreviewRequest(request.getFacilityId(), request.getStartAt(), request.getPlannedEndAt());
+        preview.setBlockageTypeId(request.getBlockageTypeId());
+        preview.setReportId(request.getReportId());
+        preview.setPublicReason(request.getPublicReason());
+        preview.setInternalNote(request.getInternalNote());
+        return preview;
+    }
+
+    private void confirmCreate(CreateBlockageRequest request) {
+        when(facilityRepository.findById(10L)).thenReturn(Optional.of(facility));
+        request.setConfirmationToken(blockageService.previewBlockageImpact(previewRequest(request)).getConfirmationToken());
+        request.setConfirmed(true);
+    }
+
+    private void confirmUpdate(Long id, UpdateBlockageRequest request) {
+        request.setConfirmationToken(blockageService.previewUpdate(id, request).getConfirmationToken());
+        request.setConfirmed(true);
+    }
     private void authenticate(String email, String role) {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(email, "unused",

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Laporan Saya', 'reports', ~{::main})}">
+<body><main><div class="ui-page">
+    <header th:replace="~{fragments/page :: heading('Laporan', 'Laporan Saya', 'Pantau perkembangan laporan fasilitas Anda.')}"></header>
+    <div th:replace="~{fragments/feedback :: flash}"></div>
+    <a class="ui-btn ui-btn-primary" th:href="@{/reports/new}" hx-get="/reports/new"
+       hx-target="#report-modal-region" hx-swap="outerHTML" hx-indicator="#global-progress">Buat laporan</a>
+    <p class="ui-empty-state" th:if="${#lists.isEmpty(reports)}">Anda belum mengirim laporan.</p>
+    <div class="ui-table-wrap" th:unless="${#lists.isEmpty(reports)}"><table class="ui-table">
+        <thead><tr><th>Fasilitas</th><th>Kategori</th><th>Status</th><th>Masuk</th><th>Detail</th></tr></thead>
+        <tbody><tr th:each="report : ${reports}">
+            <td data-label="Fasilitas" th:text="${report.facility.name}"></td>
+            <td data-label="Kategori" th:text="${report.category}"></td>
+            <td data-label="Status"><span th:replace="~{fragments/status :: badge(${report.status})}"></span></td>
+            <td data-label="Masuk" th:text="${report.createdAt != null ? #temporals.format(report.createdAt, 'dd MMM yyyy, HH:mm') : '—'}"></td>
+            <td data-label="Detail"><a class="ui-btn ui-btn-secondary" th:href="@{/reports/{id}(id=${report.id})}">Lihat laporan</a></td>
+        </tr></tbody>
+    </table></div>
+    <div id="report-modal-region"></div>
+</div></main></body></html>

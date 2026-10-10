@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Detail Laporan', 'reports', ~{::main})}">
+<body><main><div class="ui-page">
+    <header th:replace="~{fragments/page :: heading('Laporan', 'Detail Laporan', 'Informasi masalah dan perkembangan penanganannya.')}"></header>
+    <div th:replace="~{fragments/feedback :: flash}"></div>
+    <a class="ui-btn ui-btn-secondary" th:href="${staffView ? '/staff/reports' : '/reports'}">Kembali ke daftar laporan</a>
+    <section class="ui-card ui-card-body space-y-4">
+        <h2 th:text="${report.facility.name}"></h2>
+        <span th:replace="~{fragments/status :: badge(${report.status})}"></span>
+        <dl class="space-y-3">
+            <dt>Kategori</dt><dd th:text="${report.category}"></dd>
+            <dt>Deskripsi</dt><dd class="whitespace-pre-wrap" th:text="${report.description}"></dd>
+            <dt>Dilaporkan oleh</dt><dd th:text="${report.user.name}"></dd>
+            <dt>Waktu laporan</dt><dd th:text="${report.createdAt != null ? #temporals.format(report.createdAt, 'dd MMM yyyy, HH:mm') : '—'}"></dd>
+            <dt>Petugas terakhir</dt><dd th:text="${report.handledBy != null ? report.handledBy.name : 'Belum ditangani'}"></dd>
+            <dt>Waktu tindakan terakhir</dt><dd th:text="${report.handledAt != null ? #temporals.format(report.handledAt, 'dd MMM yyyy, HH:mm') : '—'}"></dd>
+            <dt>Catatan penanganan</dt><dd class="whitespace-pre-wrap" th:text="${report.resolutionNote ?: '—'}"></dd>
+            <dt>Waktu penyelesaian</dt><dd th:text="${report.resolvedAt != null ? #temporals.format(report.resolvedAt, 'dd MMM yyyy, HH:mm') : '—'}"></dd>
+        </dl>
+        <div th:if="${report.photoUrl != null}"><h3>Foto laporan</h3>
+            <a th:href="@{/reports/{id}/photo(id=${report.id})}" target="_blank" rel="noopener">Buka foto</a>
+            <img class="max-w-full rounded-lg" style="max-height: 32rem" th:src="@{/reports/{id}/photo(id=${report.id})}" alt="Foto masalah fasilitas">
+        </div>
+        <div th:if="${staffView}" th:replace="~{reports/actions :: actions(${report.id}, ${report.status})}"></div>
+    </section>
+</div></main></body></html>

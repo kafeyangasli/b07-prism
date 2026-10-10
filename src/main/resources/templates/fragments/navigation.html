@@ -50,7 +50,12 @@
            hx-push-url="true" hx-indicator="#global-progress"
            th:classappend="${activeNav == 'reservations'} ? ' ui-sidebar-link-active'"
            th:aria-current="${activeNav == 'reservations'} ? 'page' : null">Reservasi Saya</a>
-        <span sec:authorize="hasRole('PENGGUNA')" class="ui-sidebar-link ui-sidebar-link-disabled" aria-disabled="true">Laporan Saya <small>Segera</small></span>
+        <a sec:authorize="hasRole('PENGGUNA')" th:href="@{/reports}" class="ui-sidebar-link" data-dashboard-link
+           data-nav-key="reports"
+           hx-get="/reports" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
+           hx-push-url="true" hx-indicator="#global-progress"
+           th:classappend="${activeNav == 'reports'} ? ' ui-sidebar-link-active'"
+           th:aria-current="${activeNav == 'reports'} ? 'page' : null">Laporan Saya</a>
 
         <div sec:authorize="hasAnyRole('PETUGAS','ADMIN')" class="ui-sidebar-group">
             <p>Operasional</p>
@@ -66,8 +71,12 @@
                hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
                th:classappend="${activeNav == 'staff-reports'} ? ' ui-sidebar-link-active'"
                th:aria-current="${activeNav == 'staff-reports'} ? 'page' : null">Laporan</a>
-            <span class="ui-sidebar-link ui-sidebar-link-disabled"
-                  aria-disabled="true">Blokir <small>Segera</small></span>
+            <a th:href="@{/staff/blockages}" class="ui-sidebar-link" data-dashboard-link
+               data-nav-key="staff-blockages"
+               hx-get="/staff/blockages" hx-target="#dashboard-content" hx-select="#dashboard-content"
+               hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
+               th:classappend="${activeNav == 'staff-blockages'} ? ' ui-sidebar-link-active'"
+               th:aria-current="${activeNav == 'staff-blockages'} ? 'page' : null">Blokir</a>
         </div>
 
         <div sec:authorize="hasRole('ADMIN')" class="ui-sidebar-group">
@@ -89,8 +98,7 @@
                hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
                th:classappend="${activeNav == 'admin-facility-types'} ? ' ui-sidebar-link-active'"
                th:aria-current="${activeNav == 'admin-facility-types'} ? 'page' : null">Jenis Fasilitas</a>
-            <span class="ui-sidebar-link ui-sidebar-link-disabled"
-                  aria-disabled="true">Jenis Blokir <small>Segera</small></span>
+            <a th:href="@{/api/admin/blockage-types}" class="ui-sidebar-link">Jenis Blokir</a>
             <a th:href="@{/admin/recap}" class="ui-sidebar-link" data-dashboard-link data-nav-key="recap"
                hx-get="/admin/recap" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
                hx-push-url="true" hx-indicator="#global-progress"

@@ -11,10 +11,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 public interface ReportRepository extends JpaRepository<Report, Long> {
 
     // US-06 and US-07: submit and track a user's reports.
+    @EntityGraph(attributePaths = {"facility", "user", "handledBy"})
     List<Report> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     List<Report> findByUserIdAndStatusOrderByCreatedAtDesc(Long userId, ReportStatus status);
@@ -54,5 +58,15 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
 
     List<Report> findByHandledByIdOrderByHandledAtDesc(Long userId);
 
+    @EntityGraph(attributePaths = {"facility", "user", "handledBy"})
     Optional<Report> findByIdAndUserId(Long reportId, Long userId);
+
+    @Override
+    @EntityGraph(attributePaths = {"facility", "user", "handledBy"})
+    Optional<Report> findById(Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"facility", "user"})
+    @Query("select r from Report r where r.id = :id")
+    Optional<Report> findByIdForUpdate(@Param("id") Long id);
 }

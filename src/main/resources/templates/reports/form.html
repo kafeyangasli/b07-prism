@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"><body>
+<div id="report-modal-region" th:fragment="report-modal">
+    <dialog id="report-dialog" class="ui-dialog ui-reservation-dialog" aria-labelledby="report-dialog-title"
+            th:attr="open=${openReportDialog == true ? 'open' : null}">
+        <div class="ui-dialog-header">
+            <div><p class="ui-eyebrow">Laporan fasilitas</p><h2 id="report-dialog-title">Laporkan masalah fasilitas</h2>
+                <p class="ui-hint">Sertakan deskripsi dan foto agar petugas dapat menindaklanjuti.</p></div>
+            <button class="ui-btn ui-btn-ghost" type="button" data-close-dialog aria-label="Tutup dialog">×</button>
+        </div>
+        <form class="ui-form" th:action="@{/reports}" th:object="${reportForm}" method="post"
+              enctype="multipart/form-data" hx-post="/reports" hx-encoding="multipart/form-data"
+              hx-target="#report-modal-region" hx-swap="outerHTML" hx-indicator="#global-progress">
+            <div th:replace="~{fragments/feedback :: formErrors}"></div>
+            <div th:if="${reservationError != null}" class="ui-alert ui-alert-error" role="alert" th:text="${reservationError}"></div>
+            <div th:if="${reservationReport}">
+                <input type="hidden" th:field="*{reservationId}">
+                <input type="hidden" th:field="*{facilityId}">
+                <div class="ui-facility-context" th:if="${selectedFacility != null}">
+                    <div><span class="ui-eyebrow">Fasilitas reservasi</span><strong th:text="${selectedFacility.name}"></strong>
+                        <p class="ui-hint" th:text="${'Laporan dapat dikirim hingga ' + #temporals.format(reportDeadline, 'dd MMM yyyy, HH:mm') + ' (24 jam setelah selesai).'}"></p>
+                    </div>
+                </div>
+            </div>
+            <div th:unless="${reservationReport}"><label class="ui-label" for="facilityId">Fasilitas</label>
+                <select class="ui-input" th:field="*{facilityId}" required autofocus>
+                    <option value="">Pilih fasilitas</option>
+                    <option th:each="facility : ${facilities}" th:value="${facility.id}" th:text="${facility.name}"></option>
+                </select>
+            </div>
+            <div><label class="ui-label" for="category">Kategori</label>
+                <input class="ui-input" th:field="*{category}" maxlength="80" required placeholder="Contoh: AC, kebersihan, listrik">
+            </div>
+            <div><label class="ui-label" for="description">Deskripsi masalah</label>
+                <textarea class="ui-input" th:field="*{description}" maxlength="2000" required rows="5"></textarea>
+            </div>
+            <div><label class="ui-label" for="photo">Foto</label>
+                <input class="ui-input" id="photo" name="photo" type="file" accept="image/jpeg,image/png" required>
+                <p class="ui-hint">JPEG atau PNG, maksimal 10 MB dan 20 megapiksel. Pilih ulang foto jika formulir perlu diperbaiki.</p>
+            </div>
+            <div class="ui-form-actions">
+                <button class="ui-btn ui-btn-secondary" type="button" data-close-dialog>Batal</button>
+                <button class="ui-btn ui-btn-primary" type="submit" th:disabled="${reservationError != null}">Kirim laporan</button>
+            </div>
+        </form>
+    </dialog>
+</div>
+<a th:fragment="reservation-action(reservation)" th:if="${@reportReservationService.canReport(reservation)}"
+   class="ui-btn ui-btn-secondary" th:href="@{/reports/new(reservationId=${reservation.id})}"
+   th:attr="hx-get=@{/reports/new(reservationId=${reservation.id})}"
+   hx-target="#report-modal-region" hx-swap="outerHTML" hx-indicator="#global-progress">Laporkan masalah</a>
+</body></html>

@@ -5,13 +5,11 @@ import com.github.kafeyangasli.prism.feature.user.model.User;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -32,11 +30,6 @@ public class CustomUserDetailsService implements UserDetailsService {
             throw new DisabledException("Akun belum aktif atau tidak dapat digunakan.");
         }
 
-        String roleName = "ROLE_" + user.getRole().name();
-        return new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                user.getPasswordHash(),
-                Collections.singletonList(new SimpleGrantedAuthority(roleName))
-        );
+        return new PrismUserDetails(user);
     }
 }

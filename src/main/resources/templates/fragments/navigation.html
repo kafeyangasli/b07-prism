@@ -108,13 +108,20 @@
                hx-get="/admin/settings" hx-target="#dashboard-content" hx-select="#dashboard-content"
                hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
                th:classappend="${activeNav == 'admin-settings'} ? ' ui-sidebar-link-active'"
-               th:aria-current="${activeNav == 'admin-settings'} ? 'page' : null">Pengaturan</a>
+               th:aria-current="${activeNav == 'admin-settings'} ? 'page' : null">Pengaturan PRISM</a>
         </div>
     </nav>
     <div class="ui-sidebar-account">
         <div class="min-w-0"><p class="truncate text-sm font-semibold" sec:authentication="name">nama@kampus.ac.id</p>
             <p class="text-xs text-prism-200">Akun aktif</p></div>
-        <span class="ui-sidebar-link ui-sidebar-link-disabled" aria-disabled="true">Akun <small>Segera</small></span>
+        <a th:href="@{/account}" class="ui-sidebar-link" data-dashboard-link data-nav-key="account"
+           hx-get="/account" hx-target="#dashboard-content" hx-select="#dashboard-content"
+           hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
+           th:classappend="${activeNav == 'account'} ? ' ui-sidebar-link-active'"
+           th:aria-current="${activeNav == 'account'} ? 'page' : null">Pengaturan Akun</a>
+<!--        <a th:href="@{/account}" class="ui-sidebar-link"-->
+<!--           th:classappend="${activeNav == 'account'} ? ' ui-sidebar-link-active'"-->
+<!--           th:aria-current="${activeNav == 'account'} ? 'page' : null">Pengaturan Akun</a>-->
         <form th:action="@{/logout}" method="post">
             <button type="submit" class="ui-sidebar-link w-full bg-rose-900 text-rose-100 hover:bg-rose-800 transition-colors">Keluar</button>
         </form>

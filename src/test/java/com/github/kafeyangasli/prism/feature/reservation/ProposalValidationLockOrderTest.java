@@ -20,6 +20,7 @@ import com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus
 import com.github.kafeyangasli.prism.feature.reservation.repository.ReservationRepository;
 import com.github.kafeyangasli.prism.feature.reservation.service.ReservationProcessingService;
 import com.github.kafeyangasli.prism.feature.user.model.Role;
+import com.github.kafeyangasli.prism.feature.user.model.AccountStatus;
 import com.github.kafeyangasli.prism.feature.user.model.User;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 import com.github.kafeyangasli.prism.shared.exception.storage.ProposalStorageService;
@@ -50,6 +51,7 @@ class ProposalValidationLockOrderTest {
         when(facility.getId()).thenReturn(10L);
         when(facility.getAdministrativeStatus()).thenReturn(AdministrativeStatus.ACTIVE);
         when(requester.getId()).thenReturn(20L);
+        when(requester.getAccountStatus()).thenReturn(AccountStatus.ACTIVE);
         when(pending.getId()).thenReturn(1L);
         when(pending.getFacility()).thenReturn(facility);
         when(pending.getUser()).thenReturn(requester);

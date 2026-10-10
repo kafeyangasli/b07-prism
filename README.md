@@ -43,6 +43,7 @@ Seluruh individu yang berkontribusi pada projek ini terafiliasi dengan
 - Registrasi mandiri untuk Pengguna.
 - Verifikasi atau penolakan akun oleh Admin.
 - Login dan logout dengan pengamanan berbasis sesi.
+- Pengaturan akun mandiri: nama tampilan, perubahan kata sandi, dan penonaktifan akun Pengguna dengan pemeriksaan reservasi aktif. [Detail fitur dan pengujian](docs/ACCOUNT_SETTINGS.md).
 - Pengelolaan akun Pengguna dan Petugas oleh Admin.
 - Otorisasi berdasarkan peran: Pengunjung, Pengguna, Petugas, dan Admin.
 

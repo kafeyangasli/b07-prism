@@ -7,19 +7,23 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
+import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, UserRepository users) throws Exception {
         http
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/", "/facilities", "/facilities/**", "/auth/register", "/login", "/css/**", "/js/**", "/images/**", "/vendor/**", "/webjars/**").permitAll()
                 .requestMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/staff/**").hasAnyRole("ADMIN", "PETUGAS")
                 .requestMatchers("/reservations/**").hasRole("PENGGUNA")
+                .requestMatchers("/account/delete").hasRole("PENGGUNA")
+                .requestMatchers("/account/**").hasAnyRole("PENGGUNA", "PETUGAS", "ADMIN")
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form
@@ -35,6 +39,7 @@ public class SecurityConfig {
                 .permitAll()
             );
 
+        http.addFilterAfter(new AccountStatusFilter(users), AnonymousAuthenticationFilter.class);
         return http.build();
     }
 

@@ -193,7 +193,7 @@ class ProposalValidationIntegrationTest {
 
     @Test
     void aulaRequiresValidationEvenForShortReservation() throws Exception {
-        facility.setType("Aula");
+        facility.getFacilityType().updateDetails("Aula", null);
         pending.setEndAt(pending.getStartAt().plusHours(1));
         entityManager.flush();
         mvc.perform(post("/staff/reservations/{id}/approve", pending.getId())

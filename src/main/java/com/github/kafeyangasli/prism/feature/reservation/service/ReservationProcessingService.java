@@ -9,6 +9,7 @@ import com.github.kafeyangasli.prism.feature.reservation.model.ReservationReason
 import com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus;
 import com.github.kafeyangasli.prism.feature.reservation.repository.ReservationRepository;
 import com.github.kafeyangasli.prism.feature.user.model.Role;
+import com.github.kafeyangasli.prism.feature.user.model.AccountStatus;
 import com.github.kafeyangasli.prism.feature.user.model.User;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
@@ -106,8 +107,11 @@ public class ReservationProcessingService {
 
         facilityRepository.findByIdForUpdate(context.getFacilityId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fasilitas tidak ditemukan"));
-        userRepository.findByIdForUpdate(context.getUserId())
+        User requester = userRepository.findByIdForUpdate(context.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pengguna pemohon tidak ditemukan"));
+        if (requester.getAccountStatus() != AccountStatus.ACTIVE) {
+            throw rule("ACCOUNT_INACTIVE", "Akun pemohon sudah tidak aktif");
+        }
 
         // Re-read and lock after both controlling rows are locked. Every decision below uses
         // this post-lock state, never the pre-lock preview.

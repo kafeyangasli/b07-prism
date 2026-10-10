@@ -35,8 +35,14 @@
                     </div>
                     <div>
                         <label class="ui-label" for="recap-type">Tipe fasilitas</label>
-                        <input id="recap-type" class="ui-input" name="facilityType" th:value="${filter.facilityType}"
-                               placeholder="Contoh: Aula">
+                        <select id="recap-type" class="ui-input" name="facilityType">
+                            <option value="">Semua tipe fasilitas</option>
+                            <option th:each="type : ${facilityTypes}" th:value="${type.code}"
+                                    th:text="${type.name}"
+                                    th:selected="${filter.facilityType != null and
+                                        (#strings.equalsIgnoreCase(type.code, #strings.trim(filter.facilityType)) or
+                                         #strings.equalsIgnoreCase(type.name, #strings.trim(filter.facilityType)))}"></option>
+                        </select>
                     </div>
                     <div>
                         <label class="ui-label" for="recap-location">Lokasi</label>

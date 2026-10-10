@@ -13,11 +13,14 @@ import com.github.kafeyangasli.prism.feature.user.model.User;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
 import com.github.kafeyangasli.prism.shared.exception.ResourceNotFoundException;
+import com.github.kafeyangasli.prism.shared.exception.storage.ProposalStorageService;
+import org.springframework.core.io.Resource;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.net.MalformedURLException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
@@ -35,17 +38,59 @@ public class ReservationProcessingService {
     private final UserRepository userRepository;
     private final FacilityBlockageRepository blockageRepository;
     private final Clock clock;
+    private final ProposalStorageService proposalStorageService;
 
     public ReservationProcessingService(ReservationRepository reservationRepository,
                                         FacilityRepository facilityRepository,
                                         UserRepository userRepository,
                                         FacilityBlockageRepository blockageRepository,
-                                        Clock clock) {
+                                        Clock clock,
+                                        ProposalStorageService proposalStorageService) {
         this.reservationRepository = reservationRepository;
         this.facilityRepository = facilityRepository;
         this.userRepository = userRepository;
         this.blockageRepository = blockageRepository;
         this.clock = clock;
+        this.proposalStorageService = proposalStorageService;
+    }
+
+    @Transactional
+    @PreAuthorize("hasAnyRole('PETUGAS','ADMIN')")
+    public Reservation validateProposal(long reservationId, long actorId) {
+        Reservation reservation = reservationRepository.findByIdForUpdate(reservationId)
+                .orElseThrow(() -> notFound(reservationId));
+        User actor = requireStaffActor(actorId);
+        LocalDateTime now = LocalDateTime.now(clock);
+        validateProcessable(reservation, now);
+        loadProposal(reservation);
+
+        // A repeated validation preserves the original, complete audit record.
+        if (reservation.getProposalValidatedAt() == null || reservation.getProposalValidatedBy() == null) {
+            reservation.setProposalValidatedAt(now);
+            reservation.setProposalValidatedBy(actor);
+        }
+        return reservation;
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('PETUGAS','ADMIN')")
+    public Resource proposalForReview(long reservationId, long actorId) {
+        requireStaffActor(actorId);
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> notFound(reservationId));
+        validateProcessable(reservation, LocalDateTime.now(clock));
+        return loadProposal(reservation);
+    }
+
+    private Resource loadProposal(Reservation reservation) {
+        if (reservation.getProposalPath() == null || reservation.getProposalPath().isBlank()) {
+            throw rule(ReservationReasonCode.INVALID_PROPOSAL, "Berkas proposal wajib tersedia sebelum validasi");
+        }
+        try {
+            return proposalStorageService.load(reservation.getProposalPath());
+        } catch (MalformedURLException | IllegalArgumentException exception) {
+            throw rule(ReservationReasonCode.INVALID_PROPOSAL, "Berkas proposal tidak ditemukan atau tidak dapat dibaca");
+        }
     }
 
     @Transactional

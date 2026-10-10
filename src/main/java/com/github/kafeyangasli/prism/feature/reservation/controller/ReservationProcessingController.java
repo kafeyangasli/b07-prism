@@ -7,15 +7,23 @@ import com.github.kafeyangasli.prism.feature.reservation.service.ReservationProc
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
 import com.github.kafeyangasli.prism.shared.exception.ResourceNotFoundException;
 import jakarta.validation.Valid;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.server.ResponseStatusException;
 
 @Controller
 @PreAuthorize("hasAnyRole('PETUGAS','ADMIN')")
@@ -28,6 +36,34 @@ public class ReservationProcessingController {
                                            StaffActorResolver actorResolver) {
         this.processingService = processingService;
         this.actorResolver = actorResolver;
+    }
+
+    @PostMapping("/staff/reservations/{id}/proposal/validate")
+    public String validateProposal(@PathVariable long id,
+                                   Authentication authentication,
+                                   RedirectAttributes redirect) {
+        return execute(redirect, () -> processingService.validateProposal(id,
+                actorResolver.resolveId(authentication.getName())),
+                "Proposal berhasil divalidasi. Reservasi tetap menunggu persetujuan");
+    }
+
+    @GetMapping("/staff/reservations/{id}/proposal")
+    public ResponseEntity<Resource> proposal(@PathVariable long id, Authentication authentication) {
+        try {
+            Resource resource = processingService.proposalForReview(id,
+                    actorResolver.resolveId(authentication.getName()));
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                            .filename(resource.getFilename() == null ? "proposal-" + id : resource.getFilename())
+                            .build().toString())
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+        } catch (ResourceNotFoundException exception) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, exception.getMessage(), exception);
+        } catch (BusinessRuleException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
+        }
     }
 
     @PostMapping("/staff/reservations/{id}/approve")

@@ -49,6 +49,7 @@ public class AdministrationReportController {
         RecapFilter filter = withDefaultPeriod(incoming);
         model.addAttribute("filter", filter);
         model.addAttribute("facilities", reportService.facilitiesForFilter());
+        model.addAttribute("facilityTypes", reportService.typesForFilter());
         try {
             model.addAttribute("recap", reportService.generate(filter));
         } catch (BusinessRuleException exception) {
@@ -73,7 +74,10 @@ public class AdministrationReportController {
     private RecapFilter withDefaultPeriod(RecapFilter filter) {
         LocalDate today = LocalDate.now(clock);
         if (filter == null || (filter.startDate() == null && filter.endDate() == null)) {
-            return new RecapFilter(today.withDayOfMonth(1), today, null, null, null);
+            return new RecapFilter(today.withDayOfMonth(1), today,
+                    filter == null ? null : filter.facilityId(),
+                    filter == null ? null : filter.facilityType(),
+                    filter == null ? null : filter.location());
         }
         return filter;
     }

@@ -2,13 +2,21 @@
 <html lang="id" xmlns:th="http://www.thymeleaf.org">
 <body>
 <td th:fragment="actions(row)" data-label="Tindakan" class="ui-table-actions">
+    <a th:if="${row.proposalRequired}" class="ui-btn ui-btn-secondary"
+       th:href="@{/staff/reservations/{id}/proposal(id=${row.id})}">Unduh proposal</a>
+    <form th:if="${row.proposalRequired and !row.proposalValidated}"
+          th:action="@{/staff/reservations/{id}/proposal/validate(id=${row.id})}" method="post">
+        <button class="ui-btn ui-btn-secondary" type="submit">Validasi proposal</button>
+    </form>
     <form th:if="${row.conflictingPendingCount == 0}"
           th:action="@{/staff/reservations/{id}/approve(id=${row.id})}" method="post">
-        <button class="ui-btn ui-btn-primary" type="submit">
+        <button class="ui-btn ui-btn-primary" type="submit"
+                th:disabled="${row.proposalRequired and !row.proposalValidated}">
             Setujui
         </button>
     </form>
     <button th:if="${row.conflictingPendingCount > 0}" class="ui-btn ui-btn-primary" type="button"
+            th:disabled="${row.proposalRequired and !row.proposalValidated}"
             th:attr="data-open-dialog=${'approve-reservation-' + row.id}">
         Setujui
     </button>
@@ -44,7 +52,8 @@
                 <input type="hidden" name="confirmCascade" value="true">
                 <div class="ui-form-actions">
                     <button class="ui-btn ui-btn-secondary" type="button" data-close-dialog autofocus>Batal</button>
-                    <button class="ui-btn ui-btn-primary" type="submit">Setujui dan tolak konflik</button>
+                    <button class="ui-btn ui-btn-primary" type="submit"
+                            th:disabled="${row.proposalRequired and !row.proposalValidated}">Setujui dan tolak konflik</button>
                 </div>
             </form>
         </div>

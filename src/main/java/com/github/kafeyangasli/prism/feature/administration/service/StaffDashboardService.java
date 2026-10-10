@@ -47,7 +47,7 @@ public class StaffDashboardService {
                         r.getId(), r.getUser().getName(), r.getFacility().getName(),
                         r.getStartAt(), r.getEndAt(), r.getCreatedAt(), r.getExpiresAt(),
                         Duration.between(r.getStartAt(), r.getEndAt()).toHours() >= 6
-                                || "Aula".equalsIgnoreCase(r.getFacility().getType()),
+                                || "Aula".equalsIgnoreCase(r.getFacility().getFacilityType().getName()),
                         r.getProposalValidatedAt() != null && r.getProposalValidatedBy() != null,
                         countPendingConflicts(r, pendingReservations)))
                 .toList();

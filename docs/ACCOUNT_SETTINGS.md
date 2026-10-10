@@ -1,5 +1,9 @@
 # Account Settings
 
+Profile picture management is described in [PROFILE_PICTURES.md](PROFILE_PICTURES.md).
+Its new nullable avatar reference extends the original account implementation
+below without changing the password or deactivation rules.
+
 Authenticated `PENGGUNA`, `PETUGAS`, and `ADMIN` accounts can open `/account`
 from the sidebar, update their display name, and change their password.
 `PENGGUNA` is PRISM's existing name for the task's regular `USER` role.

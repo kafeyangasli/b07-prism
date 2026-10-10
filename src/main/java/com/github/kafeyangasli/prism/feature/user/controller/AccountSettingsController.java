@@ -7,6 +7,7 @@ import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.TransactionException;
 import org.springframework.security.access.AccessDeniedException;
@@ -23,8 +24,13 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/account")
 public class AccountSettingsController {
     private final AccountSettingsService service;
+    private final int avatarMaxBytes;
 
-    public AccountSettingsController(AccountSettingsService service) { this.service = service; }
+    public AccountSettingsController(AccountSettingsService service,
+            @Value("${prism.avatars.max-bytes:5242880}") int avatarMaxBytes) {
+        this.service = service;
+        this.avatarMaxBytes = avatarMaxBytes;
+    }
 
     @InitBinder("profileForm")
     void profileFields(WebDataBinder binder) { binder.setAllowedFields("name"); }
@@ -33,6 +39,7 @@ public class AccountSettingsController {
     public String settings(Model model) {
         var account = service.currentAccount();
         model.addAttribute("account", account);
+        model.addAttribute("avatarMaxBytes", avatarMaxBytes);
         if (!model.containsAttribute("profileForm")) {
             var profile = new AccountProfileForm();
             profile.setName(account.name());

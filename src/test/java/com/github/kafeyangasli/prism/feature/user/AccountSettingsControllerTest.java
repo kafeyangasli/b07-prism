@@ -20,7 +20,7 @@ class AccountSettingsControllerTest {
     @Test void persistenceFailuresRenderSafeFeedbackAndKeepSession() {
         AccountSettingsService service = mock(AccountSettingsService.class);
         when(service.currentAccount()).thenReturn(new AccountSettingsView("Name", "a@example.test", Role.PENGGUNA, AccountStatus.ACTIVE));
-        var controller = new AccountSettingsController(service);
+        var controller = new AccountSettingsController(service, 5242880);
         var failure = new DataAccessResourceFailureException("Sensitive database details");
         doThrow(failure).when(service).updateProfile(any());
         doThrow(failure).when(service).changePassword(any());

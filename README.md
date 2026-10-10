@@ -44,6 +44,7 @@ Seluruh individu yang berkontribusi pada projek ini terafiliasi dengan
 - Verifikasi atau penolakan akun oleh Admin.
 - Login dan logout dengan pengamanan berbasis sesi.
 - Pengaturan akun mandiri: nama tampilan, perubahan kata sandi, dan penonaktifan akun Pengguna dengan pemeriksaan reservasi aktif. [Detail fitur dan pengujian](docs/ACCOUNT_SETTINGS.md).
+- Foto profil opsional: unggah JPEG/PNG/WebP, ganti atau hapus foto sendiri, dan pratinjau sebelum unggah. [Penyimpanan dan pengujian](docs/PROFILE_PICTURES.md).
 - Pengelolaan akun Pengguna dan Petugas oleh Admin.
 - Otorisasi berdasarkan peran: Pengunjung, Pengguna, Petugas, dan Admin.
 

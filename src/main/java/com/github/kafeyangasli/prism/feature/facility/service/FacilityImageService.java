@@ -9,8 +9,6 @@ import com.github.kafeyangasli.prism.shared.exception.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.*;
 
@@ -121,18 +119,10 @@ public class FacilityImageService {
     }
 
     private String storeForTransaction(MultipartFile upload) {
-        String name = storage.store(upload);
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override public void afterCompletion(int status) {
-                if (status != STATUS_COMMITTED) storage.delete(name);
-            }
-        });
-        return name;
+        return storage.storeForTransaction(upload);
     }
 
     private void deleteAfterCommit(String name) {
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override public void afterCommit() { storage.delete(name); }
-        });
+        storage.deleteAfterCommit(name);
     }
 }

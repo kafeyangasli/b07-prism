@@ -30,6 +30,19 @@
     <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-sm font-bold text-primary" th:text="${number}">1</span>
     <div class="min-w-0"><h2 class="text-lg" th:text="${title}">Judul</h2><p class="mt-1 text-sm leading-6 text-muted" th:text="${description}">Keterangan</p></div>
 </div>
+<fieldset th:fragment="multiFilter(id, label, name, options)" th:id="${id}" class="space-y-2" data-multi-filter>
+    <legend class="ui-label" th:text="${label}"></legend>
+    <p class="ui-hint">Pilih satu atau lebih. Tanpa pilihan berarti semua.</p>
+    <div th:id="${id + '-options'}" class="flex flex-wrap gap-2 border-t border-border pt-3">
+        <label th:each="option, position : ${options}" class="ui-filter-pill">
+            <input class="sr-only" type="checkbox" th:name="${name}" th:value="${option.value}" th:checked="${option.selected}" th:id="${id + '-option-' + position.index}">
+            <span class="ui-filter-indicator" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m4 8 3 3 5-6"/></svg></span>
+            <span th:text="${option.label}"></span>
+        </label>
+        <p class="ui-hint" th:if="${#lists.isEmpty(options)}">Belum ada opsi tersedia.</p>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-2"><span class="ui-hint" data-selection-count aria-live="polite"></span><button type="button" class="ui-btn ui-btn-ghost" data-clear-multi>Hapus pilihan</button></div>
+</fieldset>
 <div th:fragment="historyTools(id, target, report, processed)" class="ui-list-tools flex-wrap" data-list-tools hidden>
     <div class="relative min-w-0 w-full sm:max-w-sm">
         <label class="sr-only" th:for="${id}">Cari dalam riwayat</label>

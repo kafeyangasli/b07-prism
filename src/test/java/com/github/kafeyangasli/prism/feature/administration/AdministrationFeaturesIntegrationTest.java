@@ -199,9 +199,41 @@ class AdministrationFeaturesIntegrationTest {
             String html = mockMvc.perform(get("/admin/recap").param("facilityType", selection)
                             .with(user("admin").roles("ADMIN")))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-            assertThat(html).contains("<select id=\"recap-type\"", "Semua tipe fasilitas", "value=\"HALL\"")
-                    .doesNotContain("<input id=\"recap-type\"", "<datalist")
-                    .containsPattern("(?s)<option(?=[^>]*value=\"LAB\")(?=[^>]*selected=\"selected\")[^>]*>\\s*Laboratorium Baru\\s*</option>");
+            assertThat(html).contains("id=\"recap-type\"", "data-multi-filter", "name=\"facilityTypes\"", "value=\"HALL\"")
+                    .doesNotContain("<select id=\"recap-type\"", "<datalist")
+                    .containsPattern("<input(?=[^>]*value=\"LAB\")(?=[^>]*checked=\"checked\")[^>]*>");
+        }
+    }
+
+    @Test @WithPrismUser(roles = "ADMIN")
+    void recapAndEveryExportPreserveMultipleTypesLocationsAndDefaultPeriod() throws Exception {
+        var hallType = facilityTypes.save(new FacilityType("HALL-MULTI", "Aula", null));
+        var classroomType = facilityTypes.save(new FacilityType("CLASS-MULTI", "Kelas", null));
+        var hall = facilities.save(new Facility("HALL-MULTI", "Aula Dipilih", hallType, "Gedung A, Lantai 1", 100, null, AdministrativeStatus.ACTIVE));
+        facilities.save(new Facility("HALL-OTHER", "Aula Tidak Dipilih", hallType, "Gedung C", 100, null, AdministrativeStatus.ACTIVE));
+        facilities.save(new Facility("CLASS-OTHER", "Kelas Tidak Dipilih", classroomType, "Gedung B", 40, null, AdministrativeStatus.ACTIVE));
+        var result = mockMvc.perform(get("/admin/recap")
+                        .param("facilityTypes", "LAB", "HALL-MULTI").param("locations", "Gedung B", "Gedung A, Lantai 1"))
+                .andExpect(status().isOk()).andReturn();
+        var selected = (RecapFilter) result.getModelAndView().getModel().get("filter");
+        assertThat(selected.startDate()).isEqualTo(REPORT_DATE.withDayOfMonth(1));
+        assertThat(selected.facilityTypes()).containsExactly("lab", "hall-multi");
+        assertThat(selected.locations()).containsExactly("gedung b", "gedung a, lantai 1");
+        var recap = (RecapResult) result.getModelAndView().getModel().get("recap");
+        assertThat(recap.rows()).extracting("facilityName").containsExactlyInAnyOrder(room.getName(), hall.getName());
+        String html = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(html).contains("name=\"facilityTypes\"", "name=\"locations\"")
+                .containsPattern("<input(?=[^>]*type=\"hidden\")(?=[^>]*name=\"locations\")(?=[^>]*value=\"gedung a, lantai 1\")[^>]*>");
+        for (String format : new String[]{"csv", "xlsx", "pdf"}) {
+            byte[] bytes = mockMvc.perform(get("/admin/recap/export").param("format", format)
+                            .param("facilityTypes", "LAB", "HALL-MULTI").param("locations", "Gedung B", "Gedung A, Lantai 1"))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+            String text = switch (format) {
+                case "xlsx" -> readZipEntry(bytes, "xl/worksheets/sheet1.xml");
+                case "pdf" -> pdfText(bytes);
+                default -> new String(bytes, StandardCharsets.UTF_8);
+            };
+            assertThat(text).contains(room.getName(), hall.getName()).doesNotContain("Aula Tidak Dipilih", "Kelas Tidak Dipilih");
         }
     }
 

@@ -64,6 +64,15 @@ public class FacilityServiceImpl implements FacilityService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<Facility> searchCatalogueSelections(List<String> types, List<String> locations, Integer capacity) {
+        var selectedTypes = FacilityFilters.normalize(types);
+        var selectedLocations = FacilityFilters.normalize(locations);
+        return facilityRepository.searchCatalogue(AdministrativeStatus.ACTIVE, null, null, capacity).stream()
+                .filter(f -> FacilityFilters.matches(f, selectedTypes, selectedLocations)).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Facility> getAvailableFacilities(LocalDateTime startAt, LocalDateTime endAt) {
         if (startAt == null || endAt == null || !startAt.isBefore(endAt)) {
             throw new BusinessRuleException("Waktu mulai dan selesai yang valid wajib diisi untuk memeriksa ketersediaan.");

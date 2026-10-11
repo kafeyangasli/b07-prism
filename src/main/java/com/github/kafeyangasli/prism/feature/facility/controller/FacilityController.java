@@ -1,6 +1,7 @@
 package com.github.kafeyangasli.prism.feature.facility.controller;
 
 import com.github.kafeyangasli.prism.feature.facility.service.FacilityService;
+import com.github.kafeyangasli.prism.feature.facility.service.FacilityFilters;
 import com.github.kafeyangasli.prism.feature.facility.model.AdministrativeStatus;
 import com.github.kafeyangasli.prism.feature.facility.model.Facility;
 import com.github.kafeyangasli.prism.feature.reservation.service.EquipmentAvailabilityService;
@@ -9,6 +10,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -58,13 +60,20 @@ public class FacilityController {
     }
 
     @GetMapping("/facilities")
-    public String facilityCatalogue(@RequestParam(required = false) String type,
-                                    @RequestParam(required = false) String location,
+    public String facilityCatalogue(@RequestParam MultiValueMap<String, String> parameters,
                                     @RequestParam(required = false) Integer capacity,
                                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startAt,
                                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endAt,
                                     Model model) {
-        var results = facilityService.searchCatalogue(type, location, capacity);
+        // Read raw repeated values: Spring's scalar-to-List conversion would split locations containing commas.
+        var types = FacilityFilters.normalize(parameters.get("type"));
+        var locations = FacilityFilters.normalize(parameters.get("location"));
+        var results = facilityService.searchCatalogueSelections(types, locations, capacity);
+        var catalogue = facilityService.getPublicCatalogue();
+        var catalogueTypes = catalogue.stream().map(Facility::getFacilityType)
+                .collect(Collectors.toMap(t -> t.getId(), t -> t, (a, b) -> a)).values();
+        model.addAttribute("typeOptions", FacilityFilters.types(catalogueTypes, types));
+        model.addAttribute("locationOptions", FacilityFilters.locations(catalogue, locations));
         if ((startAt == null) != (endAt == null)) {
             model.addAttribute("filterError", "Isi waktu mulai dan selesai bersama untuk memeriksa ketersediaan.");
         } else if (startAt != null) {
@@ -88,8 +97,8 @@ public class FacilityController {
         }
         model.addAttribute("availableStock", availableStock);
         model.addAttribute("stockForSelectedInterval", startAt != null && endAt != null);
-        model.addAttribute("type", type);
-        model.addAttribute("location", location);
+        model.addAttribute("type", types);
+        model.addAttribute("location", locations);
         model.addAttribute("capacity", capacity);
         model.addAttribute("startAt", startAt);
         model.addAttribute("endAt", endAt);

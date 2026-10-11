@@ -69,8 +69,9 @@ public class AdministrationReportService {
         RecapFilter filter = validate(rawFilter == null ? null : rawFilter.normalized());
         LocalDateTime periodStart = filter.startDate().atStartOfDay();
         LocalDateTime periodEnd = filter.endDate().plusDays(1).atStartOfDay();
-        List<Facility> facilities = facilityRepository.findForRecap(
-                filter.facilityId(), filter.facilityType(), filter.location());
+        List<Facility> facilities = facilityRepository.findForRecap(filter.facilityId(), null, null).stream()
+                .filter(f -> com.github.kafeyangasli.prism.feature.facility.service.FacilityFilters.matches(
+                        f, filter.facilityTypes(), filter.locations())).toList();
 
         if (facilities.isEmpty()) {
             return new RecapResult(filter, List.of(), 0, 0L, 0, LocalDateTime.now(clock));

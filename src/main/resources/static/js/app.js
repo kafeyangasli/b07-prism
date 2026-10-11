@@ -288,6 +288,7 @@
   function initializeEnhancements(root) {
     initializeActionDialogs(root);
     initializeFacilityPickers(root);
+    initializeMultiFilters(root);
     root.querySelectorAll?.('[data-list-search]').forEach(function (input) {
       const region = document.getElementById(input.dataset.listSearch);
       const tools = input.closest('[data-list-tools]');
@@ -358,6 +359,13 @@
     }
     const clearChoice = event.target.closest('[data-clear-facility]');
     if (clearChoice) { clearFacility(clearChoice.closest('[data-facility-picker]'), true); return; }
+    const clearMulti = event.target.closest('[data-clear-multi]');
+    if (clearMulti) {
+      const group = clearMulti.closest('[data-multi-filter]');
+      group.querySelectorAll('input[type="checkbox"]').forEach(input => { input.checked = false; });
+      updateMultiFilter(group);
+      return;
+    }
     const resetHistory = event.target.closest('[data-history-reset]');
     if (resetHistory) {
       const tools = resetHistory.closest('[data-list-tools]');
@@ -385,10 +393,21 @@
   });
 
   document.addEventListener('change', function (event) {
+    if (event.target.matches('[data-multi-filter] input[type="checkbox"]')) updateMultiFilter(event.target.closest('[data-multi-filter]'));
     if (event.target.matches('[data-record-from], [data-record-to]')) {
       filterRecords(event.target.closest('[data-list-tools]').querySelector('[data-list-search]'));
     }
   });
+
+  function updateMultiFilter(group) {
+    const count = group.querySelectorAll('input[type="checkbox"]:checked').length;
+    group.querySelector('[data-selection-count]').textContent = count ? count + ' dipilih' : 'Semua';
+    group.querySelector('[data-clear-multi]').disabled = count === 0;
+  }
+
+  function initializeMultiFilters(root) {
+    root.querySelectorAll?.('[data-multi-filter]').forEach(updateMultiFilter);
+  }
 
   function initializeFacilityPickers(root) {
     root.querySelectorAll?.('[data-facility-picker]').forEach(function (picker) {

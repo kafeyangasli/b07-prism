@@ -39,16 +39,8 @@
                       hx-push-url="true"
                       hx-indicator="#global-progress, #facility-filter-loading"
                       class="ui-form">
-                    <div>
-                        <label for="type" class="ui-label">Tipe fasilitas</label>
-                        <input id="type" class="ui-input" type="text" name="type" th:value="${type}"
-                               placeholder="Contoh: Ruang kelas">
-                    </div>
-                    <div>
-                        <label for="location" class="ui-label">Lokasi</label>
-                        <input id="location" class="ui-input" type="text" name="location" th:value="${location}"
-                               placeholder="Contoh: Gedung A">
-                    </div>
+                    <fieldset th:replace="~{fragments/workspace :: multiFilter('facility-type', 'Tipe fasilitas', 'type', ${typeOptions})}"></fieldset>
+                    <fieldset th:replace="~{fragments/workspace :: multiFilter('facility-location', 'Lokasi', 'location', ${locationOptions})}"></fieldset>
                     <div>
                         <label for="capacity" class="ui-label">Kapasitas minimum</label>
                         <input id="capacity" class="ui-input" type="number" name="capacity" th:value="${capacity}"

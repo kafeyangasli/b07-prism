@@ -95,6 +95,32 @@ class UiRenderingIntegrationTest {
                 .contains("tidak dapat menerima reservasi baru").doesNotContain("Cek ketersediaan", "Masuk untuk reservasi");
     }
 
+    @Test void catalogueCombinesMultipleTypeAndLocationSelectionsWithExistingConstraints() throws Exception {
+        var hallType = facilityTypes.save(new com.github.kafeyangasli.prism.feature.facility.model.FacilityType("HALL-MULTI", "Aula", null));
+        var hall = facilities.save(new Facility("HALL-MULTI", "Aula Pilihan", hallType, "Gedung B", 300, null, AdministrativeStatus.ACTIVE));
+        facilities.save(new Facility("HALL-OTHER", "Aula Lokasi Lain", hallType, "Gedung C", 300, null, AdministrativeStatus.ACTIVE));
+        String date = LocalDate.now().plusDays(4).toString();
+        String html = mvc.perform(get("/facilities").param("type", "LAB-UI", "HALL-MULTI")
+                        .param("location", room.getLocation(), "Gedung B").param("capacity", "20")
+                        .param("startAt", date + "T09:00").param("endAt", date + "T10:00").header("HX-Request", "true"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        String results = html.substring(html.indexOf("<section id=\"facility-results\""));
+        assertThat(results).contains(room.getName(), hall.getName()).doesNotContain("Aula Lokasi Lain");
+        assertThat(html).contains("data-multi-filter", "name=\"type\"", "name=\"location\"");
+        var comma = mvc.perform(get("/facilities").param("location", room.getLocation()))
+                .andExpect(status().isOk()).andReturn().getModelAndView().getModel();
+        assertThat((java.util.List<Facility>) comma.get("facilities")).extracting(Facility::getId).containsExactly(room.getId());
+        String highCapacity = mvc.perform(get("/facilities").param("type", "LAB-UI", "HALL-MULTI")
+                        .param("location", room.getLocation(), "Gedung B").param("capacity", "100"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(highCapacity.substring(highCapacity.indexOf("<section id=\"facility-results\"")))
+                .contains(hall.getName()).doesNotContain(room.getName());
+        if (Boolean.getBoolean("prism.ui.snapshots")) {
+            Files.createDirectories(Path.of("target/ui-preview"));
+            Files.writeString(Path.of("target/ui-preview/facility-multi-filters.html"), html);
+        }
+    }
+
     @Test void catalogueCombinesFiltersAndExplainsInvalidIntervals() throws Exception {
         var other = facilityTypes.save(new com.github.kafeyangasli.prism.feature.facility.model.FacilityType("CLASS-UI", "Kelas", null));
         facilities.save(new Facility("OTHER-UI", "Kelas berbeda", other, "Gedung B", 60, null, AdministrativeStatus.ACTIVE));

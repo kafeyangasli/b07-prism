@@ -28,8 +28,10 @@ public interface FacilityRepository extends JpaRepository<Facility, Long> {
 
     boolean existsByCodeIgnoreCase(String code);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "facilityType")
     List<Facility> findByAdministrativeStatusOrderByNameAsc(AdministrativeStatus status);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "facilityType")
     @Query("""
             select f from Facility f
             where f.administrativeStatus = :status

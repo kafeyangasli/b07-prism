@@ -254,13 +254,21 @@
     const query = input.value.trim().toLocaleLowerCase('id');
     const tools = input.closest('[data-list-tools]');
     const status = tools?.querySelector('[data-record-filter][aria-pressed="true"]')?.dataset.recordFilter || '';
+    const from = tools?.querySelector('[data-record-from]')?.value || '';
+    const to = tools?.querySelector('[data-record-to]')?.value || '';
+    const invalidRange = Boolean(from && to && from > to);
+    const dateError = tools?.querySelector('[data-date-range-error]');
+    if (dateError) dateError.hidden = !invalidRange;
     const records = Array.from(region.querySelectorAll('[data-list-record]'));
     let visible = 0;
     records.forEach(function (record) {
       // Action forms and dialogs should not contribute to search results.
       const text = record.dataset.searchText || Array.from(record.querySelectorAll('td:not(.ui-table-actions), h3, dl'))
         .map(function (node) { return node.textContent; }).join(' ');
-      const show = text.toLocaleLowerCase('id').includes(query) && (!status || record.dataset.recordStatus === status);
+      const date = record.dataset.recordDate || '';
+      const show = !invalidRange && text.toLocaleLowerCase('id').includes(query)
+        && (!status || record.dataset.recordStatus === status)
+        && (!from || date >= from) && (!to || (date && date <= to));
       record.hidden = !show;
       if (show) visible++;
     });
@@ -271,7 +279,7 @@
       empty = document.createElement('p');
       empty.className = 'p-6 text-center text-sm text-muted';
       empty.dataset.searchEmpty = '';
-      empty.textContent = 'Tidak ada hasil yang sesuai. Ubah pencarian atau status.';
+      empty.textContent = 'Tidak ada hasil yang sesuai. Ubah pencarian atau filter.';
       region.append(empty);
     }
     empty.hidden = visible > 0 || records.length === 0;
@@ -279,6 +287,8 @@
 
   function initializeEnhancements(root) {
     initializeActionDialogs(root);
+    initializeFacilityPickers(root);
+    initializeMultiFilters(root);
     root.querySelectorAll?.('[data-list-search]').forEach(function (input) {
       const region = document.getElementById(input.dataset.listSearch);
       const tools = input.closest('[data-list-tools]');
@@ -316,12 +326,55 @@
   document.querySelector('[data-form-errors]')?.focus();
 
   document.addEventListener('input', function (event) {
+    if (event.target.matches('[data-facility-search]')) {
+      const picker = event.target.closest('[data-facility-picker]');
+      if (picker.closest('form').querySelector('[data-selected-facility-input]').value) clearFacility(picker, false);
+      picker.querySelector('#facility-search-results').hidden = false;
+      event.target.setCustomValidity(event.target.value.trim() ? 'Pilih fasilitas dari hasil pencarian.' : '');
+    }
     if (event.target.matches('[data-list-search]')) filterRecords(event.target);
     if (event.target.matches('[data-character-count]')) {
       event.target.nextElementSibling.textContent = event.target.value.length + ' / ' + event.target.maxLength + ' karakter';
     }
   });
   document.addEventListener('click', function (event) {
+    const facilityChoice = event.target.closest('[data-select-facility]');
+    if (facilityChoice) {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      const picker = facilityChoice.closest('[data-facility-picker]');
+      const input = picker.closest('form').querySelector('[data-selected-facility-input]');
+      const search = picker.querySelector('[data-facility-search]');
+      input.value = facilityChoice.dataset.facilityId;
+      search.value = facilityChoice.dataset.facilityName;
+      search.setCustomValidity('');
+      picker.querySelector('[data-selected-facility-context]').replaceChildren(
+        facilityChoice.querySelector('[data-facility-context-template]').content.cloneNode(true));
+      picker.querySelector('#facility-search-results').hidden = true;
+      picker.querySelector('[data-clear-facility]').hidden = false;
+      resetFacilitySchedule(picker.closest('form'));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      search.focus();
+      return;
+    }
+    const clearChoice = event.target.closest('[data-clear-facility]');
+    if (clearChoice) { clearFacility(clearChoice.closest('[data-facility-picker]'), true); return; }
+    const clearMulti = event.target.closest('[data-clear-multi]');
+    if (clearMulti) {
+      const group = clearMulti.closest('[data-multi-filter]');
+      group.querySelectorAll('input[type="checkbox"]').forEach(input => { input.checked = false; });
+      updateMultiFilter(group);
+      scheduleFilter(group.closest('form[data-auto-filter]'));
+      return;
+    }
+    const resetHistory = event.target.closest('[data-history-reset]');
+    if (resetHistory) {
+      const tools = resetHistory.closest('[data-list-tools]');
+      tools.querySelectorAll('[data-list-search], [data-record-from], [data-record-to]').forEach(input => { input.value = ''; });
+      tools.querySelectorAll('[data-record-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.recordFilter === '')));
+      filterRecords(tools.querySelector('[data-list-search]'));
+      return;
+    }
     const toggle = event.target.closest('[data-toggle-password]');
     if (toggle) {
       const input = document.getElementById(toggle.dataset.togglePassword);
@@ -339,6 +392,72 @@
       filterRecords(tools.querySelector('[data-list-search]'));
     }
   });
+
+  document.addEventListener('change', function (event) {
+    scheduleFilter(event.target.closest('form[data-auto-filter]'));
+    if (event.target.matches('[data-multi-filter] input[type="checkbox"]')) updateMultiFilter(event.target.closest('[data-multi-filter]'));
+    if (event.target.matches('[data-record-from], [data-record-to]')) {
+      filterRecords(event.target.closest('[data-list-tools]').querySelector('[data-list-search]'));
+    }
+  });
+
+  const filterTimers = new WeakMap();
+  function scheduleFilter(form, delay = 0) {
+    if (!form) return;
+    clearTimeout(filterTimers.get(form));
+    filterTimers.set(form, setTimeout(function () {
+      if (form.isConnected && form.checkValidity()) {
+        form.dispatchEvent(new Event('prism:filter', { bubbles: true }));
+      }
+    }, delay));
+  }
+
+  document.addEventListener('input', function (event) {
+    if (event.target.matches('input[type="number"]')) {
+      scheduleFilter(event.target.closest('form[data-auto-filter]'), 250);
+    }
+  });
+
+  function updateMultiFilter(group) {
+    const count = group.querySelectorAll('input[type="checkbox"]:checked').length;
+    group.querySelector('[data-selection-count]').textContent = count ? count + ' dipilih' : 'Semua';
+    group.querySelector('[data-clear-multi]').disabled = count === 0;
+  }
+
+  function initializeMultiFilters(root) {
+    root.querySelectorAll?.('[data-multi-filter]').forEach(updateMultiFilter);
+  }
+
+  function initializeFacilityPickers(root) {
+    root.querySelectorAll?.('[data-facility-picker]').forEach(function (picker) {
+      const input = picker.closest('form').querySelector('[data-selected-facility-input]');
+      const search = picker.querySelector('[data-facility-search]');
+      const selected = picker.querySelector('[data-selected-facility-context] [data-selected-facility-id]');
+      search.setCustomValidity(input.value && selected ? '' : (search.value.trim() ? 'Pilih fasilitas dari hasil pencarian.' : ''));
+    });
+  }
+
+  function resetFacilitySchedule(form) {
+    form.querySelectorAll('[name="startAt"], [name="endAt"]').forEach(function (input) {
+      if (input.type === 'radio') input.checked = false;
+      else input.value = '';
+    });
+    const quantity = form.querySelector('[name="quantity"]');
+    if (quantity) quantity.value = '1';
+  }
+
+  function clearFacility(picker, resetSearch) {
+    const form = picker.closest('form');
+    const input = form.querySelector('[data-selected-facility-input]');
+    const search = picker.querySelector('[data-facility-search]');
+    input.value = '';
+    picker.querySelector('[data-selected-facility-context]').replaceChildren();
+    picker.querySelector('[data-clear-facility]').hidden = true;
+    picker.querySelector('#facility-search-results').hidden = false;
+    if (resetSearch) { search.value = ''; search.setCustomValidity(''); filterRecords(search); search.focus(); }
+    resetFacilitySchedule(form);
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
 
   function csrfToken() {
     return document.querySelector('meta[name="_csrf"]')?.content;
@@ -441,12 +560,15 @@
       summary.querySelector("[data-duration-range]").textContent = startLabel + "–" + endInput.dataset.endLabel;
     }
     const proposal = form?.querySelector("[data-proposal-state]");
-    const required = minutes >= 360;
+    const required = minutes >= 360 || Number(form?.querySelector('[name="quantity"]')?.value || 0) > 5;
     proposal?.classList.toggle("ui-proposal-required", required);
     if (proposal) {
+      proposal.dataset.proposalRequired = String(required);
+      const upload = form.querySelector('input[name="proposal"]');
+      if (upload) upload.required = required;
       proposal.querySelector("[data-proposal-label]").textContent = required ? "Wajib" : "Opsional";
       proposal.querySelector("[data-proposal-help]").textContent = required
-        ? "Wajib untuk reservasi berdurasi 6 jam atau lebih."
+        ? "Wajib untuk durasi 6 jam atau lebih, atau jumlah Alat lebih dari 5 unit."
         : "Opsional untuk reservasi kurang dari 6 jam.";
     }
   });
@@ -502,11 +624,31 @@
     });
   }
 
+  function syncEquipmentControls(root) {
+    root.querySelectorAll?.("[data-facility-type]").forEach(function (select) {
+      const container = select.closest("form")?.querySelector("[data-equipment-stock]");
+      if (!container) return;
+      const equipment = select.selectedOptions[0]?.dataset.equipment === "true";
+      container.hidden = !equipment;
+      const input = container.querySelector("input");
+      input.disabled = !equipment;
+      input.required = equipment;
+    });
+    root.querySelectorAll?.("[data-proposal-state]").forEach(function (state) {
+      const upload = state.closest("form")?.querySelector('input[name="proposal"]');
+      if (upload) upload.required = state.dataset.proposalRequired === "true";
+    });
+  }
+  document.addEventListener("change", function (event) {
+    if (event.target.matches("[data-facility-type]")) syncEquipmentControls(event.target.closest("form"));
+  });
+  syncEquipmentControls(document);
   promoteOpenDialogs(document);
   document.addEventListener("htmx:afterSwap", function (event) {
     // History snapshots can contain an older name; only fresh server responses
     // may replace the current navigation name.
     if (event.detail.xhr) syncDisplayName(document);
+    syncEquipmentControls(document);
     promoteOpenDialogs(document);
     if (event.detail.target?.id === "reservation-availability") {
       document.getElementById("reservation-availability")?.querySelector('input[name="startAt"]:checked, input[name="endAt"]')?.focus();
@@ -517,6 +659,7 @@
     initializeEnhancements(document);
     event.detail.target?.querySelector?.('[data-form-errors]')?.focus();
     initializeFilters(document);
+    syncEquipmentControls(document);
     promoteOpenDialogs(document);
     syncActiveNavigation();
     if (event.detail.target?.id?.endsWith("modal-region")) {

@@ -24,6 +24,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.util.MultiValueMap;
+import com.github.kafeyangasli.prism.feature.facility.service.FacilityFilters;
 
 @Controller
 @RequestMapping("/admin/recap")
@@ -45,11 +48,16 @@ public class AdministrationReportController {
     }
 
     @GetMapping
-    public String recap(@ModelAttribute("filter") RecapFilter incoming, Model model) {
-        RecapFilter filter = withDefaultPeriod(incoming);
+    public String recap(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                        @RequestParam(required = false) Long facilityId,
+                        @RequestParam MultiValueMap<String, String> parameters, Model model) {
+        RecapFilter filter = selections(startDate, endDate, facilityId, parameters);
         model.addAttribute("filter", filter);
-        model.addAttribute("facilities", reportService.facilitiesForFilter());
-        model.addAttribute("facilityTypes", reportService.typesForFilter());
+        var facilities = reportService.facilitiesForFilter();
+        model.addAttribute("facilities", facilities);
+        model.addAttribute("typeOptions", FacilityFilters.types(reportService.typesForFilter(), filter.facilityTypes()));
+        model.addAttribute("locationOptions", FacilityFilters.locations(facilities, filter.locations()));
         try {
             model.addAttribute("recap", reportService.generate(filter));
         } catch (BusinessRuleException exception) {
@@ -59,9 +67,12 @@ public class AdministrationReportController {
     }
 
     @GetMapping("/export")
-    public ResponseEntity<byte[]> export(@ModelAttribute RecapFilter incoming,
+    public ResponseEntity<byte[]> export(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+                                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                                         @RequestParam(required = false) Long facilityId,
+                                         @RequestParam MultiValueMap<String, String> parameters,
                                          @RequestParam String format) {
-        RecapResult result = reportService.generate(withDefaultPeriod(incoming));
+        RecapResult result = reportService.generate(selections(startDate, endDate, facilityId, parameters));
         return switch (format.toLowerCase(java.util.Locale.ROOT)) {
             case "csv" -> download(exportService.toCsv(result), "prism-recap.csv", "text/csv");
             case "xlsx" -> download(exportService.toXlsx(result), "prism-recap.xlsx",
@@ -71,13 +82,21 @@ public class AdministrationReportController {
         };
     }
 
+    private RecapFilter selections(LocalDate start, LocalDate end, Long facilityId, MultiValueMap<String, String> parameters) {
+        var filter = new RecapFilter(start, end, facilityId, parameters.getFirst("facilityType"), parameters.getFirst("location"),
+                FacilityFilters.combine(parameters.get("facilityTypes"), parameters.getFirst("facilityType")),
+                FacilityFilters.combine(parameters.get("locations"), parameters.getFirst("location")));
+        return withDefaultPeriod(filter).normalized();
+    }
+
     private RecapFilter withDefaultPeriod(RecapFilter filter) {
         LocalDate today = LocalDate.now(clock);
         if (filter == null || (filter.startDate() == null && filter.endDate() == null)) {
             return new RecapFilter(today.withDayOfMonth(1), today,
                     filter == null ? null : filter.facilityId(),
                     filter == null ? null : filter.facilityType(),
-                    filter == null ? null : filter.location());
+                    filter == null ? null : filter.location(),
+                    filter == null ? null : filter.facilityTypes(), filter == null ? null : filter.locations());
         }
         return filter;
     }

@@ -76,7 +76,7 @@
                                 </span>
                             </dd>
                         </div>
-                        <div>
+                        <div th:unless="${facility.equipment}">
                             <dt>
                                 Kapasitas
                             </dt>
@@ -84,6 +84,10 @@
                                 <span th:text="${facility.capacity}">
                                 </span>
                             </dd>
+                        </div>
+                        <div th:if="${facility.equipment}">
+                            <dt>Stok tersedia</dt><dd th:text="${availableStock + ' unit'}"></dd>
+                            <p class="ui-hint">Stok saat ini. Periksa jadwal ketersediaan untuk waktu penggunaan lainnya. Lebih dari 5 unit atau durasi minimal 6 jam wajib proposal. Pengajuan menunggu mengalokasikan stok.</p>
                         </div>
                         <div>
                             <dt>

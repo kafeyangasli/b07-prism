@@ -14,6 +14,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
+    @Query("select u.id from User u where lower(u.email) = lower(:email)")
+    Optional<Long> findIdByEmail(@Param("email") String email);
+
     // Authentication and self-registration (email is normalized by the entity callback).
     Optional<User> findByEmailIgnoreCase(String email);
 

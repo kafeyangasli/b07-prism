@@ -32,6 +32,10 @@ public class FacilityType {
     @Column(length = 2000)
     private String description;
 
+    // Immutable reservation semantics, independent of editable display names.
+    @Column(name = "quantity_based", nullable = false, updatable = false)
+    private boolean quantityBased;
+
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
@@ -48,6 +52,7 @@ public class FacilityType {
         this.code = normalizeCode(code);
         this.name = trim(name);
         this.description = trimToNull(description);
+        this.quantityBased = "ALAT".equalsIgnoreCase(trim(code)) || "Alat".equalsIgnoreCase(trim(name));
     }
 
     public Long getId() {
@@ -64,6 +69,10 @@ public class FacilityType {
 
     public String getDescription() {
         return description;
+    }
+
+    public boolean isQuantityBased() {
+        return quantityBased;
     }
 
     public boolean isActive() {

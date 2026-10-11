@@ -130,6 +130,22 @@ class ProposalValidationIntegrationTest {
     }
 
     @Test
+    void staffAndAdminCanReadHistoricalProposalsWithoutAllowingFurtherValidation() throws Exception {
+        pending.setStatus(ReservationStatus.APPROVED);
+        reservations.saveAndFlush(pending);
+        for (User actor : java.util.List.of(staff, admin)) {
+            mvc.perform(get(proposalUrl()).with(user(actor.getEmail()).roles(actor.getRole().name())))
+                    .andExpect(status().isOk()).andExpect(content().bytes(PROPOSAL))
+                    .andExpect(header().string("Cache-Control", "no-store"));
+        }
+        mvc.perform(get(proposalUrl()).with(user(requester.getEmail()).roles("PENGGUNA")))
+                .andExpect(status().isForbidden());
+        mvc.perform(multipart(validateUrl()).file(upload()).with(user(staff.getEmail()).roles("PETUGAS")).with(csrf()))
+                .andExpect(redirectedUrl("/staff/reservations")).andExpect(flash().attributeExists("error"));
+        assertThat(pending.getProposalValidatedAt()).isNull();
+    }
+
+    @Test
     void anonymousAndCsrfLessRequestsCannotValidate() throws Exception {
         mvc.perform(post(validateUrl()).with(csrf())).andExpect(status().is3xxRedirection());
         mvc.perform(get(proposalUrl())).andExpect(status().is3xxRedirection());

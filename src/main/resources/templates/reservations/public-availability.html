@@ -20,8 +20,9 @@
                 <input class="ui-input" id="availability-date" type="date" name="date" th:value="${date}" required></div>
                 <button type="submit" class="ui-btn ui-btn-secondary sm:justify-self-start">Lihat ketersediaan</button>
             </form>
+            <p th:if="${totalStock != null}" class="ui-hint" th:text="${'Total stok: ' + totalStock + ' unit. Alokasi mencakup pengajuan menunggu yang belum kedaluwarsa dan reservasi disetujui.'}"></p>
             <div><h2 th:text="${#temporals.format(date, 'dd MMMM yyyy')}">Tanggal</h2>
-                <p class="ui-hint">Tersedia: belum dipesan. Dipesan: reservasi disetujui. Diblokir: tidak dapat digunakan; alasan tercantum pada slot.</p></div>
+                <p class="ui-hint" th:text="${totalStock != null ? 'Tersedia: masih ada unit. Dialokasikan: jumlah alat pada pengajuan menunggu dan reservasi disetujui. Diblokir: seluruh stok tidak dapat digunakan.' : 'Tersedia: belum dipesan. Dipesan: reservasi disetujui. Diblokir: tidak dapat digunakan; alasan tercantum pada slot.'}">Keterangan ketersediaan</p></div>
             <div class="flex flex-wrap gap-4 text-xs font-medium text-muted" aria-label="Keterangan jadwal">
                 <span class="flex items-center gap-2"><span class="size-3 rounded border border-ink-300 bg-surface" aria-hidden="true"></span>Tersedia</span>
                 <span class="flex items-center gap-2"><span class="size-3 rounded border border-ink-300 bg-disabled" aria-hidden="true"></span>Dipesan / tidak tersedia</span>
@@ -33,6 +34,8 @@
                     th:attr="data-start=${slot.label},data-state=${slot.state}">
                     <strong th:text="|${slot.label}–${#temporals.format(slot.endAt, 'HH:mm')}|">07:00–07:30</strong>
                     <small th:text="${slot.stateLabel}">Tersedia</small>
+                    <small th:if="${slot.availableQuantity != null}" th:text="${'Tersedia ' + slot.availableQuantity + '/' + slot.totalStock + ' unit'}"></small>
+                    <small th:if="${slot.allocatedQuantity != null}" th:text="${'Dialokasikan ' + slot.allocatedQuantity + ' unit'}"></small>
                     <small th:if="${slot.reason != null}" th:text="${slot.reason}"></small>
                 </li>
             </ul>

@@ -106,6 +106,7 @@ public class ReservationController {
             @RequestParam(name = "endAt", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endAt,
             @RequestParam(name = "reset", defaultValue = "false") boolean reset,
+            @RequestParam(required = false) Integer quantity,
             Model model
     ) {
         if (reset) {
@@ -116,7 +117,7 @@ public class ReservationController {
             try {
                 model.addAttribute(
                         "availability",
-                        availabilityService.availability(facilityId, date, startAt, endAt)
+                        availabilityService.availability(facilityId, date, startAt, endAt, quantity)
                 );
             } catch (BusinessRuleException | ResourceNotFoundException exception) {
                 model.addAttribute("availabilityError", exception.getMessage());
@@ -132,7 +133,8 @@ public class ReservationController {
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     public Object submit(
-            @ModelAttribute ReservationForm form,
+            @jakarta.validation.Valid @ModelAttribute("reservationForm") ReservationForm form,
+            org.springframework.validation.BindingResult bindingResult,
             @RequestParam(
                     name = "proposal",
                     required = false
@@ -146,6 +148,11 @@ public class ReservationController {
             jakarta.servlet.http.HttpServletResponse response
     ) {
 
+        if (bindingResult.hasErrors()) {
+            populateFormModel(model, form, availabilityFor(form));
+            model.addAttribute("openReservationDialog", true);
+            return isHtmx(hxRequest) ? "reservations/form :: reservation-modal" : "reservations/form";
+        }
         try {
 
             Reservation reservation =
@@ -219,7 +226,7 @@ public class ReservationController {
             LocalDate date = LocalDate.parse(form.getDate());
             LocalDateTime start = parseOptionalDateTime(form.getStartAt());
             LocalDateTime end = parseOptionalDateTime(form.getEndAt());
-            return availabilityService.availability(form.getFacilityId(), date, start, end);
+            return availabilityService.availability(form.getFacilityId(), date, start, end, form.getQuantity());
         } catch (RuntimeException ignored) {
             return null;
         }

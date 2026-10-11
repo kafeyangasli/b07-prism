@@ -4,14 +4,19 @@
 <body>
 <main>
     <div class="ui-page">
-        <header th:replace="~{fragments/page :: heading('Reservasi', 'Detail Reservasi', 'Tinjau jadwal, status, dan dokumen pengajuan Anda.')}">
+        <header class="ui-page-header">
+            <div><p class="ui-eyebrow">Reservasi</p><h1>Detail Reservasi</h1><p class="ui-description">Tinjau jadwal, status, dan dokumen pengajuan Anda.</p></div>
+            <div class="flex flex-wrap gap-3">
+                <a th:replace="~{reports/form :: reservation-action(${reservation})}"></a>
+                <a class="ui-btn ui-btn-secondary" th:href="@{/reservations}">Kembali ke riwayat</a>
+            </div>
         </header>
         <div th:replace="~{fragments/feedback :: flash}">
         </div>
         <div class="grid items-start gap-6 xl:grid-cols-3">
         <section class="ui-card ui-card-body xl:col-span-2">
             <div class="ui-section-heading mb-4">
-                <h2 th:text="${reservation.facility.name}">Fasilitas</h2>
+                <h2 th:text="${reservation.facility.name + (reservation.quantity != null ? ' · ' + reservation.quantity + ' unit' : '')}">Fasilitas</h2>
                 <span th:replace="~{fragments/status :: badge(${reservation.status})}"></span>
             </div>
             <div class="ui-alert ui-alert-info mb-6" th:switch="${reservation.status.name()}">
@@ -23,6 +28,14 @@
                 <p th:case="'COMPLETED'">Jadwal reservasi telah selesai. Reservasi tetap tersedia dalam riwayat Anda.</p>
             </div>
             <dl class="ui-details">
+                <div>
+                    <dt>Waktu pengajuan</dt>
+                    <dd th:text="${reservation.createdAt != null ? #temporals.format(reservation.createdAt, 'dd MMM yyyy, HH:mm') : '—'}"></dd>
+                </div>
+                <div>
+                    <dt>Waktu pemrosesan</dt>
+                    <dd th:text="${reservation.processedAt != null ? #temporals.format(reservation.processedAt, 'dd MMM yyyy, HH:mm') : '—'}"></dd>
+                </div>
                 <div>
                     <dt>
                         Mulai
@@ -86,16 +99,6 @@
             </div>
         </section>
         <aside class="space-y-6 xl:sticky xl:top-6">
-        <div class="ui-card ui-card-body space-y-4">
-            <h2 class="text-lg">Langkah berikutnya</h2>
-            <p class="text-sm leading-6 text-muted">Pantau status pengajuan, simpan dokumen, atau buka riwayat reservasi Anda.</p>
-            <div class="flex flex-wrap gap-3">
-            <a th:replace="~{reports/form :: reservation-action(${reservation})}"></a>
-            <a class="ui-btn ui-btn-neutral" th:href="@{/reservations}">
-                Kembali ke riwayat
-            </a>
-        </div>
-        </div>
         <section th:if="${reservation.status.name() == 'PENDING' or reservation.status.name() == 'APPROVED'}" class="ui-card ui-card-body space-y-3">
             <h2>Pembatalan reservasi</h2>
             <p class="ui-hint" th:if="${reservation.status.name() == 'PENDING'}">Pengajuan menunggu dapat dibatalkan sebelum statusnya berubah.</p>

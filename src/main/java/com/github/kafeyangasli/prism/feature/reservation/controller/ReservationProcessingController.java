@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.ui.Model;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -41,6 +42,17 @@ public class ReservationProcessingController {
                                            StaffActorResolver actorResolver) {
         this.processingService = processingService;
         this.actorResolver = actorResolver;
+    }
+
+    @GetMapping("/staff/reservations/{id}")
+    public String detail(@PathVariable long id, Authentication authentication, Model model) {
+        try {
+            model.addAttribute("reservation", processingService.managementDetail(id,
+                    actorResolver.resolveId(authentication.getName())));
+            return "staff/reservation-detail";
+        } catch (ResourceNotFoundException exception) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, exception.getMessage(), exception);
+        }
     }
 
     @PostMapping("/staff/reservations/{id}/proposal/validate")
@@ -116,11 +128,17 @@ public class ReservationProcessingController {
                          RedirectAttributes redirect) {
         if (bindingResult.hasErrors()) {
             redirect.addFlashAttribute("error", bindingResult.getAllErrors().get(0).getDefaultMessage());
-            return "redirect:/staff/reservations";
+            redirect.addFlashAttribute("cancellationReason", form.reason());
+            return "redirect:/staff/reservations/" + id;
         }
-        return execute(redirect, () -> processingService.cancelApproved(id,
-                actorResolver.resolveId(authentication.getName()), form.reason()),
-                "Reservasi berhasil dibatalkan");
+        try {
+            processingService.cancelApproved(id, actorResolver.resolveId(authentication.getName()), form.reason());
+            redirect.addFlashAttribute("success", "Reservasi berhasil dibatalkan");
+        } catch (BusinessRuleException | ResourceNotFoundException exception) {
+            redirect.addFlashAttribute("error", exception.getMessage());
+            redirect.addFlashAttribute("cancellationReason", form.reason());
+        }
+        return "redirect:/staff/reservations/" + id;
     }
 
     private String execute(RedirectAttributes redirect, Runnable action, String successMessage) {

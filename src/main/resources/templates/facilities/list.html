@@ -21,7 +21,7 @@
             </a>
         </section>
 
-        <div class="ui-sidebar-layout">
+        <div id="facility-catalogue" class="ui-sidebar-layout">
             <aside class="ui-card ui-card-body ui-filter-panel" aria-labelledby="filter-title">
                 <details open data-responsive-filter class="space-y-4">
                 <summary class="ui-filter-summary"><h2 id="filter-title" class="inline">Filter fasilitas</h2></summary>
@@ -33,22 +33,16 @@
                       th:action="@{/facilities}"
                       method="get"
                       hx-get="/facilities"
+                      hx-trigger="submit, prism:filter"
+                      hx-sync="this:replace"
                       hx-target="#facility-results"
                       hx-select="#facility-results"
                       hx-swap="outerHTML"
                       hx-push-url="true"
                       hx-indicator="#global-progress, #facility-filter-loading"
-                      class="ui-form">
-                    <div>
-                        <label for="type" class="ui-label">Tipe fasilitas</label>
-                        <input id="type" class="ui-input" type="text" name="type" th:value="${type}"
-                               placeholder="Contoh: Ruang kelas">
-                    </div>
-                    <div>
-                        <label for="location" class="ui-label">Lokasi</label>
-                        <input id="location" class="ui-input" type="text" name="location" th:value="${location}"
-                               placeholder="Contoh: Gedung A">
-                    </div>
+                      class="ui-form" data-auto-filter>
+                    <fieldset th:replace="~{fragments/workspace :: multiFilter('facility-type', 'Tipe fasilitas', 'type', ${typeOptions})}"></fieldset>
+                    <fieldset th:replace="~{fragments/workspace :: multiFilter('facility-location', 'Lokasi', 'location', ${locationOptions})}"></fieldset>
                     <div>
                         <label for="capacity" class="ui-label">Kapasitas minimum</label>
                         <input id="capacity" class="ui-input" type="number" name="capacity" th:value="${capacity}"
@@ -67,8 +61,9 @@
                     </div>
                     </fieldset>
                     <div class="ui-form-actions">
-                        <button type="submit" class="ui-btn ui-btn-primary flex-1">Terapkan filter</button>
-                        <a th:href="@{/facilities}" class="ui-btn ui-btn-secondary">Atur ulang</a>
+                        <a th:href="@{/facilities}" hx-get="/facilities" hx-target="#facility-catalogue"
+                           hx-select="#facility-catalogue" hx-swap="outerHTML" hx-push-url="true"
+                           hx-sync="#facility-filter-form:replace" class="ui-btn ui-btn-secondary">Atur ulang</a>
                     </div>
                     <span id="facility-filter-loading" class="htmx-indicator ui-local-indicator text-sm font-medium text-prism-700" role="status">
                                 Memperbarui hasil…
@@ -113,9 +108,14 @@
                                     <dt class="text-muted">Tipe</dt>
                                     <dd class="mt-1 font-medium" th:text="${facility.facilityType.name}">Tipe</dd>
                                 </div>
-                                <div>
+                                <div th:unless="${facility.equipment}">
                                     <dt class="text-muted">Kapasitas</dt>
                                     <dd class="mt-1 font-medium" th:text="${facility.capacity + ' orang'}">0 orang</dd>
+                                </div>
+                                <div th:if="${facility.equipment}">
+                                    <dt class="text-muted">Stok tersedia</dt>
+                                    <dd class="mt-1 font-medium" th:text="${availableStock[facility.id] + ' unit'}">0 unit</dd>
+                                    <p class="mt-1 text-xs text-muted" th:text="${stockForSelectedInterval ? 'Pada waktu yang dipilih' : 'Saat ini'}"></p>
                                 </div>
                                 <div class="col-span-2">
                                     <dt class="text-muted">Lokasi</dt>
@@ -135,7 +135,9 @@
                     <h3>Tidak ada fasilitas ditemukan</h3>
                     <p class="mx-auto mt-2 max-w-md text-sm leading-6">Coba longgarkan filter atau pilih rentang waktu
                         lain.</p>
-                    <a th:href="@{/facilities}" class="ui-btn ui-btn-secondary mt-5">Hapus semua filter</a>
+                    <a th:href="@{/facilities}" hx-get="/facilities" hx-target="#facility-catalogue"
+                       hx-select="#facility-catalogue" hx-swap="outerHTML" hx-push-url="true"
+                       hx-sync="#facility-filter-form:replace" class="ui-btn ui-btn-secondary mt-5">Hapus semua filter</a>
                 </div>
                 </th:block>
             </section>

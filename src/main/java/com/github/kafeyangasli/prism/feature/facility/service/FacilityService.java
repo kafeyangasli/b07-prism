@@ -11,6 +11,8 @@ public interface FacilityService {
 
     List<Facility> searchCatalogue(String type, String location, Integer capacity);
 
+    List<Facility> searchCatalogueSelections(List<String> types, List<String> locations, Integer capacity);
+
     List<Facility> getAvailableFacilities(LocalDateTime startAt, LocalDateTime endAt);
 
     List<Facility> getAllFacilities();

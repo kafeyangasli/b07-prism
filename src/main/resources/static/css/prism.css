@@ -296,6 +296,40 @@
   .ui-action-dialog [data-open-dialog] { @apply inline-flex min-h-11 items-center; }
 }
 
+.ui-filter-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  max-width: 100%;
+  padding: .35rem .65rem .35rem .35rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  background: var(--color-surface);
+  font-size: .8125rem;
+  line-height: 1.25rem;
+  cursor: pointer;
+}
+.ui-filter-pill:hover { border-color: var(--color-primary); }
+.ui-filter-pill:has(input:focus-visible) { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.ui-filter-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+}
+.ui-filter-indicator svg { width: .75rem; height: .75rem; visibility: hidden; }
+.ui-filter-pill input:checked + .ui-filter-indicator {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+.ui-filter-pill input:checked + .ui-filter-indicator svg { visibility: visible; }
+
 @keyframes ui-loading-spin { to { transform: rotate(360deg); } }
 
 /* Keep table semantics; each mobile record exposes its column labels. */

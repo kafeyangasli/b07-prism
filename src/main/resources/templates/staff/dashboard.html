@@ -92,7 +92,7 @@
                     <tr data-list-record th:each="row : ${dashboard.pendingReservations}">
                         <td data-label="Pemohon" th:text="${row.requesterName}">
                         </td>
-                        <td data-label="Fasilitas"><strong th:text="${row.facilityName}"></strong>
+                        <td data-label="Fasilitas"><strong th:text="${row.facilityName + (row.quantity != null ? ' · ' + row.quantity + ' unit' : '')}"></strong>
                             <details class="mt-2" th:if="${row.purpose != null}"><summary class="ui-link py-2">Tujuan penggunaan</summary><p class="mt-2 whitespace-pre-wrap" th:text="${row.purpose}"></p></details>
                         </td>
                         <td data-label="Penggunaan"

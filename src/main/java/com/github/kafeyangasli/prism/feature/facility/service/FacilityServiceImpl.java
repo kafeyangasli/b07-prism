@@ -27,6 +27,7 @@ import java.util.List;
 @Transactional
 public class FacilityServiceImpl implements FacilityService {
 
+    private final com.github.kafeyangasli.prism.feature.reservation.service.EquipmentAvailabilityService equipmentAvailability;
     private final FacilityRepository facilityRepository;
     private final FacilityTypeRepository facilityTypeRepository;
     private final UserRepository userRepository;
@@ -37,8 +38,10 @@ public class FacilityServiceImpl implements FacilityService {
                                FacilityTypeRepository facilityTypeRepository,
                                UserRepository userRepository,
                                ReservationRepository reservationRepository,
-                               FacilityBlockageRepository facilityBlockageRepository) {
+                               FacilityBlockageRepository facilityBlockageRepository,
+                               com.github.kafeyangasli.prism.feature.reservation.service.EquipmentAvailabilityService equipmentAvailability) {
         this.facilityRepository = facilityRepository;
+        this.equipmentAvailability = equipmentAvailability;
         this.facilityTypeRepository = facilityTypeRepository;
         this.userRepository = userRepository;
         this.reservationRepository = reservationRepository;
@@ -61,17 +64,32 @@ public class FacilityServiceImpl implements FacilityService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<Facility> searchCatalogueSelections(List<String> types, List<String> locations, Integer capacity) {
+        var selectedTypes = FacilityFilters.normalize(types);
+        var selectedLocations = FacilityFilters.normalize(locations);
+        return facilityRepository.searchCatalogue(AdministrativeStatus.ACTIVE, null, null, capacity).stream()
+                .filter(f -> FacilityFilters.matches(f, selectedTypes, selectedLocations)).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Facility> getAvailableFacilities(LocalDateTime startAt, LocalDateTime endAt) {
         if (startAt == null || endAt == null || !startAt.isBefore(endAt)) {
             throw new BusinessRuleException("Waktu mulai dan selesai yang valid wajib diisi untuk memeriksa ketersediaan.");
         }
-        return facilityRepository.findAvailableFacilities(
+        List<Facility> exclusive = facilityRepository.findAvailableFacilities(
                 AdministrativeStatus.ACTIVE,
                 startAt,
                 endAt,
                 List.of(ReservationStatus.APPROVED),
                 List.of(BlockageStatus.ACTIVE, BlockageStatus.SCHEDULED)
         );
+        var result = new java.util.ArrayList<>(exclusive.stream().filter(f -> !f.isEquipment()).toList());
+        facilityRepository.findByAdministrativeStatusOrderByNameAsc(AdministrativeStatus.ACTIVE).stream()
+                .filter(Facility::isEquipment)
+                .filter(f -> equipmentAvailability.available(f, startAt, endAt) > 0).forEach(result::add);
+        result.sort(java.util.Comparator.comparing(Facility::getName));
+        return result;
     }
 
     @Override
@@ -111,10 +129,13 @@ public class FacilityServiceImpl implements FacilityService {
 
         AdministrativeStatus status = dto.getAdministrativeStatus() != null ? dto.getAdministrativeStatus() : AdministrativeStatus.ACTIVE;
         Facility facility = new Facility(normalizedCode, dto.getName().trim(), facilityType, dto.getLocation().trim(), dto.getCapacity(), dto.getDescription(), status);
+        validateStock(facilityType, dto.getTotalStock());
+        facility.setTotalStock(dto.getTotalStock());
         return facilityRepository.save(facility);
     }
 
     @Override
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Facility updateFacility(Long adminId, Long facilityId, FacilityDto dto) {
         validateAdmin(adminId);
         Facility facility = facilityRepository.findByIdForUpdate(facilityId)
@@ -128,7 +149,18 @@ public class FacilityServiceImpl implements FacilityService {
         }
         Long currentTypeId = facility.getFacilityType().getId();
         if (!dto.getFacilityTypeId().equals(currentTypeId)) {
-            facility.setFacilityType(requireAssignableType(dto.getFacilityTypeId()));
+            FacilityType nextType = requireAssignableType(dto.getFacilityTypeId());
+            if (facility.isEquipment() != nextType.isQuantityBased() && reservationRepository.existsByFacilityId(facilityId)) {
+                throw new BusinessRuleException("Perubahan antara Alat dan tipe lain tidak diizinkan setelah fasilitas memiliki riwayat reservasi.");
+            }
+            facility.setFacilityType(nextType);
+        }
+        validateStock(facility.getFacilityType(), dto.getTotalStock());
+        // Queries may auto-flush: keep the new type and its stock valid together.
+        // The facility lock remains held; a failed peak check rolls this assignment back.
+        facility.setTotalStock(dto.getTotalStock());
+        if (facility.isEquipment() && dto.getTotalStock() < equipmentAvailability.maximumFutureAllocated(facility)) {
+            throw new BusinessRuleException("Stok tidak boleh lebih kecil dari jumlah alat yang dialokasikan secara bersamaan.");
         }
         if (dto.getLocation() != null && !dto.getLocation().isBlank()) {
             facility.setLocation(dto.getLocation().trim());
@@ -179,6 +211,12 @@ public class FacilityServiceImpl implements FacilityService {
     @Transactional(readOnly = true)
     public List<FacilityBlockage> getBlockagesForFacility(Long facilityId) {
         return facilityBlockageRepository.findByFacilityIdOrderByStartAtAsc(facilityId);
+    }
+
+    private void validateStock(FacilityType type, Integer stock) {
+        if (type.isQuantityBased() ? stock == null || stock <= 0 : stock != null) {
+            throw new BusinessRuleException("Stok positif wajib untuk Alat; kosongkan stok untuk fasilitas lain.");
+        }
     }
 
     private void validateAdmin(Long adminId) {

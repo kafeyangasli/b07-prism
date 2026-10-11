@@ -25,6 +25,8 @@ public class FacilityDto {
     @NotNull(message = "Kapasitas fasilitas wajib diisi.")
     @Positive(message = "Kapasitas fasilitas harus lebih dari nol.")
     private Integer capacity;
+    @Positive(message = "Jumlah stok alat harus lebih dari nol.")
+    private Integer totalStock;
     private String description;
     private AdministrativeStatus administrativeStatus;
 }

@@ -50,7 +50,7 @@
         </div>
         <div class="space-y-5">
             <div class="ui-facility-context">
-                <strong th:text="${row.facilityName}">Fasilitas</strong>
+                <strong th:text="${row.facilityName + (row.quantity != null ? ' · ' + row.quantity + ' unit' : '')}">Fasilitas</strong>
                 <p th:text="${row.requesterName + ' · ' + #temporals.format(row.startAt, 'dd MMM yyyy, HH:mm') + ' – ' + #temporals.format(row.endAt, 'HH:mm')}">
                     Ringkasan reservasi
                 </p>
@@ -84,7 +84,7 @@
         </div>
         <form class="ui-form" th:action="@{/staff/reservations/{id}/reject(id=${row.id})}" method="post">
             <div class="ui-facility-context">
-                <strong th:text="${row.facilityName}">Fasilitas</strong>
+                <strong th:text="${row.facilityName + (row.quantity != null ? ' · ' + row.quantity + ' unit' : '')}">Fasilitas</strong>
                 <p th:text="${row.requesterName + ' · ' + #temporals.format(row.startAt, 'dd MMM yyyy, HH:mm') + ' – ' + #temporals.format(row.endAt, 'HH:mm')}">
                     Ringkasan reservasi
                 </p>

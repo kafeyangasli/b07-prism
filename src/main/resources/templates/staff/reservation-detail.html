@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Detail Reservasi', 'staff-reservations', ~{::main})}">
+<body><main><div class="ui-page">
+    <header class="ui-page-header">
+        <div><p class="ui-eyebrow">Operasional</p><h1>Detail Reservasi</h1><p class="ui-description">Tinjau pengajuan, dokumen, dan riwayat tindakan reservasi.</p></div>
+        <a class="ui-btn ui-btn-secondary" th:href="@{/staff/reservations}">Kembali ke manajemen reservasi</a>
+    </header>
+    <div th:replace="~{fragments/feedback :: flash}"></div>
+    <div class="grid items-start gap-6 xl:grid-cols-3">
+        <section class="ui-card ui-card-body space-y-4 xl:col-span-2">
+            <div class="ui-section-heading"><h2 th:text="${reservation.facility.name + (reservation.quantity != null ? ' · ' + reservation.quantity + ' unit' : '')}"></h2><span th:replace="~{fragments/status :: badge(${reservation.status})}"></span></div>
+            <p class="ui-hint" th:text="${'Nomor reservasi: #' + reservation.id}"></p>
+            <dl class="ui-details">
+                <div><dt>Pemohon</dt><dd th:text="${reservation.user.name}"></dd></div>
+                <div><dt>Lokasi</dt><dd th:text="${reservation.facility.location}"></dd></div>
+                <div><dt>Mulai penggunaan</dt><dd th:text="${#temporals.format(reservation.startAt, 'dd MMM yyyy, HH:mm')}"></dd></div>
+                <div><dt>Selesai penggunaan</dt><dd th:text="${#temporals.format(reservation.endAt, 'dd MMM yyyy, HH:mm')}"></dd></div>
+                <div class="sm:col-span-2"><dt>Tujuan penggunaan</dt><dd class="whitespace-pre-wrap" th:text="${reservation.purpose}"></dd></div>
+                <div><dt>Waktu pengajuan</dt><dd th:text="${#temporals.format(reservation.createdAt, 'dd MMM yyyy, HH:mm')}"></dd></div>
+                <div><dt>Diproses oleh</dt><dd th:text="${reservation.processedBy != null ? reservation.processedBy.name : '—'}"></dd></div>
+                <div><dt>Waktu pemrosesan</dt><dd th:text="${reservation.processedAt != null ? #temporals.format(reservation.processedAt, 'dd MMM yyyy, HH:mm') : '—'}"></dd></div>
+                <div th:if="${reservation.status.name() == 'PENDING'}"><dt>Batas persetujuan</dt><dd th:text="${reservation.expiresAt != null ? #temporals.format(reservation.expiresAt, 'dd MMM yyyy, HH:mm') : '—'}"></dd></div>
+                <div><dt>Ketentuan proposal</dt><dd th:text="${reservation.proposalRequired ? 'Wajib' : 'Opsional'}"></dd></div>
+                <div><dt>Validasi proposal</dt><dd th:text="${reservation.proposalSubmitted ? (reservation.proposalValidated ? 'Sudah divalidasi' : 'Belum divalidasi') : 'Tidak dilampirkan'}"></dd></div>
+                <div th:if="${reservation.cancelledBy != null}"><dt>Dibatalkan oleh</dt><dd th:text="${reservation.cancelledBy.name}"></dd></div>
+                <div th:if="${reservation.cancelledAt != null}"><dt>Waktu pembatalan</dt><dd th:text="${#temporals.format(reservation.cancelledAt, 'dd MMM yyyy, HH:mm')}"></dd></div>
+                <div th:if="${reservation.reasonDetail != null}" class="sm:col-span-2"><dt th:text="${reservation.status.name() == 'CANCELLED' ? 'Alasan pembatalan' : 'Alasan / catatan tindakan'}"></dt><dd class="whitespace-pre-wrap" th:text="${reservation.reasonDetail}"></dd></div>
+            </dl>
+            <div class="ui-form-actions">
+                <a th:if="${reservation.proposalSubmitted}" class="ui-btn ui-btn-secondary" th:href="@{/staff/reservations/{id}/proposal(id=${reservation.id})}">Unduh proposal</a>
+                <a th:if="${reservation.hasValidatedProposal()}" class="ui-btn ui-btn-secondary" th:href="@{/documents/reservations/{id}/validated-proposal(id=${reservation.id})}">Unduh PDF tervalidasi</a>
+            </div>
+        </section>
+        <aside class="ui-card ui-card-body space-y-4 xl:sticky xl:top-6">
+            <h2>Tindakan reservasi</h2>
+            <th:block th:if="${reservation.status.name() == 'APPROVED'}">
+                <p class="ui-hint">Petugas atau admin dapat membatalkan reservasi disetujui dengan alasan yang akan ditampilkan kepada pemohon.</p>
+                <button type="button" class="ui-btn ui-btn-danger" data-open-dialog="staff-cancel-reservation">Batalkan reservasi</button>
+            </th:block>
+            <p th:unless="${reservation.status.name() == 'APPROVED'}" class="ui-hint">Pembatalan manual hanya tersedia untuk reservasi berstatus Disetujui.</p>
+        </aside>
+    </div>
+    <dialog th:if="${reservation.status.name() == 'APPROVED'}" id="staff-cancel-reservation" class="ui-dialog max-w-md" aria-labelledby="staff-cancel-title">
+        <div class="ui-dialog-header"><div><p class="ui-eyebrow">Konfirmasi pembatalan</p><h2 id="staff-cancel-title">Batalkan reservasi</h2></div><button type="button" class="ui-btn ui-btn-ghost" data-close-dialog aria-label="Tutup dialog">×</button></div>
+        <form class="ui-form" th:action="@{/staff/reservations/{id}/cancel(id=${reservation.id})}" method="post">
+            <div class="ui-facility-context"><strong th:text="${reservation.facility.name}"></strong><p th:text="${reservation.user.name + ' · ' + #temporals.format(reservation.startAt, 'dd MMM yyyy, HH:mm')}"></p></div>
+            <p class="ui-alert ui-alert-info">Reservasi akan berstatus Dibatalkan. Jadwal atau stok yang dialokasikan akan dilepas, dan tindakan ini tidak dapat dipulihkan.</p>
+            <div><label class="ui-label" for="staff-cancellation-reason">Alasan pembatalan</label><textarea id="staff-cancellation-reason" class="ui-input" name="reason" rows="5" maxlength="2000" required data-character-count th:text="${cancellationReason ?: ''}"></textarea><p class="ui-hint">Alasan wajib diisi, maksimal 2000 karakter.</p></div>
+            <div class="ui-form-actions"><button type="button" class="ui-btn ui-btn-secondary" data-close-dialog>Kembali</button><button type="submit" class="ui-btn ui-btn-danger">Konfirmasi pembatalan</button></div>
+        </form>
+    </dialog>
+</div></main></body></html>

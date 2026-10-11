@@ -34,7 +34,7 @@ class ProposalValidationLockOrderTest {
         FacilityBlockageRepository blockages = mock(FacilityBlockageRepository.class);
         LocalDateTime now = LocalDateTime.of(2026, 9, 22, 10, 0);
         ReservationProcessingService service = new ReservationProcessingService(reservations, facilities, users,
-                blockages, Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC), mock(ProposalStorageService.class));
+                blockages, Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC), mock(ProposalStorageService.class), mock(com.github.kafeyangasli.prism.feature.reservation.service.EquipmentAvailabilityService.class));
         ReservationRepository.ReservationLockContext context = mock(ReservationRepository.ReservationLockContext.class);
         Facility facility = mock(Facility.class);
         User requester = mock(User.class);

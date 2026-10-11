@@ -7,8 +7,14 @@ public record ReservationSlotView(
         LocalDateTime startAt,
         LocalDateTime endAt,
         ReservationSlotState state,
-        String reason
+        String reason,
+        Integer availableQuantity,
+        Integer totalStock,
+        Long allocatedQuantity
 ) {
+    public ReservationSlotView(LocalDateTime startAt, LocalDateTime endAt, ReservationSlotState state, String reason) {
+        this(startAt, endAt, state, reason, null, null, null);
+    }
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
 
     public String getLabel() {

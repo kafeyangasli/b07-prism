@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#5d5098">
     <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
-    <title th:text="${pageTitle + ' · PRISM'}">PRISM</title>
+    <title th:text="${pageTitle + ' - PRISM'}">PRISM</title>
     <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <script defer th:src="@{/vendor/htmx.min.js}"></script>
@@ -16,6 +16,7 @@
     <link rel="stylesheet" th:href="@{/css/facility-images.css}">
     <script defer th:src="@{/js/facility-images.js}"></script>
     <link rel="stylesheet" th:href="@{/css/avatar.css}">
+    <link rel="icon" type="image/png" sizes="32x32" th:href="@{/images/prism-logo.png}">
     <script defer th:src="@{/js/avatar.js}"></script>
 </head>
 <body>
@@ -56,8 +57,8 @@
             tabindex="-1"></button>
     <aside th:replace="~{fragments/navigation :: sidebar(${activeNav})}"></aside>
     <div class="ui-dashboard-main">
-        <header class="ui-workspace-bar" aria-label="Ruang kerja PRISM">
-            <div class="flex items-center gap-3"><span class="size-2 rounded-full bg-accent" aria-hidden="true"></span><span class="font-semibold text-content">Ruang kerja PRISM</span><span class="text-border" aria-hidden="true">/</span><span sec:authorize="hasRole('PENGGUNA')" class="text-muted">Pengguna</span><span sec:authorize="hasRole('PETUGAS')" class="text-muted">Petugas</span><span sec:authorize="hasRole('ADMIN')" class="text-muted">Admin</span></div>
+        <header class="ui-workspace-bar" aria-label="PRISM">
+            <div class="flex items-center gap-3"><span class="size-2 rounded-full bg-accent" aria-hidden="true"></span><span class="font-semibold text-content">PRISM</span><span class="text-border" aria-hidden="true">/</span><span sec:authorize="hasRole('PENGGUNA')" class="text-muted">Pengguna</span><span sec:authorize="hasRole('PETUGAS')" class="text-muted">Petugas</span><span sec:authorize="hasRole('ADMIN')" class="text-muted">Admin</span></div>
             <button th:replace="~{fragments/workspace :: themeToggle}"></button>
         </header>
         <div class="ui-dashboard-feedback has-[[hidden]]:hidden">

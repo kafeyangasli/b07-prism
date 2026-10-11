@@ -3,6 +3,7 @@ package com.github.kafeyangasli.prism.feature.administration.service;
 import com.github.kafeyangasli.prism.feature.administration.dto.PendingReservationRow;
 import com.github.kafeyangasli.prism.feature.administration.dto.StaffDashboard;
 import com.github.kafeyangasli.prism.feature.administration.dto.UnresolvedReportRow;
+import com.github.kafeyangasli.prism.feature.administration.dto.ReservationHistoryRow;
 import com.github.kafeyangasli.prism.feature.report.model.ReportStatus;
 import com.github.kafeyangasli.prism.feature.report.repository.ReportRepository;
 import com.github.kafeyangasli.prism.feature.reservation.model.Reservation;
@@ -47,7 +48,7 @@ public class StaffDashboardService {
                         r.getStartAt(), r.getEndAt(), r.getCreatedAt(), r.getExpiresAt(),
                         r.isProposalRequired(), r.isProposalSubmitted(), r.isProposalValidated(),
                         r.hasValidatedProposal(), r.isProposalValidationLegacy(),
-                        countPendingConflicts(r, pendingReservations), r.getPurpose()))
+                        countPendingConflicts(r, pendingReservations), r.getPurpose(), r.getQuantity()))
                 .toList();
         var reports = reportRepository.findUnresolvedQueue(
                         EnumSet.of(ReportStatus.NEW, ReportStatus.IN_PROGRESS))
@@ -59,12 +60,22 @@ public class StaffDashboardService {
     }
 
     private int countPendingConflicts(Reservation candidate, List<Reservation> pendingReservations) {
+        if (candidate.getFacility().isEquipment()) return 0;
         return (int) pendingReservations.stream()
                 .filter(other -> !other.getId().equals(candidate.getId()))
                 .filter(other -> other.getFacility().getId().equals(candidate.getFacility().getId()))
                 .filter(other -> other.getStartAt().isBefore(candidate.getEndAt())
                         && other.getEndAt().isAfter(candidate.getStartAt()))
                 .count();
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('PETUGAS','ADMIN')")
+    public List<ReservationHistoryRow> reservationHistory() {
+        return reservationRepository.findManagementHistory(ReservationStatus.PENDING).stream()
+                .map(r -> new ReservationHistoryRow(r.getId(), r.getUser().getName(), r.getFacility().getName(),
+                        r.getStartAt(), r.getEndAt(), r.getStatus(), r.getQuantity(), r.getPurpose(), r.getReasonDetail()))
+                .toList();
     }
 
     @Transactional(readOnly = true)

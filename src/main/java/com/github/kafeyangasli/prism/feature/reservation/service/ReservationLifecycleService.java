@@ -22,15 +22,23 @@ public class ReservationLifecycleService {
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final Clock clock;
+    private final com.github.kafeyangasli.prism.feature.facility.repository.FacilityRepository facilities;
+    private final org.springframework.transaction.support.TransactionTemplate lifecycleTransaction;
 
     public ReservationLifecycleService(
             ReservationRepository reservationRepository,
             UserRepository userRepository,
-            Clock clock
+            Clock clock,
+            com.github.kafeyangasli.prism.feature.facility.repository.FacilityRepository facilities,
+            org.springframework.transaction.PlatformTransactionManager transactions
     ) {
         this.reservationRepository = reservationRepository;
         this.userRepository = userRepository;
         this.clock = clock;
+        this.facilities = facilities;
+        this.lifecycleTransaction = new org.springframework.transaction.support.TransactionTemplate(transactions);
+        this.lifecycleTransaction.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.lifecycleTransaction.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
 
     /*
@@ -40,105 +48,45 @@ public class ReservationLifecycleService {
             fixedDelayString =
                     "${prism.scheduler.reservation-lifecycle-ms:60000}"
     )
-    @Transactional
     public void processLifecycle() {
-
-        expirePendingReservations();
-
-        completeApprovedReservations();
+        transitionCandidates(null);
     }
 
-    /*
-     * FR-11
-     *
-     * PENDING + expires_at <= now
-     *             ↓
-     *          EXPIRED
-     */
     public int expirePendingReservations() {
-
-        LocalDateTime now =
-                LocalDateTime.now(clock);
-
-        int changed = 0;
-
-        for (Reservation reservation :
-                reservationRepository.findExpiredPending(
-                        ReservationStatus.PENDING,
-                        now
-                )) {
-
-            /*
-             * Double check untuk idempotency.
-             */
-            if (reservation.getStatus()
-                    != ReservationStatus.PENDING) {
-                continue;
-            }
-
-            reservation.setStatus(
-                    ReservationStatus.EXPIRED
-            );
-
-            reservation.setReasonCode(
-                    ReservationReasonCode.APPROVAL_DEADLINE_EXCEEDED
-            );
-
-            reservation.setReasonDetail(
-                    "Reservasi melewati batas waktu persetujuan"
-            );
-
-            reservation.setProcessedAt(now);
-
-            changed++;
-        }
-
-        return changed;
+        return transitionCandidates(ReservationStatus.PENDING);
     }
 
-    /*
-     * FR-18
-     *
-     * APPROVED + end_at < now
-     *             ↓
-     *         COMPLETED
-     */
     public int completeApprovedReservations() {
+        return transitionCandidates(ReservationStatus.APPROVED);
+    }
 
-        LocalDateTime now =
-                LocalDateTime.now(clock);
-
+    private int transitionCandidates(ReservationStatus onlyStatus) {
+        LocalDateTime observed = LocalDateTime.now(clock);
         int changed = 0;
-
-        for (Reservation reservation :
-                reservationRepository.findEndedApproved(
-                        ReservationStatus.APPROVED,
-                        now
-                )) {
-
-            /*
-             * Pastikan hanya APPROVED yang diproses.
-             */
-            if (reservation.getStatus()
-                    != ReservationStatus.APPROVED) {
-                continue;
-            }
-
-            /*
-             * SRS:
-             * end_at sudah terlewati.
-             */
-            if (!reservation.getEndAt().isBefore(now)) {
-                continue;
-            }
-
-            reservation.setStatus(
-                    ReservationStatus.COMPLETED
-            );
-
-            changed++;
+        // Scalar candidates; each transaction locks only one facility, avoiding cross-facility deadlocks.
+        for (var candidate : reservationRepository.findLifecycleCandidates(observed)) {
+            Boolean transitioned = lifecycleTransaction.execute(tx -> {
+                facilities.findByIdForUpdate(candidate.getFacilityId()).orElseThrow();
+                userRepository.findByIdForUpdate(candidate.getUserId()).orElseThrow();
+                Reservation reservation = reservationRepository.findByIdForUpdate(candidate.getId()).orElse(null);
+                if (reservation == null || (onlyStatus != null && reservation.getStatus() != onlyStatus)) return false;
+                LocalDateTime now = LocalDateTime.now(clock);
+                if (reservation.getStatus() == ReservationStatus.PENDING && reservation.getExpiresAt() != null
+                        && !reservation.getExpiresAt().isAfter(now)) {
+                    reservation.setStatus(ReservationStatus.EXPIRED);
+                    reservation.setReasonCode(ReservationReasonCode.APPROVAL_DEADLINE_EXCEEDED);
+                    reservation.setReasonDetail("Reservasi melewati batas waktu persetujuan");
+                    reservation.setProcessedAt(now);
+                    return true;
+                }
+                if (reservation.getStatus() == ReservationStatus.APPROVED && reservation.getEndAt().isBefore(now)) {
+                    reservation.setStatus(ReservationStatus.COMPLETED);
+                    return true;
+                }
+                return false;
+            });
+            if (Boolean.TRUE.equals(transitioned)) changed++;
         }
-
         return changed;
     }
 
@@ -147,7 +95,7 @@ public class ReservationLifecycleService {
      *
      * User hanya boleh membatalkan reservation miliknya sendiri.
      */
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Reservation cancelOwnReservation(
             String authenticatedEmail,
             long reservationId
@@ -175,6 +123,11 @@ public class ReservationLifecycleService {
          * Pessimistic lock mencegah perubahan status
          * bersamaan ketika cancellation dilakukan.
          */
+        var lockContext = reservationRepository.findLockContextById(reservationId)
+                .filter(context -> context.getUserId().equals(user.getId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Reservasi tidak ditemukan"));
+        facilities.findByIdForUpdate(lockContext.getFacilityId()).orElseThrow();
+        userRepository.findByIdForUpdate(lockContext.getUserId()).orElseThrow();
         Reservation reservation =
                 reservationRepository
                         .findByIdAndUserIdForUpdate(

@@ -46,6 +46,7 @@ public class PublicFacilityAvailabilityController {
         model.addAttribute("facilityName", availability.facility().getName());
         model.addAttribute("date", availability.date());
         model.addAttribute("slots", availability.slots());
+        if (availability.facility().isEquipment()) model.addAttribute("totalStock", availability.facility().getTotalStock());
 
         return "reservations/public-availability";
     }

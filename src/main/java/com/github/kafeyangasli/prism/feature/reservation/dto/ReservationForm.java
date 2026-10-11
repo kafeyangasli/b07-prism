@@ -7,6 +7,11 @@ public class ReservationForm {
     private String endAt;
     private String purpose;
     private boolean facilityFixed;
+    @jakarta.validation.constraints.Positive(message = "Jumlah alat harus lebih dari nol.")
+    private Integer quantity;
+
+    public Integer getQuantity() { return quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
 
     public Long getFacilityId() {
         return facilityId;

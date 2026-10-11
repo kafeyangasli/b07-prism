@@ -147,27 +147,231 @@ Setiap folder pada `feature` dapat memiliki lapisan `model` dan `repository`, se
 
 ## Menjalankan Proyek
 
-Pastikan Java 25 dan MySQL telah terpasang, variabel lingkungan (environment variables) telah diatur, dan layanan MySQL sedang berjalan. Lalu, jalankan perintah berikut:
+Jalankan perintah pada bagian ini dari direktori root repositori, yaitu direktori yang
+berisi `pom.xml`, `mvnw`, dan `mvnw.cmd`.
 
-```bash
-./mvnw spring-boot:run
+### 1. Siapkan perangkat lunak
+
+Pastikan perangkat berikut tersedia:
+
+- **JDK 25**, sesuai konfigurasi `java.version` pada `pom.xml`;
+- **MySQL 8 atau lebih baru** dan layanan MySQL dalam keadaan aktif;
+- **Node.js dan npm** untuk membangun aset frontend;
+- Git, jika proyek diperoleh melalui clone repositori.
+
+Periksa instalasi dari terminal:
+
+```powershell
+java -version
+node --version
+npm --version
 ```
 
-Pada Windows, gunakan:
+Maven tidak perlu dipasang secara global karena proyek menyediakan Maven Wrapper.
+Pada Windows gunakan `mvnw.cmd`; pada Linux/macOS gunakan `./mvnw`.
+
+### 2. Buat basis data MySQL
+
+Masuk ke MySQL sebagai pengguna yang dapat membuat database, lalu buat database dan
+pengguna khusus aplikasi. Ganti kata sandi contoh berikut dengan kata sandi lokal yang
+aman:
+
+```sql
+CREATE DATABASE prism
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+CREATE USER 'prism_app'@'localhost' IDENTIFIED BY 'ganti_dengan_password_lokal';
+GRANT ALL PRIVILEGES ON prism.* TO 'prism_app'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Jika sudah memiliki database dan pengguna MySQL sendiri, langkah pembuatan tersebut
+dapat dilewati. Pengguna database harus memiliki izin untuk membuat dan mengubah tabel
+agar Flyway dapat menjalankan migrasi.
+
+### 3. Atur konfigurasi lingkungan
+
+Aplikasi membutuhkan tiga variabel koneksi database berikut:
+
+| Variabel | Contoh nilai | Keterangan |
+| --- | --- | --- |
+| `DATABASE_URL` | `jdbc:mysql://localhost:3306/prism` | JDBC URL database PRISM |
+| `DATABASE_USERNAME` | `prism_app` | Pengguna MySQL |
+| `DATABASE_PASSWORD` | `ganti_dengan_password_lokal` | Kata sandi pengguna MySQL |
+
+Pada PowerShell, atur variabel untuk sesi terminal yang sedang aktif:
+
+```powershell
+$env:DATABASE_URL = "jdbc:mysql://localhost:3306/prism"
+$env:DATABASE_USERNAME = "prism_app"
+$env:DATABASE_PASSWORD = "ganti_dengan_password_lokal"
+```
+
+Pada Bash atau Zsh:
+
+```bash
+export DATABASE_URL='jdbc:mysql://localhost:3306/prism'
+export DATABASE_USERNAME='prism_app'
+export DATABASE_PASSWORD='ganti_dengan_password_lokal'
+```
+
+File `.env.example` mencantumkan variabel tambahan untuk penyimpanan dan batas unggahan.
+Salinan `.env` dapat digunakan sebagai catatan konfigurasi lokal, tetapi aplikasi tidak
+memuat file `.env` secara otomatis. Variabel harus diekspor ke proses terminal atau
+diatur melalui konfigurasi IDE/layanan yang menjalankan aplikasi. Jangan commit kata
+sandi database ke repositori.
+
+Konfigurasi opsional menggunakan nilai default berikut:
+
+| Variabel | Nilai default | Fungsi |
+| --- | --- | --- |
+| `PRISM_PROPOSAL_STORAGE` | `./storage/proposals` | Penyimpanan proposal |
+| `PRISM_FACILITY_STORAGE` | `./storage/facilities` | Penyimpanan gambar fasilitas |
+| `PRISM_AVATAR_STORAGE` | `./storage/avatars` | Penyimpanan foto profil |
+| `PRISM_AVATAR_MAX_BYTES` | `5242880` | Batas foto profil (5 MiB) |
+| `PRISM_FACILITY_IMAGE_MAX_BYTES` | `5242880` | Batas satu gambar fasilitas (5 MiB) |
+| `PRISM_FACILITY_IMAGE_MAX_COUNT` | `20` | Jumlah maksimal gambar per fasilitas |
+| `PRISM_MULTIPART_MAX_FILE_SIZE` | `10MB` | Batas satu file unggahan |
+| `PRISM_MULTIPART_MAX_REQUEST_SIZE` | `110MB` | Batas keseluruhan request unggahan |
+| `PRISM_RESERVATION_LIFECYCLE_MS` | `60000` | Interval pemrosesan status reservasi (ms) |
+| `PRISM_SEED_ENABLED` | `true` | Menjalankan seeder awal di luar profil produksi |
+| `PRISM_SEED_DIRECTORY` | `./initial_data` | Lokasi sumber fasilitas awal |
+
+Path relatif dihitung dari direktori kerja saat aplikasi dijalankan. Direktori di bawah
+`storage/` dibuat saat dibutuhkan dan telah dikecualikan dari Git.
+
+### 4. Bangun aset frontend
+
+Instal dependensi frontend dan bangun CSS serta HTMX lokal:
+
+```powershell
+npm install
+npm run build
+```
+
+Perintah ini menghasilkan `src/main/resources/static/css/app.css` dan menyalin HTMX ke
+`src/main/resources/static/vendor/htmx.min.js`. Jalankan kembali `npm run build` setelah
+mengubah template, CSS sumber, atau versi dependensi frontend.
+
+### 5. Jalankan aplikasi
+
+Untuk menjalankan aplikasi, gunakan:
 
 ```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-Konfigurasi koneksi basis data dapat ditambahkan atau disesuaikan pada `src/main/resources/application.yaml`. Flyway akan menjalankan migrasi skema secara berurutan saat aplikasi dimulai.
-
-### Membangun aset frontend
-
-Instal dependensi frontend satu kali dan bangun aset sebelum menjalankan aplikasi:
+Pada Linux/macOS:
 
 ```bash
-npm install
-npm run build
+./mvnw spring-boot:run
 ```
 
-Perintah build menghasilkan CSS Tailwind di `src/main/resources/static/css/app.css` dan menyalin HTMX ke `src/main/resources/static/vendor/htmx.min.js`. Konvensi komponen dan pola HTMX didokumentasikan di `docs/UI_CONVENTIONS.md`.
+Saat startup, Flyway menjalankan seluruh migrasi pada
+`src/main/resources/db/migration`, lalu Hibernate memvalidasi kecocokan entity dengan
+schema. Seeder kemudian otomatis mengisi fasilitas dan akun awal yang belum ada. Dengan
+demikian, database baru langsung siap digunakan pada startup pertama tanpa profile atau
+perintah tambahan. Jangan membuat tabel secara manual. Startup akan berhenti dengan
+pesan kesalahan jika database tidak dapat diakses, schema tidak sesuai, atau sumber seed
+tidak valid.
+
+Setelah log menampilkan bahwa aplikasi telah dimulai, buka:
+
+```text
+http://localhost:8080
+```
+
+Hentikan aplikasi dengan `Ctrl+C` pada terminal yang menjalankannya.
+
+### 6. Data awal dan akun pengembangan
+
+Pada startup pertama, seeder otomatis membuat 18 fasilitas dari `initial_data`, tipe
+fasilitas yang dibutuhkan, dan empat akun berikut. Seeder bersifat idempoten: startup
+berikutnya memeriksa kode fasilitas, kode/nama tipe, dan email sehingga tidak membuat
+duplikat atau menimpa data yang sudah ada.
+
+Seeder aktif secara default dan tidak berjalan jika profil `prod` atau `production`
+aktif. Seeder juga dapat dimatikan secara eksplisit dengan environment variable
+`PRISM_SEED_ENABLED=false`. Detail parsing data, pemetaan fasilitas, kredensial demo,
+dan aturan idempotensi tersedia pada
+[panduan seeder pengembangan](docs/DEVELOPMENT_SEED.md).
+
+| Email | Kata sandi | Peran |
+| --- | --- | --- |
+| `pengguna1@university.ac.id` | `pengguna_prism` | PENGGUNA |
+| `pengguna2@university.ac.id` | `pengguna_prism` | PENGGUNA |
+| `petugas@university.ac.id` | `petugas_prism` | PETUGAS |
+| `admin@university.ac.id` | `admin_prism` | ADMIN |
+
+Kredensial tersebut hanya untuk pengembangan dan pengujian. Deployment produksi harus
+mengaktifkan profil `prod` atau `production`; sebaiknya juga menetapkan
+`PRISM_SEED_ENABLED=false` sebagai perlindungan konfigurasi tambahan.
+
+### 7. Menjalankan dari IDE
+
+Gunakan `com.github.kafeyangasli.prism.PrismApplication` sebagai main class. Tambahkan
+`DATABASE_URL`, `DATABASE_USERNAME`, dan `DATABASE_PASSWORD` pada environment variables
+run configuration. Seeder sudah aktif tanpa active profile. Untuk konfigurasi produksi,
+gunakan opsi program `--spring.profiles.active=prod` dan set
+`PRISM_SEED_ENABLED=false`.
+
+Pastikan working directory mengarah ke root repositori agar `initial_data` dan path
+penyimpanan relatif dapat ditemukan.
+
+### 8. Build dan jalankan JAR
+
+Bangun executable JAR dengan:
+
+```powershell
+.\mvnw.cmd clean package
+```
+
+Setelah seluruh test berhasil, jalankan artefak yang dihasilkan:
+
+```powershell
+java -jar target/prism-0.0.1-SNAPSHOT.jar
+```
+
+Lokasi `initial_data` harus tersedia ketika seeder aktif. Jika JAR dijalankan dari root
+repositori, perintah biasa di atas sudah menjalankan seeder. Jika JAR dijalankan dari
+direktori lain, berikan path absolut sumber seed:
+
+```powershell
+java -jar target/prism-0.0.1-SNAPSHOT.jar `
+  --prism.seed.directory="C:\path\ke\b07-prism\initial_data"
+```
+
+### 9. Menjalankan test
+
+Jalankan seluruh test standar dengan:
+
+```powershell
+.\mvnw.cmd test
+```
+
+Test standar menggunakan H2 untuk isolasi dan tidak mengubah database MySQL yang
+ditentukan oleh `DATABASE_URL`. Beberapa test integrasi MySQL bersifat opt-in dan
+didokumentasikan pada [pengujian reservasi alat](docs/EQUIPMENT_RESERVATIONS.md) serta
+[panduan seeder pengembangan](docs/DEVELOPMENT_SEED.md).
+
+### Pemecahan masalah umum
+
+- **`DATABASE_URL` tidak ditemukan:** pastikan variabel diatur pada terminal atau run
+  configuration yang sama dengan proses aplikasi.
+- **`Communications link failure`:** pastikan layanan MySQL aktif, port pada JDBC URL
+  benar, dan database dapat diakses dengan username/password tersebut.
+- **`Access denied for user`:** periksa kredensial dan hak akses pengguna terhadap
+  database `prism`.
+- **Migrasi Flyway gagal:** baca nama serta pesan migrasi yang gagal. Jangan mengubah
+  migration yang sudah pernah diterapkan; gunakan database pengembangan baru jika data
+  lama tidak perlu dipertahankan.
+- **Port 8080 sudah digunakan:** jalankan dengan `--server.port=8081`, misalnya
+  `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--server.port=8081"`.
+- **Aset tampilan tidak ditemukan atau usang:** jalankan `npm install` lalu
+  `npm run build` sebelum memulai ulang aplikasi.
+- **Seeder tidak menemukan `initial_data`:** jalankan dari root repositori atau atur
+  `--prism.seed.directory` ke path absolut direktori tersebut.
+
+Konvensi komponen dan pola HTMX didokumentasikan lebih lanjut pada
+[`docs/UI_CONVENTIONS.md`](docs/UI_CONVENTIONS.md).

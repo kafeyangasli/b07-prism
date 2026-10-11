@@ -26,6 +26,10 @@ spring:
       max-request-size: ${PRISM_MULTIPART_MAX_REQUEST_SIZE:110MB}
 
 prism:
+  seed:
+    enabled: ${PRISM_SEED_ENABLED:true}
+    directory: ${PRISM_SEED_DIRECTORY:./initial_data}
+
   storage:
     proposals: ${PRISM_PROPOSAL_STORAGE:./storage/proposals}
     facilities: ${PRISM_FACILITY_STORAGE:./storage/facilities}

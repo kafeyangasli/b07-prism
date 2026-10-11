@@ -21,14 +21,16 @@ public class AccountStatusFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
-        // Production login always returns PrismUserDetails. Scalar status lookup
-        // avoids preloading stale User entities before transactional row locks.
+        // Read DB state on every request even when the SecurityContext came from a cached session.
         if (authentication != null && authentication.isAuthenticated()
-                && authentication.getPrincipal() instanceof PrismUserDetails principal
-                && !users.existsByIdAndAccountStatus(principal.getAccountId(), AccountStatus.ACTIVE)) {
-            new SecurityContextLogoutHandler().logout(request, response, authentication);
-            response.sendRedirect(request.getContextPath() + "/login?inactive");
-            return;
+                && authentication.getPrincipal() instanceof PrismUserDetails principal) {
+            var state = users.findAuthenticationStateById(principal.getAccountId()).orElse(null);
+            boolean active = state != null && state.getAccountStatus() == AccountStatus.ACTIVE;
+            if (!active || !principal.matchesStoredCredentials(state.getPasswordHash())) {
+                new SecurityContextLogoutHandler().logout(request, response, authentication);
+                response.sendRedirect(request.getContextPath() + (active ? "/login?passwordChanged" : "/login?inactive"));
+                return;
+            }
         }
         chain.doFilter(request, response);
     }

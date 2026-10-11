@@ -47,7 +47,7 @@
 </div>
 
 <th:block th:fragment="reservation-fields(modal)">
-    <p class="ui-hint">Fasilitas, tanggal, waktu, dan tujuan wajib diisi. Pengajuan akan menunggu persetujuan petugas.</p>
+    <p class="ui-hint">Reservasi hanya tersedia Senin–Jumat, pukul 07:00–20:00 WIB. Fasilitas, tanggal, waktu, dan tujuan wajib diisi. Pengajuan akan menunggu persetujuan petugas.</p>
     <div th:replace="~{fragments/feedback :: formErrors}"></div>
     <div th:if="${error != null}" class="ui-alert ui-alert-error" role="alert"><p th:text="${error}">Reservasi tidak
         dapat diajukan.</p></div>

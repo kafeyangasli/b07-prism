@@ -249,7 +249,7 @@
   .ui-slot:has(input):hover { @apply border-primary bg-primary-subtle; }
   .ui-slot:has(input:focus-visible) { @apply outline-2 outline-offset-2 outline-primary; }
   .ui-slot-selected, .ui-slot:has(input:checked) { @apply border-primary bg-primary-subtle text-primary; box-shadow: inset 0 0 0 1px var(--color-primary); }
-  .ui-slot-reserved, .ui-slot-blocked, .ui-slot-past, .ui-slot-too_soon { @apply cursor-not-allowed border-border bg-disabled text-disabled-text; }
+  .ui-slot-reserved, .ui-slot-blocked, .ui-slot-past, .ui-slot-too_soon, .ui-slot-non_operating { @apply cursor-not-allowed border-border bg-disabled text-disabled-text; }
   .ui-slot-blocked { @apply border-warning-border bg-warning-subtle text-warning; }
   .ui-slot small { @apply mt-0.5 text-xs leading-4; }
   .ui-slot { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }

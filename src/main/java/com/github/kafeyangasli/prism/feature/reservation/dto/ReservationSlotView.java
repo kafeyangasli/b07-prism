@@ -37,6 +37,7 @@ public record ReservationSlotView(
             case BLOCKED -> "Diblokir";
             case PAST -> "Sudah lewat";
             case TOO_SOON -> "Terlalu dekat";
+            case NON_OPERATING -> "Akhir pekan - tidak tersedia";
         };
     }
 }

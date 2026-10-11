@@ -117,7 +117,10 @@ class ReportBlockageAuthorizationTest {
     @BeforeEach
     void setUp() {
         reset(users, reports, facilities, reservations, blockages, types);
-        when(users.existsByIdAndAccountStatus(any(), eq(AccountStatus.ACTIVE))).thenReturn(true);
+        var authenticationState = mock(UserRepository.AuthenticationState.class);
+        when(authenticationState.getAccountStatus()).thenReturn(AccountStatus.ACTIVE);
+        when(authenticationState.getPasswordHash()).thenReturn("hash");
+        when(users.findAuthenticationStateById(any())).thenReturn(Optional.of(authenticationState));
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         owner = account(42L, "owner@example.com", Role.PENGGUNA);
         facility = new Facility("F01", "Room", "Room", "Floor", 10, "Room", AdministrativeStatus.ACTIVE);

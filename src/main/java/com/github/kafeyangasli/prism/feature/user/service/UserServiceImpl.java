@@ -24,11 +24,14 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
+    private final jakarta.persistence.EntityManager entityManager;
 
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, Clock clock) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, Clock clock,
+                           jakarta.persistence.EntityManager entityManager) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -57,8 +60,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User verifyUser(Long adminId, Long userId) {
         User admin = validateAdmin(adminId);
-        User target = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pengguna dengan ID " + userId + " tidak ditemukan."));
+        User target = lockTarget(userId);
 
         if (target.getAccountStatus() != AccountStatus.PENDING) {
             throw new BusinessRuleException("Hanya akun berstatus menunggu yang dapat diverifikasi.");
@@ -73,8 +75,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User rejectUser(Long adminId, Long userId) {
         User admin = validateAdmin(adminId);
-        User target = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pengguna dengan ID " + userId + " tidak ditemukan."));
+        User target = lockTarget(userId);
 
         if (target.getAccountStatus() != AccountStatus.PENDING) {
             throw new BusinessRuleException("Hanya akun berstatus menunggu yang dapat ditolak.");
@@ -116,10 +117,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public User deactivateUser(Long adminId, Long userId) {
         validateAdmin(adminId);
-        User target = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pengguna dengan ID " + userId + " tidak ditemukan."));
+        User target = lockTarget(userId, true);
 
         target.setAccountStatus(AccountStatus.INACTIVE);
         return userRepository.save(target);
@@ -128,8 +129,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User activateUser(Long adminId, Long userId) {
         User admin = validateAdmin(adminId);
-        User target = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pengguna dengan ID " + userId + " tidak ditemukan."));
+        User target = lockTarget(userId);
 
         if (target.getAccountStatus() != AccountStatus.INACTIVE) {
             throw new BusinessRuleException("Hanya akun tidak aktif yang dapat diaktifkan.");
@@ -197,6 +197,38 @@ public class UserServiceImpl implements UserService {
             throw new BusinessRuleException("Tindakan ini hanya dapat dilakukan oleh Admin.");
         }
         return admin;
+    }
+
+    private User lockTarget(Long userId) {
+        return lockTarget(userId, false);
+    }
+
+    private User lockTarget(Long userId, boolean deactivation) {
+        Role role = userRepository.findRoleById(userId).orElseThrow(() ->
+                new ResourceNotFoundException("Pengguna dengan ID " + userId + " tidak ditemukan."));
+        List<User> admins = new java.util.ArrayList<>();
+        if (role == Role.ADMIN) {
+            // Lock individual IDs in ascending order and hydrate their current locking-read state.
+            // Do not refresh from an ordinary read that can restore an old MySQL snapshot.
+            for (Long adminId : userRepository.findIdsByRole(Role.ADMIN)) admins.add(lockFreshUser(adminId));
+        }
+        User target = role == Role.ADMIN ? admins.stream().filter(admin -> admin.getId().equals(userId)).findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Pengguna dengan ID " + userId + " tidak ditemukan."))
+                : lockFreshUser(userId);
+        if (deactivation && target.getRole() == Role.ADMIN && target.getAccountStatus() == AccountStatus.ACTIVE
+                && admins.stream().filter(admin -> admin.getAccountStatus() == AccountStatus.ACTIVE).count() <= 1) {
+            throw new BusinessRuleException("Setidaknya satu Admin aktif harus tetap tersedia.");
+        }
+        return target;
+    }
+
+    private User lockFreshUser(Long userId) {
+        // OSIV/callers may have preloaded this entity. A locking query cannot overwrite that
+        // managed snapshot, so detach it before loading the authoritative row under its lock.
+        User managed = entityManager.find(User.class, userId);
+        if (managed != null) entityManager.detach(managed);
+        return userRepository.findByIdForUpdate(userId).orElseThrow(() ->
+                new ResourceNotFoundException("Pengguna dengan ID " + userId + " tidak ditemukan."));
     }
 
     private void validatePasswordLength(String password) {

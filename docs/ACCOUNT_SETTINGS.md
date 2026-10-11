@@ -30,21 +30,36 @@ Password DTOs remain local to the controller/service. Passwords and rejected
 password values never enter the view model, flash attributes, or redirects.
 Error pages render empty password inputs and retain only safe inputs.
 
-There is no existing session registry. A successful password change ends the
-current session with Spring Security's `SecurityContextLogoutHandler` and sends
-the user to `/login?passwordChanged`. **Other sessions are not selectively
-invalidated by a password change.** The UI makes no such claim.
+A successful password change ends the current session with Spring Security's
+`SecurityContextLogoutHandler` and sends the user to `/login?passwordChanged`.
+All other authenticated sessions for the account are rejected on their next
+authenticated request, including serialized/cached session data. Fresh login is
+required. Failed or rolled-back changes do not revoke sessions.
 
 Production authentication still uses `CustomUserDetailsService`, now returning
 `PrismUserDetails`, a subclass of the existing Spring Security user principal
-carrying the persistent account ID. `AccountStatusFilter` checks account status
-with a scalar query on every authenticated request from that principal. If the
+carrying the persistent account ID and a one-way fingerprint of the password hash
+at login. The fingerprint survives Spring's credential erasure.
+`AccountStatusFilter` checks current account status and password hash using an
+uncached scalar database query on every authenticated request. A changed hash
+revokes old authentication and redirects to `/login?passwordChanged`. This also
+covers a committed administrative reset, even to the same plaintext password
+when BCrypt creates a new salted hash; no separate administrative reset endpoint
+currently exists. If the
 account is no longer active, it clears authentication, invalidates that session,
 and redirects to `/login?inactive`. This includes administrative deactivation.
 Other sessions of a deactivated account are terminated on their next request;
 there is no proactive session broadcast or guarantee about requests already
 executing when deactivation commits. Login itself already rejects inactive
 accounts. CSRF protection and the existing login/logout workflow remain enabled.
+
+Admin-managed status changes lock Admin rows in ascending ID order before the
+target account. Preloaded user entities are detached before current locking reads,
+so old managed state or a REPEATABLE_READ snapshot cannot supply the active count.
+Deactivation of the last ACTIVE Admin
+is rejected, whether the target is the actor or another account. Other Admin
+status transitions share the same lock ordering; inactive Admins do not count
+toward the required active account.
 
 ## Self-deactivation and transaction coordination
 

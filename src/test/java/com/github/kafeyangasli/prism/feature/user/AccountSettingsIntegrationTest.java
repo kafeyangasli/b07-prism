@@ -188,20 +188,19 @@ class AccountSettingsIntegrationTest {
         assertThat(encoder.matches(OLD_PASSWORD, owner.getPasswordHash())).isTrue();
     }
 
-    @Test void passwordFallbackLeavesOtherSessionActiveButRechecksLatestHash() throws Exception {
+    @Test void passwordChangeRevokesOtherSessionAndPreventsFurtherPasswordChanges() throws Exception {
         MockHttpSession first = login(OLD_PASSWORD);
         MockHttpSession second = login(OLD_PASSWORD);
         mvc.perform(post("/account/password").session(first).with(csrf())
                 .param("currentPassword", OLD_PASSWORD).param("newPassword", NEW_PASSWORD)
                 .param("confirmPassword", NEW_PASSWORD)).andExpect(redirectedUrl("/login?passwordChanged"));
-        mvc.perform(get("/account").session(second)).andExpect(status().isOk());
         String hash = owner.getPasswordHash();
         mvc.perform(post("/account/password").session(second).with(csrf())
                 .param("currentPassword", OLD_PASSWORD).param("newPassword", "another-password")
                 .param("confirmPassword", "another-password"))
-                .andExpect(status().isOk()).andExpect(model().attributeExists("errorMessage"));
+                .andExpect(redirectedUrl("/login?passwordChanged")).andExpect(unauthenticated());
         assertThat(owner.getPasswordHash()).isEqualTo(hash);
-        assertThat(second.isInvalid()).isFalse();
+        assertThat(second.isInvalid()).isTrue();
     }
 
     private void passwordFailure(String current, String next, String confirmation, String message) throws Exception {

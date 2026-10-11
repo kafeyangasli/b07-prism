@@ -74,6 +74,7 @@ public class ReservationAvailabilityService {
             LocalDateTime selectedStart, LocalDateTime selectedEnd, Integer quantity) {
         Facility facility = activeFacility(facilityId);
         validateDate(date);
+        boolean weekday = com.github.kafeyangasli.prism.shared.util.OperatingDays.isWeekday(date);
 
         LocalDateTime dayStart = date.atTime(OPENING_TIME);
         LocalDateTime dayEnd = date.atTime(CLOSING_TIME);
@@ -89,10 +90,13 @@ public class ReservationAvailabilityService {
             LocalDateTime end = start.plusMinutes(SLOT_MINUTES);
             ReservationSlotState state;
             String reason = null;
-            Integer availableQuantity = facility.isEquipment() ? equipmentAvailability.availableFromAllocations(facility, allocations, start, end, firstOverlappingBlockage(blockages, start, end) != null) : null;
+            Integer availableQuantity = facility.isEquipment() ? equipmentAvailability.availableFromAllocations(facility, allocations, start, end, !weekday || firstOverlappingBlockage(blockages, start, end) != null) : null;
 
             FacilityBlockage blockage = firstOverlappingBlockage(blockages, start, end);
-            if (blockage != null) {
+            if (!weekday) {
+                state = ReservationSlotState.NON_OPERATING;
+                reason = "Reservasi hanya diperbolehkan Senin sampai Jumat.";
+            } else if (blockage != null) {
                 state = ReservationSlotState.BLOCKED;
                 reason = blockage.getPublicReason();
             } else if (facility.isEquipment() ? availableQuantity == 0 : overlapsReservation(reservations, start, end)) {
@@ -130,6 +134,11 @@ public class ReservationAvailabilityService {
             }
         }
 
+        if (!weekday) {
+            effectiveStart = null;
+            effectiveEnd = null;
+            endTimes = List.of();
+        }
         Integer availableQuantity = facility.isEquipment() && effectiveStart != null && effectiveEnd != null
                 ? equipmentAvailability.availableFromAllocations(facility, allocations, effectiveStart, effectiveEnd, firstOverlappingBlockage(blockages, effectiveStart, effectiveEnd) != null) : null;
         return new ReservationAvailabilityView(
@@ -139,6 +148,9 @@ public class ReservationAvailabilityService {
 
     @Transactional(readOnly = true)
     public void ensureIntervalAvailable(Long facilityId, LocalDateTime startAt, LocalDateTime endAt) {
+        if (com.github.kafeyangasli.prism.shared.util.OperatingDays.includesWeekend(startAt, endAt)) {
+            throw new BusinessRuleException("Reservasi hanya diperbolehkan Senin sampai Jumat.");
+        }
         boolean reserved = reservationRepository.existsOverlapping(
                 facilityId, startAt, endAt, BLOCKING_RESERVATION_STATUSES, null);
         boolean blocked = blockageRepository.existsOverlapping(

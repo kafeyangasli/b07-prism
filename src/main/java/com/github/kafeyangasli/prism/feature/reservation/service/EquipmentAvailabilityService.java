@@ -31,6 +31,7 @@ public class EquipmentAvailabilityService {
     public int available(Facility facility, LocalDateTime start, LocalDateTime end) {
         requireStock(facility);
         validateInterval(start, end);
+        if (com.github.kafeyangasli.prism.shared.util.OperatingDays.includesWeekend(start, end)) return 0;
         if (blockages.existsOverlapping(facility.getId(), start, end,
                 Set.of(BlockageStatus.SCHEDULED, BlockageStatus.ACTIVE), null)) return 0;
         return (int) Math.max(0L, facility.getTotalStock() - maximumAllocated(facility, start, end, null));

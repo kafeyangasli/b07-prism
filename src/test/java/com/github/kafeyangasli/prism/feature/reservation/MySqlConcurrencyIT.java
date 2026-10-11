@@ -55,6 +55,7 @@ class MySqlConcurrencyIT {
     @Autowired JdbcTemplate jdbc;
     @Autowired com.github.kafeyangasli.prism.feature.report.repository.ReportRepository reports;
     @Autowired com.github.kafeyangasli.prism.feature.report.service.ReportService reportService;
+    @Autowired com.github.kafeyangasli.prism.feature.user.service.UserService userService;
     User actor, requester;
     Facility firstRoom, secondRoom;
     static final AtomicBoolean synchronizePreviews = new AtomicBoolean();
@@ -80,6 +81,32 @@ class MySqlConcurrencyIT {
     }
 
     @AfterEach void clearSecurity() { SecurityContextHolder.clearContext(); }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void finalAdminIsProtectedFromConcurrentSelfAndCrossDeactivationWithOldSnapshots(boolean crossTarget) throws Exception {
+        var first = users.saveAndFlush(new User("First Admin", "first-admin@test", "hash", Role.ADMIN, AccountStatus.ACTIVE));
+        var second = users.saveAndFlush(new User("Second Admin", "second-admin@test", "hash", Role.ADMIN, AccountStatus.ACTIVE));
+        var beforeLocks = new CyclicBarrier(2);
+        assertThat(race(() -> deactivateAdmin(first.getId(), crossTarget ? second.getId() : first.getId(), beforeLocks),
+                () -> deactivateAdmin(second.getId(), crossTarget ? first.getId() : second.getId(), beforeLocks)))
+                .containsExactlyInAnyOrder(true, false);
+        assertThat(users.findByRoleAndAccountStatusOrderByCreatedAtDesc(Role.ADMIN, AccountStatus.ACTIVE)).hasSize(1);
+    }
+
+    private boolean deactivateAdmin(Long actorId, Long targetId, CyclicBarrier beforeLocks) {
+        var tx = new TransactionTemplate(transactions);
+        tx.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        try {
+            return Boolean.TRUE.equals(tx.execute(status -> {
+                users.findById(actorId).orElseThrow(); // Preload an old managed entity and a MySQL snapshot.
+                try { beforeLocks.await(15, TimeUnit.SECONDS); }
+                catch (Exception exception) { throw new IllegalStateException(exception); }
+                userService.deactivateUser(actorId, targetId);
+                return true;
+            }));
+        } catch (BusinessRuleException expected) { return false; }
+    }
 
     @Test void simultaneousBlockageReconciliationCommitsEachTransitionOnce() throws Exception {
         var type = blockageTypes.findByCodeIgnoreCase("PLANNED_MAINTENANCE").orElseThrow();

@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -153,8 +152,7 @@ public class AdministrationReportService {
         long bookableSlots = 0;
         boolean capacityKnown = true;
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            boolean weekday = date.getDayOfWeek() != DayOfWeek.SATURDAY
-                    && date.getDayOfWeek() != DayOfWeek.SUNDAY;
+            boolean weekday = com.github.kafeyangasli.prism.shared.util.OperatingDays.isWeekday(date);
             for (LocalDateTime slotStart = date.atTime(OPEN_TIME);
                  slotStart.isBefore(date.atTime(CLOSE_TIME));
                  slotStart = slotStart.plusMinutes(SLOT_MINUTES)) {

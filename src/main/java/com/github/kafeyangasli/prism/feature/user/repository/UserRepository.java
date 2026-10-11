@@ -14,6 +14,25 @@ import org.springframework.data.repository.query.Param;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
+    interface AuthenticationState {
+        AccountStatus getAccountStatus();
+        String getPasswordHash();
+    }
+
+    // Scalar, uncached DB state: do not trust the session or a managed User snapshot.
+    @org.springframework.data.jpa.repository.QueryHints(@jakarta.persistence.QueryHint(
+            name = org.hibernate.jpa.HibernateHints.HINT_CACHEABLE, value = "false"))
+    @Query("select u.accountStatus as accountStatus, u.passwordHash as passwordHash from User u where u.id = :id")
+    Optional<AuthenticationState> findAuthenticationStateById(@Param("id") Long id);
+
+    @Query("select u.role from User u where u.id = :id")
+    Optional<Role> findRoleById(@Param("id") Long id);
+
+    // Routing IDs only. Admin roles are immutable through account-management endpoints.
+    @Query("select u.id from User u where u.role = :role order by u.id")
+    List<Long> findIdsByRole(@Param("role") Role role);
+
+
     @Query("select u.id from User u where lower(u.email) = lower(:email)")
     Optional<Long> findIdByEmail(@Param("email") String email);
 

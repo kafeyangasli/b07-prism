@@ -60,6 +60,7 @@ Seluruh individu yang berkontribusi pada projek ini terafiliasi dengan
 
 - Mengajukan reservasi fasilitas pada satu tanggal dan mengisi tujuan penggunaan.
 - Validasi jam operasional 07.00-20.00 WIB dan interval 30 menit.
+- Reservasi fasilitas dan Alat hanya Senin–Jumat; Sabtu/Minggu tidak tersedia. Hari libur nasional tidak dikecualikan dan riwayat akhir pekan tetap disimpan.
 - Aturan khusus pemesanan Aula untuk satu hari operasional penuh.
 - Pengunduhan template proposal dan pengunggahan proposal bertanda tangan untuk reservasi yang memenuhi syarat.
 - Persetujuan atau penolakan reservasi oleh Petugas dan Admin.

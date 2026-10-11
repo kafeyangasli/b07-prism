@@ -16,7 +16,7 @@ public final class PrismTestUsers {
             User saved = users.saveAndFlush(account);
             if (saved != null) account = saved;
         }
-        User principalAccount = new User(account.getName(), account.getEmail(), "hash", Role.valueOf(roles[0]), AccountStatus.ACTIVE);
+        User principalAccount = new User(account.getName(), account.getEmail(), account.getPasswordHash(), Role.valueOf(roles[0]), AccountStatus.ACTIVE);
         org.springframework.test.util.ReflectionTestUtils.setField(principalAccount, "id", account.getId());
         return new PrismUserDetails(principalAccount);
     }

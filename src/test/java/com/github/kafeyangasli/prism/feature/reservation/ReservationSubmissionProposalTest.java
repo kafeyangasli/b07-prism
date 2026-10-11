@@ -148,7 +148,7 @@ class ReservationSubmissionProposalTest {
     }
 
     private ReservationForm form(Facility facility, int minutes) {
-        LocalDateTime start = NOW.toLocalDate().plusDays(1).atTime(7, 0);
+        LocalDateTime start = NOW.toLocalDate().plusDays(2).atTime(7, 0);
         ReservationForm form = new ReservationForm();
         form.setFacilityId(facility.getId());
         form.setStartAt(start.toString());

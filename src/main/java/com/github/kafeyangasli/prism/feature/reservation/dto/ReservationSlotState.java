@@ -6,5 +6,6 @@ public enum ReservationSlotState {
     RESERVED,
     BLOCKED,
     PAST,
-    TOO_SOON
+    TOO_SOON,
+    NON_OPERATING
 }

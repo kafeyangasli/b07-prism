@@ -252,6 +252,10 @@ public class ReservationSubmissionService {
             );
         }
 
+        if (!com.github.kafeyangasli.prism.shared.util.OperatingDays.isWeekday(startAt.toLocalDate())) {
+            throw rule("Reservasi hanya diperbolehkan Senin sampai Jumat; Sabtu dan Minggu tidak tersedia.");
+        }
+
         /*
          * Minimal 30 menit dari waktu submit.
          */
@@ -391,7 +395,7 @@ public class ReservationSubmissionService {
     }
 
     private boolean isWorkday(LocalDate date) {
-        return date.getDayOfWeek().getValue() <= 5;
+        return com.github.kafeyangasli.prism.shared.util.OperatingDays.isWeekday(date);
     }
 
     private boolean isHalfHour(LocalDateTime value) {

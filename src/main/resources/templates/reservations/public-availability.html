@@ -9,7 +9,7 @@
                 <a class="ui-link text-sm" th:href="@{/facilities/{id}(id=${facilityId})}">← Detail fasilitas</a>
                 <p class="ui-eyebrow mt-4">Ketersediaan fasilitas</p>
                 <h1 th:text="${facilityName}">Fasilitas</h1>
-                <p class="ui-description">Slot 30 menit, pukul 07:00–20:00 WIB. Jadwal dapat berubah sampai reservasi disetujui.</p>
+                <p class="ui-description">Senin–Jumat, slot 30 menit, pukul 07:00–20:00 WIB. Sabtu dan Minggu tidak tersedia. Jadwal dapat berubah sampai reservasi disetujui.</p>
             </div>
             <a sec:authorize="hasRole('PENGGUNA')" class="ui-btn ui-btn-primary" th:href="@{/reservations/new(facilityId=${facilityId},date=${date})}">Ajukan reservasi</a>
             <a sec:authorize="!isAuthenticated()" class="ui-btn ui-btn-primary" th:href="@{/login}">Masuk untuk reservasi</a>

@@ -80,6 +80,7 @@ public class FacilityServiceImpl implements FacilityService {
         if (startAt == null || endAt == null || !startAt.isBefore(endAt)) {
             throw new BusinessRuleException("Waktu mulai dan selesai yang valid wajib diisi untuk memeriksa ketersediaan.");
         }
+        if (com.github.kafeyangasli.prism.shared.util.OperatingDays.includesWeekend(startAt, endAt)) return List.of();
         List<Facility> exclusive = facilityRepository.findAvailableFacilities(
                 AdministrativeStatus.ACTIVE,
                 startAt,

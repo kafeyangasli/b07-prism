@@ -354,7 +354,9 @@ class UiRenderingIntegrationTest {
             .contains("multipart/form-data", "name=\"facilityId\"", "name=\"date\"", "name=\"purpose\"", "name=\"proposal\"", "name=\"_csrf\"", "id=\"reservation-availability\"",
                 "id=\"dashboard-sidebar\"", "id=\"dashboard-content\"", "Laporan Saya", "href=\"/account\"", "Pengaturan Akun")
             .doesNotContain("type=\"datetime-local\"");
-        String day = LocalDate.now().plusDays(2).toString();
+        LocalDate selectedDate = LocalDate.now(java.time.ZoneId.of("Asia/Jakarta")).plusDays(2);
+        while (!com.github.kafeyangasli.prism.shared.util.OperatingDays.isWeekday(selectedDate)) selectedDate = selectedDate.plusDays(1);
+        String day = selectedDate.toString();
         String availability = mvc.perform(get("/reservations/availability")
                 .param("facilityId", room.getId().toString()).param("date", day)
                 .header("HX-Request", "true"))

@@ -113,7 +113,7 @@ class ReservationAvailabilityIntegrationTest {
     @Test
     void aulaUsesFixedFullDayAndAnyConflictMakesDayUnavailable() {
         Facility aula = facilities.save(new Facility("AULA-1", "Aula Utama", facilityType("HALL", "Aula"), "Gedung Pusat", 500, null, AdministrativeStatus.ACTIVE));
-        LocalDate date = NOW.toLocalDate().plusDays(2);
+        LocalDate date = NOW.toLocalDate().plusDays(1);
 
         ReservationAvailabilityView available = availabilityService.availability(aula.getId(), date, null, null);
         assertThat(available.aula()).isTrue();
@@ -156,7 +156,7 @@ class ReservationAvailabilityIntegrationTest {
 
     @Test
     void proposalThresholdAndAulaTimesRemainServerAuthoritative() {
-        LocalDate date = NOW.toLocalDate().plusDays(3);
+        LocalDate date = NOW.toLocalDate().plusDays(4);
         assertThat(submit(room, date.atTime(9, 0), date.atTime(14, 30), null)).isNotNull();
         assertThatThrownBy(() -> submit(room, date.atTime(9, 0), date.atTime(15, 0), null))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Proposal");

@@ -56,8 +56,12 @@
                                 : '-'}">
                     </dd>
                 </div>
+                <div><dt>Ketentuan proposal</dt>
+                    <dd th:text="${reservation.proposalRequired ? 'Wajib' : 'Opsional'}"></dd></div>
                 <div><dt>Proposal</dt>
-                    <dd th:text="${reservation.proposalPath == null ? 'Tidak dilampirkan' : (reservation.proposalValidatedAt != null ? 'Sudah divalidasi petugas' : 'Dilampirkan · belum divalidasi petugas')}"></dd>
+                    <dd th:text="${reservation.proposalSubmitted ? (reservation.proposalRequired ? 'Dilampirkan · wajib' : 'Dilampirkan secara sukarela') : 'Tidak dilampirkan'}"></dd></div>
+                <div><dt>Validasi proposal</dt>
+                    <dd th:text="${reservation.proposalSubmitted ? (reservation.proposalValidated ? 'Sudah divalidasi petugas' : 'Belum divalidasi petugas') : (reservation.proposalRequired ? 'Menunggu pengajuan proposal wajib' : 'Tidak diperlukan')}"></dd>
                 </div>
                 <div th:if="${reservation.status.name() == 'PENDING'}">
                     <dt>
@@ -69,11 +73,15 @@
                     </dd>
                 </div>
             </dl>
-            <div class="mt-6" th:if="${reservation.proposalPath != null}">
+            <p class="ui-hint mt-4" th:if="${reservation.status.name() == 'PENDING' and reservation.proposalSubmitted and !reservation.proposalValidated}">Persetujuan menunggu validasi proposal, termasuk proposal yang dilampirkan secara sukarela.</p>
+            <p class="ui-hint mt-4" th:if="${reservation.proposalValidationLegacy}">Validasi historis dipertahankan; PDF tervalidasi belum tersedia.</p>
+            <div class="mt-6" th:if="${reservation.proposalSubmitted}">
                 <a class="ui-btn ui-btn-secondary"
                    th:href="@{/reservations/{id}/proposal(id=${reservation.id})}">
                     Unduh proposal
                 </a>
+                <a class="ui-btn ui-btn-secondary" th:if="${reservation.proposalValidated and reservation.hasValidatedProposal()}"
+                   th:href="@{/documents/reservations/{id}/validated-proposal(id=${reservation.id})}">Unduh PDF tervalidasi</a>
             </div>
         </section>
         <div class="ui-form-actions">

@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.List;
@@ -46,9 +45,8 @@ public class StaffDashboardService {
                 .map(r -> new PendingReservationRow(
                         r.getId(), r.getUser().getName(), r.getFacility().getName(),
                         r.getStartAt(), r.getEndAt(), r.getCreatedAt(), r.getExpiresAt(),
-                        Duration.between(r.getStartAt(), r.getEndAt()).toHours() >= 6
-                                || "Aula".equalsIgnoreCase(r.getFacility().getFacilityType().getName()),
-                        r.getProposalValidatedAt() != null && r.getProposalValidatedBy() != null,
+                        r.isProposalRequired(), r.isProposalSubmitted(), r.isProposalValidated(),
+                        r.hasValidatedProposal(), r.isProposalValidationLegacy(),
                         countPendingConflicts(r, pendingReservations), r.getPurpose()))
                 .toList();
         var reports = reportRepository.findUnresolvedQueue(

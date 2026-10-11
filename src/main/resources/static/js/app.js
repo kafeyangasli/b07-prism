@@ -1,6 +1,30 @@
 (function () {
   "use strict";
 
+  // Early format/size feedback; the server also parses the uploaded PDF.
+  document.addEventListener("change", async function (event) {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.matches("[data-validated-proposal]")) return;
+    input.setCustomValidity("");
+    const file = input.files?.[0];
+    if (!file) return;
+    let error = "";
+    if (!/\.pdf$/i.test(file.name) || file.size === 0) error = "Pilih berkas PDF tervalidasi yang tidak kosong.";
+    else if (file.size > Number(input.dataset.maxBytes)) error = "Ukuran PDF melebihi batas unggahan.";
+    else {
+      // Prevent native submission until the asynchronous header check finishes.
+      input.setCustomValidity("Sedang memeriksa PDF. Mohon tunggu.");
+      try {
+        const header = new TextDecoder().decode(await file.slice(0, 5).arrayBuffer());
+        if (input.files?.[0] !== file) return;
+        if (header !== "%PDF-") error = "Isi berkas harus berupa PDF yang valid.";
+      } catch (_) { error = "Berkas PDF tidak dapat dibaca. Pilih ulang berkas."; }
+    }
+    if (input.files?.[0] !== file) return;
+    input.setCustomValidity(error);
+    if (error) input.reportValidity();
+  });
+
   let drawerTrigger = null;
   const pendingPosts = new Map();
   const postRequests = new WeakMap();

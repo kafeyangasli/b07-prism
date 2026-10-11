@@ -59,8 +59,9 @@ class ProposalValidationLockOrderTest {
         when(pending.getStartAt()).thenReturn(now.plusDays(1));
         when(pending.getEndAt()).thenReturn(now.plusDays(1).plusHours(6));
         when(pending.getExpiresAt()).thenReturn(now.plusHours(12));
-        when(pending.getProposalValidatedAt()).thenReturn(now);
-        when(pending.getProposalValidatedBy()).thenReturn(staff);
+        when(pending.isProposalRequired()).thenReturn(true);
+        when(pending.isProposalSubmitted()).thenReturn(true);
+        when(pending.isProposalValidated()).thenReturn(true);
 
         service.approve(1L, 30L, false);
 

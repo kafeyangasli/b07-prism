@@ -63,6 +63,7 @@ Seluruh individu yang berkontribusi pada projek ini terafiliasi dengan
 - Aturan khusus pemesanan Aula untuk satu hari operasional penuh.
 - Pengunduhan template proposal dan pengunggahan proposal bertanda tangan untuk reservasi yang memenuhi syarat.
 - Persetujuan atau penolakan reservasi oleh Petugas dan Admin.
+- Setiap proposal yang dilampirkan, termasuk proposal opsional, wajib divalidasi dengan unggahan PDF resmi sebelum persetujuan. [Alur, migrasi, penyimpanan, dan pengujian](docs/VALIDATED_PROPOSALS.md).
 - Pencegahan konflik jadwal secara transaksional.
 - Batas maksimal tujuh reservasi disetujui yang belum berakhir untuk setiap Pengguna.
 - Pembatalan reservasi sesuai hak akses dan batas waktu.

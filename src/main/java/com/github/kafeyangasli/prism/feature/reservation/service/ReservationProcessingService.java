@@ -40,6 +40,7 @@ public class ReservationProcessingService {
     private final UserRepository userRepository;
     private final FacilityBlockageRepository blockageRepository;
     private final Clock clock;
+    private final EquipmentAvailabilityService equipmentAvailability;
     private final ProposalStorageService proposalStorageService;
 
     public ReservationProcessingService(ReservationRepository reservationRepository,
@@ -47,12 +48,14 @@ public class ReservationProcessingService {
                                         UserRepository userRepository,
                                         FacilityBlockageRepository blockageRepository,
                                         Clock clock,
-                                        ProposalStorageService proposalStorageService) {
+                                        ProposalStorageService proposalStorageService,
+                                        EquipmentAvailabilityService equipmentAvailability) {
         this.reservationRepository = reservationRepository;
         this.facilityRepository = facilityRepository;
         this.userRepository = userRepository;
         this.blockageRepository = blockageRepository;
         this.clock = clock;
+        this.equipmentAvailability = equipmentAvailability;
         this.proposalStorageService = proposalStorageService;
     }
 
@@ -150,7 +153,12 @@ public class ReservationProcessingService {
             throw rule(ReservationReasonCode.INVALID_PROPOSAL,
                     "Proposal wajib divalidasi Petugas atau Admin sebelum persetujuan");
         }
-        if (reservationRepository.existsOverlapping(reservation.getFacility().getId(),
+        now = LocalDateTime.now(clock);
+        validateProcessable(reservation, now);
+        if (reservation.getFacility().isEquipment()) {
+            equipmentAvailability.ensureFits(reservation.getFacility(), reservation.getStartAt(),
+                    reservation.getEndAt(), reservation.getQuantity(), reservation.getId());
+        } else if (reservationRepository.existsOverlapping(reservation.getFacility().getId(),
                 reservation.getStartAt(), reservation.getEndAt(),
                 EnumSet.of(ReservationStatus.APPROVED), reservation.getId())) {
             throw rule(ReservationReasonCode.SCHEDULE_CONFLICT,
@@ -168,7 +176,7 @@ public class ReservationProcessingService {
             throw rule("ACTIVE_RESERVATION_LIMIT", "Pengguna telah memiliki tujuh reservasi aktif");
         }
 
-        List<Reservation> pendingConflicts = reservationRepository.findOverlapping(
+        List<Reservation> pendingConflicts = reservation.getFacility().isEquipment() ? List.of() : reservationRepository.findOverlapping(
                         reservation.getFacility().getId(), reservation.getStartAt(), reservation.getEndAt(),
                         EnumSet.of(ReservationStatus.PENDING))
                 .stream()
@@ -202,8 +210,8 @@ public class ReservationProcessingService {
         String normalizedReason = normalizeRequired(reasonDetail,
                 "REJECTION_REASON_REQUIRED", "Alasan penolakan wajib diisi");
         LocalDateTime now = LocalDateTime.now(clock);
-        Reservation reservation = reservationRepository.findByIdForUpdate(reservationId)
-                .orElseThrow(() -> notFound(reservationId));
+        Reservation reservation = lockForMutation(reservationId);
+        now = LocalDateTime.now(clock);
         User actor = requireStaffActor(actorId);
         validateProcessable(reservation, now);
 
@@ -221,8 +229,8 @@ public class ReservationProcessingService {
         String normalizedReason = normalizeRequired(reason,
                 "CANCELLATION_REASON_REQUIRED", "Alasan pembatalan wajib diisi");
         LocalDateTime now = LocalDateTime.now(clock);
-        Reservation reservation = reservationRepository.findByIdForUpdate(reservationId)
-                .orElseThrow(() -> notFound(reservationId));
+        Reservation reservation = lockForMutation(reservationId);
+        now = LocalDateTime.now(clock);
         User actor = requireStaffActor(actorId);
         if (reservation.getStatus() != ReservationStatus.APPROVED) {
             throw rule("RESERVATION_NOT_APPROVED", "Hanya reservasi disetujui yang dapat dibatalkan");
@@ -234,6 +242,13 @@ public class ReservationProcessingService {
         reservation.setReasonCode(ReservationReasonCode.CANCELLED_BY_STAFF);
         reservation.setReasonDetail(normalizedReason);
         return reservation;
+    }
+
+    private Reservation lockForMutation(long id) {
+        var context = reservationRepository.findLockContextById(id).orElseThrow(() -> notFound(id));
+        facilityRepository.findByIdForUpdate(context.getFacilityId()).orElseThrow(() -> notFound(id));
+        userRepository.findByIdForUpdate(context.getUserId()).orElseThrow(() -> notFound(id));
+        return reservationRepository.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
     }
 
     private void validateProcessable(Reservation reservation, LocalDateTime now) {

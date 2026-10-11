@@ -85,6 +85,10 @@
                                 </span>
                             </dd>
                         </div>
+                        <div th:if="${facility.equipment}">
+                            <dt>Total stok alat</dt><dd th:text="${facility.totalStock + ' unit'}"></dd>
+                            <p class="ui-hint">Ketersediaan mengikuti interval reservasi. Lebih dari 5 unit atau durasi minimal 6 jam wajib proposal. Pengajuan menunggu mengalokasikan stok.</p>
+                        </div>
                         <div>
                             <dt>
                                 Deskripsi

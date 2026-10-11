@@ -14,7 +14,9 @@ public record ReservationAvailabilityView(
         List<ReservationSlotView> slots,
         List<ReservationEndTimeView> endTimes,
         LocalDateTime selectedStart,
-        LocalDateTime selectedEnd
+        LocalDateTime selectedEnd,
+        Integer availableQuantity,
+        Integer quantity
 ) {
     public boolean hasSelectedStart() {
         return selectedStart != null;
@@ -31,6 +33,6 @@ public record ReservationAvailabilityView(
     }
 
     public boolean isProposalRequired() {
-        return aula || getDurationMinutes() >= 360;
+        return aula || getDurationMinutes() >= 360 || (facility.isEquipment() && quantity != null && quantity > 5);
     }
 }

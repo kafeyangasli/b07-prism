@@ -54,6 +54,15 @@ public class Facility {
     private Integer capacity;
 
     @Setter
+    @Column(name = "total_stock")
+    private Integer totalStock;
+
+    @Transient
+    public boolean isEquipment() {
+        return facilityType != null && facilityType.isQuantityBased();
+    }
+
+    @Setter
     @Column(length = 2000)
     private String description;
 
@@ -93,6 +102,7 @@ public class Facility {
 
     @PrePersist
     void beforeInsert() {
+        validateStock();
         normalizeCode();
         LocalDateTime now = LocalDateTime.now(java.time.Clock.system(java.time.ZoneId.of("Asia/Jakarta")));
         createdAt = now;
@@ -102,6 +112,7 @@ public class Facility {
 
     @PreUpdate
     void beforeUpdate() {
+        validateStock();
         normalizeCode();
         updatedAt = LocalDateTime.now();
     }
@@ -109,6 +120,12 @@ public class Facility {
     private void normalizeCode() {
         if (code != null) {
             code = code.trim().toUpperCase(java.util.Locale.ROOT);
+        }
+    }
+
+    private void validateStock() {
+        if (isEquipment() ? totalStock == null || totalStock <= 0 : totalStock != null) {
+            throw new IllegalArgumentException("Stok positif wajib untuk Alat; fasilitas lain tidak memiliki stok.");
         }
     }
 

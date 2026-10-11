@@ -47,7 +47,7 @@ public class StaffDashboardService {
                         r.getStartAt(), r.getEndAt(), r.getCreatedAt(), r.getExpiresAt(),
                         r.isProposalRequired(), r.isProposalSubmitted(), r.isProposalValidated(),
                         r.hasValidatedProposal(), r.isProposalValidationLegacy(),
-                        countPendingConflicts(r, pendingReservations), r.getPurpose()))
+                        countPendingConflicts(r, pendingReservations), r.getPurpose(), r.getQuantity()))
                 .toList();
         var reports = reportRepository.findUnresolvedQueue(
                         EnumSet.of(ReportStatus.NEW, ReportStatus.IN_PROGRESS))
@@ -59,6 +59,7 @@ public class StaffDashboardService {
     }
 
     private int countPendingConflicts(Reservation candidate, List<Reservation> pendingReservations) {
+        if (candidate.getFacility().isEquipment()) return 0;
         return (int) pendingReservations.stream()
                 .filter(other -> !other.getId().equals(candidate.getId()))
                 .filter(other -> other.getFacility().getId().equals(candidate.getFacility().getId()))

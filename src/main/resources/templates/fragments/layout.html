@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#5d5098">
     <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
-    <title th:text="${pageTitle + ' · PRISM'}">PRISM</title>
+    <title th:text="${pageTitle + ' - PRISM'}">PRISM</title>
     <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <script defer th:src="@{/vendor/htmx.min.js}"></script>
@@ -16,6 +16,7 @@
     <link rel="stylesheet" th:href="@{/css/facility-images.css}">
     <script defer th:src="@{/js/facility-images.js}"></script>
     <link rel="stylesheet" th:href="@{/css/avatar.css}">
+    <link rel="icon" type="image/png" sizes="32x32" th:href="@{/images/prism-logo.png}">
     <script defer th:src="@{/js/avatar.js}"></script>
 </head>
 <body>

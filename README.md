@@ -65,6 +65,7 @@ Seluruh individu yang berkontribusi pada projek ini terafiliasi dengan
 - Persetujuan atau penolakan reservasi oleh Petugas dan Admin.
 - Setiap proposal yang dilampirkan, termasuk proposal opsional, wajib divalidasi dengan unggahan PDF resmi sebelum persetujuan. [Alur, migrasi, penyimpanan, dan pengujian](docs/VALIDATED_PROPOSALS.md).
 - Pencegahan konflik jadwal secara transaksional.
+- Reservasi Alat berdasarkan jumlah: stok bersama, alokasi sejak Menunggu, proposal untuk lebih dari 5 unit, dan pengelolaan stok oleh Admin. [Aturan, migrasi, dan pengujian](docs/EQUIPMENT_RESERVATIONS.md).
 - Batas maksimal tujuh reservasi disetujui yang belum berakhir untuk setiap Pengguna.
 - Pembatalan reservasi sesuai hak akses dan batas waktu.
 - Kedaluwarsa otomatis untuk reservasi yang masih menunggu.

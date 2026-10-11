@@ -62,7 +62,7 @@ public class ReservationSubmissionService {
         this.clock = clock;
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Reservation submit(
             String authenticatedEmail,
             ReservationForm form,
@@ -73,18 +73,8 @@ public class ReservationSubmissionService {
          * Jangan pernah mengambil userId dari form.
          * User ditentukan berdasarkan akun yang sedang login.
          */
-        User user = userRepository.findByEmailIgnoreCase(authenticatedEmail)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Pengguna tidak ditemukan")
-                );
-
-        if (user.getRole() != Role.PENGGUNA) {
-            throw rule("Hanya Pengguna yang dapat mengajukan reservasi");
-        }
-
-        if (user.getAccountStatus() != AccountStatus.ACTIVE) {
-            throw rule("Akun pengguna belum aktif");
-        }
+        Long userId = userRepository.findIdByEmail(authenticatedEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Pengguna tidak ditemukan"));
 
         if (form == null || form.getFacilityId() == null) {
             throw rule("Fasilitas wajib dipilih");
@@ -94,10 +84,21 @@ public class ReservationSubmissionService {
          * Facility harus dicari ulang dari database.
          * Jangan percaya status facility yang berasal dari UI.
          */
-        Facility facility = facilityRepository.findById(form.getFacilityId())
+        Facility facility = facilityRepository.findByIdForUpdate(form.getFacilityId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Fasilitas tidak ditemukan")
                 );
+
+        // Lock the requester after the controlling facility to serialize with deactivation.
+        User user = userRepository.findByIdForUpdate(userId).orElseThrow(() ->
+                new ResourceNotFoundException("Pengguna tidak ditemukan"));
+        if (user.getRole() != Role.PENGGUNA) throw rule("Hanya Pengguna yang dapat mengajukan reservasi");
+        if (user.getAccountStatus() != AccountStatus.ACTIVE) throw rule("Akun pengguna belum aktif");
+        if (facility.isEquipment()) {
+            if (form.getQuantity() == null || form.getQuantity() <= 0) throw rule("Jumlah alat wajib berupa bilangan bulat positif.");
+        } else if (form.getQuantity() != null) {
+            throw rule("Jumlah hanya dapat dipilih untuk fasilitas Alat.");
+        }
 
         if (facility.getAdministrativeStatus() != AdministrativeStatus.ACTIVE) {
             throw rule(
@@ -144,20 +145,16 @@ public class ReservationSubmissionService {
         /*
          * Availability shown in the browser is advisory. Re-check immediately
          * before accepting the request so stale forms cannot reserve an
-         * approved or blocked interval. Pending requests intentionally do not
-         * participate in this check.
+         * approved or blocked interval. Equipment pending requests also allocate stock.
+         * The controlling facility row is locked until commit.
          */
-        availabilityService.ensureIntervalAvailable(
-                facility.getId(),
-                startAt,
-                endAt
-        );
+        availabilityService.ensureReservationAvailable(facility, startAt, endAt, form.getQuantity());
 
         /*
          * FR-10
          */
-        boolean proposalRequired =
-                requiresProposal(
+        boolean proposalRequired = (facility.isEquipment() && form.getQuantity() > 5)
+                || requiresProposal(
                         facility,
                         startAt,
                         endAt
@@ -224,6 +221,7 @@ public class ReservationSubmissionService {
                 expiresAt
         );
 
+        reservation.setQuantity(form.getQuantity());
         return reservationRepository.save(reservation);
     }
 

@@ -43,17 +43,20 @@ public class ReservationAvailabilityService {
     private final ReservationRepository reservationRepository;
     private final FacilityBlockageRepository blockageRepository;
     private final Clock clock;
+    private final EquipmentAvailabilityService equipmentAvailability;
 
     public ReservationAvailabilityService(
             FacilityRepository facilityRepository,
             ReservationRepository reservationRepository,
             FacilityBlockageRepository blockageRepository,
-            Clock clock
+            Clock clock,
+            EquipmentAvailabilityService equipmentAvailability
     ) {
         this.facilityRepository = facilityRepository;
         this.reservationRepository = reservationRepository;
         this.blockageRepository = blockageRepository;
         this.clock = clock;
+        this.equipmentAvailability = equipmentAvailability;
     }
 
     @Transactional(readOnly = true)
@@ -63,6 +66,12 @@ public class ReservationAvailabilityService {
             LocalDateTime selectedStart,
             LocalDateTime selectedEnd
     ) {
+        return availability(facilityId, date, selectedStart, selectedEnd, null);
+    }
+
+    @Transactional(readOnly = true)
+    public ReservationAvailabilityView availability(Long facilityId, LocalDate date,
+            LocalDateTime selectedStart, LocalDateTime selectedEnd, Integer quantity) {
         Facility facility = activeFacility(facilityId);
         validateDate(date);
 
@@ -73,18 +82,20 @@ public class ReservationAvailabilityService {
         List<FacilityBlockage> blockages = blockageRepository.findOverlapping(
                 facilityId, dayStart, dayEnd, BLOCKING_BLOCKAGE_STATUSES);
 
+        var allocations = facility.isEquipment() ? equipmentAvailability.allocations(facility, dayStart, dayEnd) : List.<ReservationRepository.EquipmentAllocation>of();
         LocalDateTime now = LocalDateTime.now(clock);
         List<ReservationSlotView> slots = new ArrayList<>();
         for (LocalDateTime start = dayStart; start.isBefore(dayEnd); start = start.plusMinutes(SLOT_MINUTES)) {
             LocalDateTime end = start.plusMinutes(SLOT_MINUTES);
             ReservationSlotState state;
             String reason = null;
+            Integer availableQuantity = facility.isEquipment() ? equipmentAvailability.availableFromAllocations(facility, allocations, start, end, firstOverlappingBlockage(blockages, start, end) != null) : null;
 
             FacilityBlockage blockage = firstOverlappingBlockage(blockages, start, end);
             if (blockage != null) {
                 state = ReservationSlotState.BLOCKED;
                 reason = blockage.getPublicReason();
-            } else if (overlapsReservation(reservations, start, end)) {
+            } else if (facility.isEquipment() ? availableQuantity == 0 : overlapsReservation(reservations, start, end)) {
                 state = ReservationSlotState.RESERVED;
             } else if (start.isBefore(now)) {
                 state = ReservationSlotState.PAST;
@@ -95,7 +106,8 @@ public class ReservationAvailabilityService {
             } else {
                 state = ReservationSlotState.AVAILABLE;
             }
-            slots.add(new ReservationSlotView(start, end, state, reason));
+            slots.add(new ReservationSlotView(start, end, state, reason, availableQuantity, facility.getTotalStock(),
+                    facility.isEquipment() ? EquipmentAvailabilityService.maximumConcurrent(allocations, start, end) : null));
         }
 
         boolean aula = isAula(facility);
@@ -118,8 +130,11 @@ public class ReservationAvailabilityService {
             }
         }
 
+        Integer availableQuantity = facility.isEquipment() && effectiveStart != null && effectiveEnd != null
+                ? equipmentAvailability.availableFromAllocations(facility, allocations, effectiveStart, effectiveEnd, firstOverlappingBlockage(blockages, effectiveStart, effectiveEnd) != null) : null;
         return new ReservationAvailabilityView(
-                facility, date, aula, aulaAvailable, slots, endTimes, effectiveStart, effectiveEnd);
+                facility, date, aula, aulaAvailable, slots, endTimes, effectiveStart, effectiveEnd,
+                availableQuantity, quantity == null ? 1 : quantity);
     }
 
     @Transactional(readOnly = true)
@@ -132,6 +147,11 @@ public class ReservationAvailabilityService {
             throw new BusinessRuleException(
                     "Satu atau lebih slot yang dipilih tidak lagi tersedia. Silakan pilih waktu lain.");
         }
+    }
+
+    public void ensureReservationAvailable(Facility facility, LocalDateTime start, LocalDateTime end, Integer quantity) {
+        if (facility.isEquipment()) equipmentAvailability.ensureFits(facility, start, end, quantity, null);
+        else ensureIntervalAvailable(facility.getId(), start, end);
     }
 
     public LocalDate minimumDate() {

@@ -441,12 +441,15 @@
       summary.querySelector("[data-duration-range]").textContent = startLabel + "–" + endInput.dataset.endLabel;
     }
     const proposal = form?.querySelector("[data-proposal-state]");
-    const required = minutes >= 360;
+    const required = minutes >= 360 || Number(form?.querySelector('[name="quantity"]')?.value || 0) > 5;
     proposal?.classList.toggle("ui-proposal-required", required);
     if (proposal) {
+      proposal.dataset.proposalRequired = String(required);
+      const upload = form.querySelector('input[name="proposal"]');
+      if (upload) upload.required = required;
       proposal.querySelector("[data-proposal-label]").textContent = required ? "Wajib" : "Opsional";
       proposal.querySelector("[data-proposal-help]").textContent = required
-        ? "Wajib untuk reservasi berdurasi 6 jam atau lebih."
+        ? "Wajib untuk durasi 6 jam atau lebih, atau jumlah Alat lebih dari 5 unit."
         : "Opsional untuk reservasi kurang dari 6 jam.";
     }
   });
@@ -502,11 +505,31 @@
     });
   }
 
+  function syncEquipmentControls(root) {
+    root.querySelectorAll?.("[data-facility-type]").forEach(function (select) {
+      const container = select.closest("form")?.querySelector("[data-equipment-stock]");
+      if (!container) return;
+      const equipment = select.selectedOptions[0]?.dataset.equipment === "true";
+      container.hidden = !equipment;
+      const input = container.querySelector("input");
+      input.disabled = !equipment;
+      input.required = equipment;
+    });
+    root.querySelectorAll?.("[data-proposal-state]").forEach(function (state) {
+      const upload = state.closest("form")?.querySelector('input[name="proposal"]');
+      if (upload) upload.required = state.dataset.proposalRequired === "true";
+    });
+  }
+  document.addEventListener("change", function (event) {
+    if (event.target.matches("[data-facility-type]")) syncEquipmentControls(event.target.closest("form"));
+  });
+  syncEquipmentControls(document);
   promoteOpenDialogs(document);
   document.addEventListener("htmx:afterSwap", function (event) {
     // History snapshots can contain an older name; only fresh server responses
     // may replace the current navigation name.
     if (event.detail.xhr) syncDisplayName(document);
+    syncEquipmentControls(document);
     promoteOpenDialogs(document);
     if (event.detail.target?.id === "reservation-availability") {
       document.getElementById("reservation-availability")?.querySelector('input[name="startAt"]:checked, input[name="endAt"]')?.focus();
@@ -517,6 +540,7 @@
     initializeEnhancements(document);
     event.detail.target?.querySelector?.('[data-form-errors]')?.focus();
     initializeFilters(document);
+    syncEquipmentControls(document);
     promoteOpenDialogs(document);
     syncActiveNavigation();
     if (event.detail.target?.id?.endsWith("modal-region")) {

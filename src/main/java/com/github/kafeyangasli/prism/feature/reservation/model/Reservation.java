@@ -54,6 +54,9 @@ public class Reservation {
     @Column(nullable = false, length = 1000)
     private String purpose;
 
+    @Column(name = "quantity")
+    private Integer quantity;
+
     @Column(name = "proposal_path", length = 1000)
     private String proposalPath;
 
@@ -122,6 +125,7 @@ public class Reservation {
 
     @PrePersist
     void beforeInsert() {
+        validateQuantity();
         validateTimeRange();
         validateProposalEvidence();
         LocalDateTime now = LocalDateTime.now();
@@ -131,6 +135,7 @@ public class Reservation {
 
     @PreUpdate
     void beforeUpdate() {
+        validateQuantity();
         validateTimeRange();
         validateProposalEvidence();
         updatedAt = LocalDateTime.now();
@@ -144,7 +149,14 @@ public class Reservation {
 
     public boolean isProposalRequired() {
         return Duration.between(startAt, endAt).toMinutes() >= 360
+                || (quantity != null && quantity > 5)
                 || "Aula".equalsIgnoreCase(facility.getType());
+    }
+
+    private void validateQuantity() {
+        if (facility.isEquipment() ? quantity == null || quantity <= 0 : quantity != null) {
+            throw new IllegalArgumentException("Jumlah positif wajib untuk reservasi Alat saja.");
+        }
     }
 
     public boolean isProposalSubmitted() {

@@ -42,7 +42,7 @@
                 <tr data-list-record th:attr="data-record-status=${reservation.status}"
                         th:each="reservation : ${reservations}">
                     <td data-label="Fasilitas"
-                        th:text="${reservation.facility.name}">
+                        th:text="${reservation.facility.name + (reservation.quantity != null ? ' · ' + reservation.quantity + ' unit' : '')}">
                     </td>
                     <td data-label="Mulai"
                         th:text="${reservation.startAt != null ? #temporals.format(reservation.startAt, 'dd MMM yyyy, HH:mm') : '—'}">

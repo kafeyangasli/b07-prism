@@ -15,6 +15,46 @@ import com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
+    boolean existsByFacilityId(Long facilityId);
+
+    // A current scalar read avoids stale managed Reservation instances and a MySQL
+    // repeatable-read snapshot established before waiting for the facility lock.
+    interface EquipmentAllocation {
+        LocalDateTime getStartAt();
+        LocalDateTime getEndAt();
+        Integer getQuantity();
+    }
+
+    @Query("""
+            select r.startAt as startAt, r.endAt as endAt, r.quantity as quantity
+            from Reservation r
+            where r.facility.id = :facilityId
+              and r.startAt < :endAt and r.endAt > :startAt
+              and (r.status = com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus.APPROVED
+                   or (r.status = com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus.PENDING
+                       and r.startAt > :now and (r.expiresAt is null or r.expiresAt > :now)))
+              and (:ignoredId is null or r.id <> :ignoredId)
+            """)
+    List<EquipmentAllocation> findEquipmentAllocations(@Param("facilityId") Long facilityId,
+            @Param("startAt") LocalDateTime startAt, @Param("endAt") LocalDateTime endAt,
+            @Param("now") LocalDateTime now, @Param("ignoredId") Long ignoredId);
+
+    interface LifecycleCandidate {
+        Long getId();
+        Long getFacilityId();
+        Long getUserId();
+    }
+
+    @Query("""
+            select r.id as id, r.facility.id as facilityId, r.user.id as userId from Reservation r
+            where (r.status = com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus.PENDING
+                       and r.expiresAt is not null and r.expiresAt <= :now)
+               or (r.status = com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus.APPROVED
+                       and r.endAt < :now)
+            order by r.facility.id, r.user.id, r.id
+            """)
+    List<LifecycleCandidate> findLifecycleCandidates(@Param("now") LocalDateTime now);
+
     interface ReservationLockContext {
         Long getFacilityId();
         Long getUserId();

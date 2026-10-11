@@ -19,6 +19,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface FacilityRepository extends JpaRepository<Facility, Long> {
 
+    @Override
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "facilityType")
+    Optional<Facility> findById(Long id);
+
     // Public facility catalogue and admin facility management.
     Optional<Facility> findByCodeIgnoreCase(String code);
 

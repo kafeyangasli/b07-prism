@@ -40,15 +40,25 @@ public class FacilityTypeService {
     public FacilityType create(FacilityTypeDto dto) {
         String code = requireCode(dto.getCode());
         String name = requireName(dto.getName());
+        FacilityType type = new FacilityType(code, name, dto.getDescription());
+        if (type.isQuantityBased() && "Aula".equalsIgnoreCase(name)) {
+            throw new BusinessRuleException("Tipe Alat tidak dapat diberi nama Aula.");
+        }
         rejectDuplicateCode(code, null);
         rejectDuplicateName(name, null);
-        return facilityTypeRepository.save(new FacilityType(code, name, dto.getDescription()));
+        return facilityTypeRepository.save(type);
     }
 
     public FacilityType update(Long id, FacilityTypeDto dto) {
         FacilityType type = getById(id);
         String name = requireName(dto.getName());
         rejectDuplicateName(name, id);
+        if (type.isQuantityBased() && "Aula".equalsIgnoreCase(name)) {
+            throw new BusinessRuleException("Tipe Alat tidak dapat diubah menjadi Aula.");
+        }
+        if (!type.isQuantityBased() && "Alat".equalsIgnoreCase(name)) {
+            throw new BusinessRuleException("Buat tipe Alat baru untuk reservasi berdasarkan jumlah; tipe lain tidak dapat diubah menjadi Alat.");
+        }
         type.updateDetails(name, dto.getDescription());
         return facilityTypeRepository.save(type);
     }

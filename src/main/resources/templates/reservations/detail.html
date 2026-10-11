@@ -11,7 +11,7 @@
         <div class="grid items-start gap-6 xl:grid-cols-3">
         <section class="ui-card ui-card-body xl:col-span-2">
             <div class="ui-section-heading mb-4">
-                <h2 th:text="${reservation.facility.name}">Fasilitas</h2>
+                <h2 th:text="${reservation.facility.name + (reservation.quantity != null ? ' · ' + reservation.quantity + ' unit' : '')}">Fasilitas</h2>
                 <span th:replace="~{fragments/status :: badge(${reservation.status})}"></span>
             </div>
             <div class="ui-alert ui-alert-info mb-6" th:switch="${reservation.status.name()}">

@@ -7,13 +7,16 @@
         <header th:replace="~{fragments/page :: heading('Administrasi', 'Rekap dan ekspor', 'Tinjau tingkat penggunaan fasilitas dan jumlah laporan berdasarkan periode.')}"></header>
         <div th:replace="~{fragments/feedback :: flash}"></div>
 
-        <div class="ui-sidebar-layout">
+        <div id="recap-content" class="ui-sidebar-layout">
             <aside class="ui-card ui-card-body ui-filter-panel" aria-labelledby="recap-filter-title">
                 <div>
                     <h2 id="recap-filter-title">Konfigurasi rekap</h2>
                     <p class="ui-hint">Tentukan periode. Fasilitas, tipe, dan lokasi dapat dikosongkan.</p>
                 </div>
-                <form id="recap-filter-form" class="ui-form" method="get" th:action="@{/admin/recap}">
+                <form id="recap-filter-form" class="ui-form" method="get" th:action="@{/admin/recap}"
+                      data-auto-filter hx-get="/admin/recap" hx-trigger="submit, prism:filter"
+                      hx-target="#recap-results" hx-select="#recap-results" hx-swap="outerHTML"
+                      hx-push-url="true" hx-sync="this:replace" hx-indicator="#global-progress">
                     <div>
                         <label class="ui-label" for="recap-start">Tanggal mulai</label>
                         <input id="recap-start" class="ui-input" type="date" name="startDate"
@@ -36,13 +39,14 @@
                     <fieldset th:replace="~{fragments/workspace :: multiFilter('recap-type', 'Tipe fasilitas', 'facilityTypes', ${typeOptions})}"></fieldset>
                     <fieldset th:replace="~{fragments/workspace :: multiFilter('recap-location', 'Lokasi', 'locations', ${locationOptions})}"></fieldset>
                     <div class="ui-form-actions">
-                        <button class="ui-btn ui-btn-primary" type="submit">Tampilkan rekap</button>
-                        <a class="ui-btn ui-btn-secondary" th:href="@{/admin/recap}">Atur ulang</a>
+                        <a class="ui-btn ui-btn-secondary" th:href="@{/admin/recap}" hx-get="/admin/recap"
+                           hx-target="#recap-content" hx-select="#recap-content" hx-swap="outerHTML"
+                           hx-push-url="true" hx-sync="#recap-filter-form:replace">Atur ulang</a>
                     </div>
                 </form>
             </aside>
 
-            <section class="min-w-0 space-y-5" aria-labelledby="recap-result-title">
+            <section id="recap-results" class="min-w-0 space-y-5" aria-labelledby="recap-result-title" aria-live="polite">
                 <div th:if="${error != null}" class="ui-alert ui-alert-error" role="alert">
                     <p th:text="${error}">Rekap tidak dapat dibuat.</p>
                 </div>

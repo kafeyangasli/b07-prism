@@ -56,11 +56,11 @@ class DevelopmentDatabaseSeederIntegrationTest {
     @TempDir Path directory;
 
     @Test void freshStartupSeedsAllFacilitiesAndAuthenticatableVerifiedAccountsAndRepeatsSafely() throws Exception {
-        assertThat(facilities.count()).isEqualTo(18);
+        assertThat(facilities.count()).isEqualTo(19);
         assertThat(types.count()).isEqualTo(7);
         assertThat(users.count()).isEqualTo(4);
-        assertThat(images.count()).isEqualTo(18);
-        assertThat(storedFileCount()).isEqualTo(18);
+        assertThat(images.count()).isEqualTo(19);
+        assertThat(storedFileCount()).isEqualTo(19);
         var originalImagePaths = images.findAll().stream().map(FacilityImage::getStoragePath).toList();
         for (var entry : FacilitySeedSource.read(Path.of("initial_data"))) {
             var facility = facilities.findByCodeIgnoreCase(entry.code()).orElseThrow();
@@ -68,7 +68,7 @@ class DevelopmentDatabaseSeederIntegrationTest {
             assertThat(facility.getDescription()).isEqualTo(entry.description());
             assertThat(facility.getCapacity()).isEqualTo(entry.capacity());
             assertThat(facility.getTotalStock()).isEqualTo(entry.stock());
-            assertThat(facility.getLocation()).isEqualTo("Universitas Diponegoro");
+            assertThat(facility.getLocation()).isEqualTo(entry.location());
             assertThat(facility.getAdministrativeStatus()).isEqualTo(AdministrativeStatus.ACTIVE);
             assertThat(types.findByCodeIgnoreCase(entry.typeCode()).orElseThrow().isQuantityBased())
                     .isEqualTo(entry.stock() != null);
@@ -106,25 +106,32 @@ class DevelopmentDatabaseSeederIntegrationTest {
         users.save(edited);
         Facility editedFacility = facilities.findById(facilities.findByCodeIgnoreCase("F001").orElseThrow().getId()).orElseThrow();
         editedFacility.setDescription("Edited by administrator");
+        editedFacility.setLocation("Administrator location");
+        editedFacility.setName("Administrator hall");
+        editedFacility.setCapacity(123);
         facilities.save(editedFacility);
         users.save(new User("Existing", "existing@example.test", encoder.encode("custom"), Role.PENGGUNA, AccountStatus.ACTIVE));
         seeder.run(new DefaultApplicationArguments());
-        assertThat(facilities.count()).isEqualTo(18);
+        assertThat(facilities.count()).isEqualTo(19);
         assertThat(types.count()).isEqualTo(7);
         assertThat(users.count()).isEqualTo(5);
         assertThat(images.findAll()).extracting(FacilityImage::getStoragePath).containsExactlyInAnyOrderElementsOf(originalImagePaths);
-        assertThat(storedFileCount()).isEqualTo(18);
+        assertThat(storedFileCount()).isEqualTo(19);
         assertThat(users.findByEmailIgnoreCase(edited.getEmail()).orElseThrow().getPasswordHash()).isEqualTo(oldHash);
         assertThat(users.findByEmailIgnoreCase(edited.getEmail()).orElseThrow().getAccountStatus()).isEqualTo(AccountStatus.INACTIVE);
         assertThat(facilities.findByCodeIgnoreCase("F001").orElseThrow().getDescription()).isEqualTo("Edited by administrator");
+        var preservedHall = facilities.findByCodeIgnoreCase("F001").orElseThrow();
+        assertThat(preservedHall.getLocation()).isEqualTo("Administrator location");
+        assertThat(preservedHall.getName()).isEqualTo("Administrator hall");
+        assertThat(preservedHall.getCapacity()).isEqualTo(123);
 
         // A missing description still inserts; the existing type is reused even with a legacy code.
         FacilityType legacy = types.findByCodeIgnoreCase("RUANG").orElseThrow();
         jdbc.update("UPDATE facility_types SET code = 'RUANG-0000000001' WHERE id = ?", legacy.getId());
-        Files.writeString(directory.resolve("missing.txt"), "F019,Ruang Baru,20");
+        Files.writeString(directory.resolve("missing.txt"), "F025,Ruang Baru,20");
         Files.writeString(directory.resolve("multiline.txt"), "F022,Ruang Deskripsi,\"Baris pertama, kedua\n  baris ketiga\",20");
         runSource(directory);
-        Facility missing = facilities.findByCodeIgnoreCase("F019").orElseThrow();
+        Facility missing = facilities.findByCodeIgnoreCase("F025").orElseThrow();
         assertThat(missing.getDescription()).isNull();
         assertThat(facilities.findById(missing.getId()).orElseThrow().getFacilityType().getId()).isEqualTo(legacy.getId());
         assertThat(facilities.findByCodeIgnoreCase("F022").orElseThrow().getDescription())
@@ -156,8 +163,8 @@ class DevelopmentDatabaseSeederIntegrationTest {
                 .extracting(FacilityImage::getId).containsExactly(custom.getId());
         assertThat(images.findById(custom.getId()).orElseThrow().isThumbnail()).isTrue();
         assertThat(images.findById(custom.getId()).orElseThrow().getDisplayOrder()).isEqualTo(4);
-        assertThat(images.count()).isEqualTo(20);
-        assertThat(storedFileCount()).isEqualTo(20);
+        assertThat(images.count()).isEqualTo(21);
+        assertThat(storedFileCount()).isEqualTo(21);
 
         Path invalidSource = Files.createDirectory(directory.resolve("invalid"));
         Files.writeString(invalidSource.resolve("valid.txt"), "F023,Aula Valida,20");
@@ -168,8 +175,8 @@ class DevelopmentDatabaseSeederIntegrationTest {
                 .hasMessageContaining("F024");
         assertThat(facilities.existsByCodeIgnoreCase("F023")).isFalse();
         assertThat(facilities.existsByCodeIgnoreCase("F024")).isFalse();
-        assertThat(images.count()).isEqualTo(20);
-        assertThat(storedFileCount()).isEqualTo(20);
+        assertThat(images.count()).isEqualTo(21);
+        assertThat(storedFileCount()).isEqualTo(21);
 
         // A conflict after an earlier insertion must roll back that insertion too.
         jdbc.update("UPDATE facility_types SET quantity_based = TRUE WHERE id = ?", legacy.getId());
@@ -178,9 +185,9 @@ class DevelopmentDatabaseSeederIntegrationTest {
         Files.writeString(directory.resolve("b.txt"), "F021,Ruang Konflik,20");
         assertThatThrownBy(() -> runSource(directory)).hasMessageContaining("F021").hasMessageContaining("incompatible");
         assertThat(facilities.existsByCodeIgnoreCase("F020")).isFalse();
-        assertThat(facilities.count()).isEqualTo(20);
-        assertThat(images.count()).isEqualTo(20);
-        assertThat(storedFileCount()).isEqualTo(20);
+        assertThat(facilities.count()).isEqualTo(21);
+        assertThat(images.count()).isEqualTo(21);
+        assertThat(storedFileCount()).isEqualTo(21);
     }
 
     private void runSource(Path source) {

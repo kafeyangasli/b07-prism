@@ -1,1 +1,1 @@
-F004,Lapangan Basket,Lapangan untuk olahraga dan latihan bola basket.,20
+F004,Lapangan Basket,Lapangan untuk olahraga dan latihan bola basket.,100

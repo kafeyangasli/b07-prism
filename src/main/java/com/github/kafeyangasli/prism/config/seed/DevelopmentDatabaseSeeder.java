@@ -71,7 +71,7 @@ public class DevelopmentDatabaseSeeder implements ApplicationRunner {
                 if (type.isQuantityBased() != (entry.stock() != null)) {
                     throw new IllegalStateException("Facility seed " + entry.code() + ": incompatible existing type " + type.getCode());
                 }
-                facility = new Facility(entry.code(), entry.name(), type, "Universitas Diponegoro",
+                facility = new Facility(entry.code(), entry.name(), type, entry.location(),
                         entry.capacity(), entry.description(), AdministrativeStatus.ACTIVE);
                 facility.setTotalStock(entry.stock());
                 facilities.save(facility);

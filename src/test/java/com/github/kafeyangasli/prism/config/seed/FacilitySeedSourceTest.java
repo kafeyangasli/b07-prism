@@ -11,13 +11,47 @@ class FacilitySeedSourceTest {
 
     @Test void readsEveryActualRecordIncludingStockAndQuotedCommas() throws Exception {
         var entries = FacilitySeedSource.read(Path.of("initial_data"));
-        assertThat(entries).hasSize(18);
+        assertThat(entries).hasSize(19);
         assertThat(entries).allSatisfy(e -> assertThat(e.image()).isRegularFile());
         var aula = entries.stream().filter(e -> e.code().equals("F001")).findFirst().orElseThrow();
         assertThat(aula.capacity()).isEqualTo(300);
+        assertThat(aula.name()).isEqualTo("Gedung Prof Soedarto");
+        assertThat(aula.typeCode()).isEqualTo("AULA");
         assertThat(aula.description()).isEqualTo("Aula untuk seminar, kuliah umum, dan kegiatan mahasiswa berskala besar.");
         assertThat(entries.stream().filter(e -> e.stock() != null).map(FacilitySeedSource.Entry::stock))
                 .containsExactly(25, 55, 100, 40, 75);
+        assertThat(entries.stream().filter(e -> java.util.Set.of("F002", "F003", "F007", "F011", "F012", "F013", "F019").contains(e.code())))
+                .hasSize(7).allSatisfy(e -> assertThat(e.location()).isEqualTo("FSM - UNDIP"));
+        assertThat(entries.stream().filter(e -> e.stock() != null))
+                .hasSize(5).allSatisfy(e -> assertThat(e.location()).isEqualTo("ICT - UNDIP"));
+        assertThat(entries.stream().filter(e -> e.code().equals("F005")).findFirst().orElseThrow().location())
+                .isEqualTo("Perpustakaan UNDIP");
+        assertThat(entries.stream().filter(e -> java.util.Set.of("F004", "F008", "F009").contains(e.code())))
+                .hasSize(3).allSatisfy(e -> {
+                    assertThat(e.typeCode()).isEqualTo("LAPANGAN");
+                    assertThat(e.typeName()).isEqualTo("Lapangan");
+                });
+        assertThat(entries.stream().filter(e -> e.code().equals("F004")).findFirst().orElseThrow().capacity()).isEqualTo(100);
+        var acintya = entries.stream().filter(e -> e.code().equals("F019")).findFirst().orElseThrow();
+        assertThat(acintya.name()).isEqualTo("Acintya Prasada");
+        assertThat(acintya.typeCode()).isEqualTo("AULA");
+        assertThat(acintya.capacity()).isEqualTo(150);
+        assertThat(acintya.description()).isNull();
+    }
+
+    @Test void optionalMetadataSuppliesLocationAndTypeWithoutChangingDescriptionParsing() throws Exception {
+        Files.writeString(directory.resolve("hall.txt"), "F001,Gedung Baru,\"Baris satu, dua\n  baris tiga\",20");
+        Files.writeString(directory.resolve("facility-metadata.properties"),
+                "F001.location=  FSM - UNDIP  \nF001.typeCode=AULA\nF001.typeName=Aula\n");
+        var entry = FacilitySeedSource.read(directory).getFirst();
+        assertThat(entry.location()).isEqualTo("FSM - UNDIP");
+        assertThat(entry.typeCode()).isEqualTo("AULA");
+        assertThat(entry.description()).isEqualTo("Baris satu, dua\n  baris tiga");
+        Files.writeString(directory.resolve("facility-metadata.properties"), "F001.location= \n");
+        assertThatThrownBy(() -> FacilitySeedSource.read(directory)).hasMessageContaining("hall.txt").hasMessageContaining("location");
+        Files.writeString(directory.resolve("facility-metadata.properties"), "F001.typeCode=AULA\n");
+        assertThatThrownBy(() -> FacilitySeedSource.read(directory)).hasMessageContaining("hall.txt").hasMessageContaining("typeName");
+        assertThat(FacilitySeedSource.parse("legacy.txt", "F001,Aula,20").location()).isEqualTo("Universitas Diponegoro");
     }
 
     @Test void preservesMultilineCommasQuotesAndUnusualDescriptionFormatting() {

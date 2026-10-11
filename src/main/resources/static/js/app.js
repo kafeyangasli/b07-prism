@@ -364,6 +364,7 @@
       const group = clearMulti.closest('[data-multi-filter]');
       group.querySelectorAll('input[type="checkbox"]').forEach(input => { input.checked = false; });
       updateMultiFilter(group);
+      scheduleFilter(group.closest('form[data-auto-filter]'));
       return;
     }
     const resetHistory = event.target.closest('[data-history-reset]');
@@ -393,9 +394,27 @@
   });
 
   document.addEventListener('change', function (event) {
+    scheduleFilter(event.target.closest('form[data-auto-filter]'));
     if (event.target.matches('[data-multi-filter] input[type="checkbox"]')) updateMultiFilter(event.target.closest('[data-multi-filter]'));
     if (event.target.matches('[data-record-from], [data-record-to]')) {
       filterRecords(event.target.closest('[data-list-tools]').querySelector('[data-list-search]'));
+    }
+  });
+
+  const filterTimers = new WeakMap();
+  function scheduleFilter(form, delay = 0) {
+    if (!form) return;
+    clearTimeout(filterTimers.get(form));
+    filterTimers.set(form, setTimeout(function () {
+      if (form.isConnected && form.checkValidity()) {
+        form.dispatchEvent(new Event('prism:filter', { bubbles: true }));
+      }
+    }, delay));
+  }
+
+  document.addEventListener('input', function (event) {
+    if (event.target.matches('input[type="number"]')) {
+      scheduleFilter(event.target.closest('form[data-auto-filter]'), 250);
     }
   });
 

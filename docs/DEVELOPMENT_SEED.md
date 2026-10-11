@@ -36,17 +36,31 @@ into `totalStock` and the preceding text remains the description. Equipment uses
 existing `Alat` quantity semantics. Its required capacity is one per equipment unit;
 inventory is represented only by the explicitly supplied stock count.
 
-Types are derived from the source names: Aula, Kelas, Ruang, Laboratorium, Olahraga
-(Lapangan/GOR), Masjid, and Alat. Existing types are reused by code or name, including
+Types are derived from the source names: Aula, Kelas, Ruang, Laboratorium, Lapangan
+(Lapangan/GOR), Masjid, and Alat. Optional `<code>.typeCode` and `<code>.typeName`
+entries in `facility-metadata.properties` explicitly classify names such as
+Gedung Prof Soedarto and Acintya Prasada as Aula; both fields are required together.
+Existing types are reused by code or name, including
 types migrated under legacy codes. Missing types are created with stable uppercase
 codes. An incompatible existing quantity-based type causes rollback, never an edit.
 Unknown categories, missing/nonpositive/overflowing capacity or stock, duplicate
 source codes, and overlong required fields fail with source context.
 
-Source records have no location. The broad location `Universitas Diponegoro` follows
-the campus identified in README.md; no building/address is guessed. All new facilities
-are administratively ACTIVE. These category, location, and per-unit capacity mappings
-are the only facility assumptions.
+Locations come from UTF-8 `initial_data/facility-metadata.properties`, keyed as
+`<code>.location`. Masjid FSM, laboratories B/C/D, classrooms A101/B201, and
+Acintya Prasada use `FSM - UNDIP`; Ruang Rapat uses `Perpustakaan UNDIP`; all five
+equipment records use `ICT - UNDIP`. Records without a location entry retain the
+broad campus location `Universitas Diponegoro`. Blank or overlong supplied locations
+fail clearly. All new facilities are administratively ACTIVE.
+
+The original F001 hall is now Gedung Prof Soedarto (300 people), F004 Lapangan
+Basket has capacity 100, and F019 adds Acintya Prasada with capacity 150 (supplied
+for the development seed) and no invented description. The new hall's companion
+photo comes from the official FSM UNDIP facilities page; attribution and the
+original image link are recorded in `initial_data/IMAGE_SOURCES.md`.
+These changes apply to newly inserted facilities. Existing seeded or administrator-edited
+facilities/types are not renamed or relocated automatically; existing databases keep
+their current values and gain only missing records.
 
 ## Companion images
 

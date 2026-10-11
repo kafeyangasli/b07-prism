@@ -286,7 +286,7 @@ Hentikan aplikasi dengan `Ctrl+C` pada terminal yang menjalankannya.
 
 ### 6. Data awal dan akun pengembangan
 
-Pada startup pertama, seeder otomatis membuat 18 fasilitas dari `initial_data`, tipe
+Pada startup pertama, seeder otomatis membuat 19 fasilitas dari `initial_data`, tipe
 fasilitas yang dibutuhkan, gambar pendamping beserta thumbnail, dan empat akun berikut.
 Gambar `.jpg`, `.jpeg`, atau `.png` dipasangkan dengan file `.txt` yang memiliki nama
 dasar sama, lalu disalin ke `PRISM_FACILITY_STORAGE`. Seeder juga mengisi galeri kosong

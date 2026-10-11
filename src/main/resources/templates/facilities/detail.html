@@ -33,20 +33,22 @@
                     </div>
                 </header>
                 <p th:if="${facility.administrativeStatus.name() != 'ACTIVE'}" class="ui-alert ui-alert-info">Fasilitas tidak aktif dan tidak dapat menerima reservasi baru.</p>
-                <section class="ui-card ui-card-body facility-gallery" aria-label="Galeri fasilitas" data-facility-gallery>
-                    <img class="facility-image-main" th:src="${facility.thumbnail != null ? facility.thumbnail.url : '/images/facility-placeholder.svg'}"
+                <div class="grid items-start gap-6 xl:grid-cols-3">
+                <section class="ui-card ui-card-body facility-gallery xl:col-span-2" aria-label="Galeri fasilitas" data-facility-gallery>
+                    <img class="aspect-video max-h-120 w-full rounded-xl bg-ink-100 object-contain" th:src="${facility.thumbnail != null ? facility.thumbnail.url : '/images/facility-placeholder.svg'}"
                          th:alt="${'Foto utama ' + facility.name}" data-gallery-main data-facility-image>
                     <p th:if="${#lists.isEmpty(facility.images)}" class="ui-hint">Belum ada gambar fasilitas.</p>
-                    <div class="facility-image-strip">
-                        <a th:each="image : ${facility.images}" th:href="${image.url}" data-gallery-choice
+                    <div class="flex gap-3 overflow-x-auto py-4">
+                        <a th:each="image : ${facility.images}" th:href="${image.url}" data-gallery-choice class="w-28 shrink-0 rounded-lg focus-visible:outline-primary"
                            th:aria-label="${'Lihat foto ' + facility.name + ' ke-' + (image.displayOrder + 1)}">
-                            <img class="facility-image-small" th:src="${image.url}"
+                            <img class="h-24 w-full rounded-lg object-cover" th:src="${image.url}"
                                  th:alt="${'Foto ' + facility.name + ' ke-' + (image.displayOrder + 1)}" loading="lazy" data-facility-image>
                         </a>
                     </div>
                 </section>
-                <section class="ui-card ui-card-body">
-                    <dl class="ui-details">
+                <section class="ui-card ui-card-body xl:sticky xl:top-6">
+                    <h2 class="mb-5">Tentang fasilitas</h2>
+                    <dl class="grid gap-5 [&_dt]:text-sm [&_dt]:text-muted [&_dd]:mt-1 [&_dd]:font-medium">
                         <div>
                             <dt>
                                 Kode
@@ -103,6 +105,7 @@
                         </div>
                     </dl>
                 </section>
+                </div>
                 <section class="ui-section">
                     <div>
                         <h2>

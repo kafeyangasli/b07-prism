@@ -9,10 +9,10 @@
     <p th:if="${imageSuccess != null}" class="ui-alert ui-alert-success" role="status" th:text="${imageSuccess}"></p>
     <p th:if="${imageError != null}" class="ui-alert ui-alert-error" role="alert" th:text="${imageError}"></p>
     <p th:if="${#lists.isEmpty(managedImages)}" class="ui-hint">Belum ada gambar.</p>
-    <div class="facility-image-grid">
-        <article th:each="image : ${managedImages}" class="ui-card ui-card-body">
+    <div class="my-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <article th:each="image : ${managedImages}" class="ui-card ui-card-body space-y-3">
             <a th:href="${image.url}" target="_blank" rel="noopener">
-                <img class="facility-image-small" th:src="${image.url}" th:alt="${'Foto ' + f.name + ' ke-' + (image.displayOrder + 1)}" data-facility-image>
+                <img class="h-24 w-full rounded-lg object-cover" th:src="${image.url}" th:alt="${'Foto ' + f.name + ' ke-' + (image.displayOrder + 1)}" data-facility-image>
             </a>
             <p th:if="${image.thumbnail}" class="ui-badge" aria-label="Thumbnail saat ini">Thumbnail saat ini</p>
             <form th:unless="${image.thumbnail}" method="post"
@@ -39,7 +39,7 @@
         <label class="ui-label" th:for="${'add-images-' + f.id}">Tambah gambar</label>
         <input class="ui-input" type="file" name="images" multiple accept="image/jpeg,image/png" th:id="${'add-images-' + f.id}" data-image-input>
         <p class="ui-hint">Thumbnail saat ini dipertahankan kecuali Anda memilih thumbnail baru.</p>
-        <div class="facility-image-grid" data-image-previews></div>
+        <div class="facility-image-grid my-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-image-previews></div>
         <button class="ui-btn ui-btn-primary" type="submit">Unggah gambar</button>
     </form>
 </section>

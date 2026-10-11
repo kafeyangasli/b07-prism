@@ -1,6 +1,10 @@
 (() => {
   'use strict';
   const previews = new WeakMap();
+  // A cached image failure can occur before this deferred script attaches listeners.
+  document.querySelectorAll('.ui-avatar').forEach(image => {
+    if (image.complete && image.naturalWidth === 0) image.src = '/images/avatar-placeholder.svg';
+  });
   function clear(input) {
     const old = previews.get(input);
     if (old) URL.revokeObjectURL(old);
@@ -34,6 +38,9 @@
     if (image.closest?.('[data-avatar-preview]') && image.src.startsWith('blob:')) {
       image.src = image.dataset.currentAvatarSrc;
       image.closest('form').querySelector('[data-avatar-preview-status]').textContent = 'Gambar tidak dapat dipratinjau. Pilih gambar yang valid.';
+    }
+    else if (image.matches?.('.ui-avatar') && !image.src.endsWith('/images/avatar-placeholder.svg')) {
+      image.src = '/images/avatar-placeholder.svg';
     }
   }, true);
 })();

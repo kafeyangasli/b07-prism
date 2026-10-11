@@ -59,6 +59,8 @@ class UiRenderingIntegrationTest {
         assertThat(html).contains("/css/app.css", "id=\"main-content\"")
             .doesNotContain("th:field=", "th:replace=", "sec:authorize=");
         assertThat(html.split("<main", -1)).hasSize(2);
+        assertThat(html).contains("data-theme-toggle", "/js/theme.js");
+        assertThat(html.indexOf("/js/theme.js")).isLessThan(html.indexOf("/css/app.css"));
         if (Boolean.getBoolean("prism.ui.snapshots")) {
             Path directory = Path.of("target/ui-preview");
             Files.createDirectories(directory);
@@ -258,6 +260,9 @@ class UiRenderingIntegrationTest {
                 "History-rejected-UI", "Laporan ditolak", null, com.github.kafeyangasli.prism.feature.report.model.ReportStatus.REJECTED));
         mvc.perform(post("/staff/reports/" + report.getId() + "/status").with(csrf()).param("status", "IN_PROGRESS"))
                 .andExpect(status().is3xxRedirection());
+        assertThat(render("/staff/reports", "report-queue"))
+                .contains("data-action-dialog", "name=\"resolutionNote\"", "name=\"_csrf\"", "Selesaikan laporan");
+        render("/staff/reports/" + report.getId(), "report-in-progress");
         mvc.perform(post("/staff/reports/" + report.getId() + "/status").with(csrf())
                 .param("status", "RESOLVED").param("resolutionNote", "Masalah sudah diperbaiki"))
                 .andExpect(redirectedUrl("/staff/reports"));
@@ -405,5 +410,29 @@ class UiRenderingIntegrationTest {
         String html = mvc.perform(get("/facilities?type=nonexistent").header("HX-Request", "true"))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(html).contains("id=\"facility-results\"", "Tidak ada fasilitas ditemukan");
+    }
+
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
+    void redesignedReportPageAndModalKeepTheSameSubmissionContract() throws Exception {
+        String page = render("/reports/new", "report-form");
+        assertThat(page).contains("action=\"/reports\"", "multipart/form-data", "name=\"facilityId\"",
+                "name=\"category\"", "name=\"description\"", "name=\"photo\"", "name=\"_csrf\"",
+                "data-character-count", "Jelaskan kondisi fasilitas").doesNotContain("<dialog");
+        String modal = mvc.perform(get("/reports/new").header("HX-Request", "true"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(modal).contains("id=\"report-dialog\"", "hx-post=\"/reports\"", "name=\"facilityId\"",
+                "name=\"category\"", "name=\"description\"", "name=\"photo\"", "name=\"_csrf\"");
+        render("/reports", "my-reports-empty");
+        var report = reports.save(new com.github.kafeyangasli.prism.feature.report.model.Report(reservation.getUser(), room,
+                "AC", "Pendingin tidak berfungsi", null, com.github.kafeyangasli.prism.feature.report.model.ReportStatus.NEW));
+        assertThat(render("/reports", "my-reports")).contains("data-record-status=\"NEW\"", "data-record-filter=\"IN_PROGRESS\"");
+        render("/reports/" + report.getId(), "my-report-detail");
+    }
+
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
+    void accountViewsKeepProfilePasswordAndDeactivationForms() throws Exception {
+        assertThat(render("/account", "account")).contains("/account/profile", "/account/avatar", "name=\"name\"", "name=\"image\"", "name=\"_csrf\"");
+        assertThat(render("/account/password", "account-password")).contains("name=\"currentPassword\"", "name=\"newPassword\"", "name=\"confirmPassword\"", "data-password-toggle");
+        assertThat(render("/account/delete", "account-delete")).contains("name=\"confirmed\"", "name=\"currentPassword\"", "name=\"_csrf\"");
     }
 }

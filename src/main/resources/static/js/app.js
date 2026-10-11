@@ -1,6 +1,75 @@
 (function () {
   "use strict";
 
+  // Only server-rendered values update the persistent navigation shell.
+  function syncDisplayName(root) {
+    const content = root.querySelector?.('[data-navigation-name]');
+    if (!content) return;
+    document.querySelectorAll('[data-display-name]').forEach(function (element) {
+      element.textContent = content.dataset.navigationName;
+    });
+  }
+
+  function openDialog(dialog, trigger) {
+    document.querySelectorAll('dialog[open]').forEach(function (other) {
+      if (other !== dialog) other.close();
+    });
+    if (trigger) {
+      trigger.setAttribute('aria-expanded', 'true');
+      dialog.returnFocus = trigger;
+    }
+    if (!dialog.open) dialog.showModal();
+    focusDialog(dialog);
+  }
+
+  // Upgrade existing disclosure forms without cloning fields, CSRF tokens or
+  // HTMX attributes. Native dialogs enter the top layer, outside table layout.
+  function initializeActionDialogs(root) {
+    if (typeof HTMLDialogElement === 'undefined' || !HTMLDialogElement.prototype.showModal) return;
+    root.querySelectorAll('.ui-table details:not([data-overlay-ready]), details[data-action-dialog]:not([data-overlay-ready])').forEach(function (details) {
+      const summary = details.querySelector(':scope > summary');
+      if (!summary) return;
+      const dialog = document.createElement('dialog');
+      dialog.id = 'action-' + crypto.randomUUID();
+      dialog.className = 'ui-dialog';
+      dialog.setAttribute('aria-labelledby', dialog.id + '-title');
+      const header = document.createElement('div');
+      header.className = 'ui-dialog-header';
+      const title = document.createElement('h2');
+      title.id = dialog.id + '-title';
+      title.textContent = summary.textContent.trim();
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'ui-btn ui-btn-ghost';
+      close.dataset.closeDialog = '';
+      close.setAttribute('aria-label', 'Tutup dialog');
+      close.textContent = '×';
+      header.append(title, close);
+      const content = document.createElement('div');
+      content.className = 'space-y-5';
+      Array.from(details.children).forEach(function (child) {
+        if (child !== summary) content.append(child);
+      });
+      dialog.append(header, content);
+      details.after(dialog);
+      details.open = false;
+      details.dataset.overlayReady = 'true';
+      details.classList.add('ui-action-dialog');
+      summary.dataset.openDialog = dialog.id;
+      summary.setAttribute('aria-haspopup', 'dialog');
+      summary.setAttribute('aria-controls', dialog.id);
+      summary.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  document.addEventListener('close', function (event) {
+    if (!(event.target instanceof HTMLDialogElement)) return;
+    document.querySelectorAll('[data-open-dialog]').forEach(function (trigger) {
+      if (trigger.dataset.openDialog === event.target.id) trigger.setAttribute('aria-expanded', 'false');
+    });
+    if (event.target.returnFocus?.isConnected) event.target.returnFocus.focus();
+  }, true);
+
   // Early format/size feedback; the server also parses the uploaded PDF.
   document.addEventListener("change", async function (event) {
     const input = event.target;
@@ -127,7 +196,8 @@
     const target = dialog.querySelector("[data-form-errors]")
       || dialog.querySelector('[aria-invalid="true"]')
       || dialog.querySelector("[autofocus]")
-      || dialog.querySelector('input:not([type="hidden"]), select, textarea, button');
+      || dialog.querySelector('input:not([type="hidden"]), select, textarea')
+      || dialog.querySelector('button');
     target?.focus();
   }
 
@@ -159,6 +229,8 @@
     }
     const main = document.querySelector(".ui-dashboard-main");
     if (main) main.inert = Boolean(open);
+    const mobileHeader = document.querySelector(".ui-mobile-header");
+    if (mobileHeader) mobileHeader.inert = Boolean(open);
     if (!mobile) {
       shell?.classList.remove("ui-drawer-open");
       document.querySelector("[data-open-drawer]")?.setAttribute("aria-expanded", "false");
@@ -175,6 +247,98 @@
     });
   }
   initializeFilters(document);
+
+  function filterRecords(input) {
+    const region = document.getElementById(input.dataset.listSearch);
+    if (!region) return;
+    const query = input.value.trim().toLocaleLowerCase('id');
+    const tools = input.closest('[data-list-tools]');
+    const status = tools?.querySelector('[data-record-filter][aria-pressed="true"]')?.dataset.recordFilter || '';
+    const records = Array.from(region.querySelectorAll('[data-list-record]'));
+    let visible = 0;
+    records.forEach(function (record) {
+      // Action forms and dialogs should not contribute to search results.
+      const text = record.dataset.searchText || Array.from(record.querySelectorAll('td:not(.ui-table-actions), h3, dl'))
+        .map(function (node) { return node.textContent; }).join(' ');
+      const show = text.toLocaleLowerCase('id').includes(query) && (!status || record.dataset.recordStatus === status);
+      record.hidden = !show;
+      if (show) visible++;
+    });
+    const count = tools?.querySelector('[data-list-count]');
+    if (count) count.textContent = visible + ' dari ' + records.length + ' ditampilkan';
+    let empty = region.querySelector('[data-search-empty]');
+    if (!empty) {
+      empty = document.createElement('p');
+      empty.className = 'p-6 text-center text-sm text-muted';
+      empty.dataset.searchEmpty = '';
+      empty.textContent = 'Tidak ada hasil yang sesuai. Ubah pencarian atau status.';
+      region.append(empty);
+    }
+    empty.hidden = visible > 0 || records.length === 0;
+  }
+
+  function initializeEnhancements(root) {
+    initializeActionDialogs(root);
+    root.querySelectorAll?.('[data-list-search]').forEach(function (input) {
+      const region = document.getElementById(input.dataset.listSearch);
+      const tools = input.closest('[data-list-tools]');
+      if (tools) tools.hidden = !region?.querySelector('[data-list-record]');
+      filterRecords(input);
+    });
+    root.querySelectorAll?.('[data-character-count]:not([data-count-ready])').forEach(function (input) {
+      input.dataset.countReady = 'true';
+      const count = document.createElement('p');
+      count.className = 'mt-2 text-right text-xs tabular-nums text-muted';
+      count.dataset.characterFeedback = '';
+      input.after(count);
+      count.textContent = input.value.length + ' / ' + input.maxLength + ' karakter';
+    });
+    root.querySelectorAll?.('[data-password-toggle]:not([data-toggle-ready])').forEach(function (input) {
+      input.dataset.toggleReady = 'true';
+      if (!input.id) input.id = 'password-' + crypto.randomUUID();
+      const wrapper = document.createElement('span');
+      wrapper.className = 'relative block';
+      input.before(wrapper);
+      wrapper.append(input);
+      input.classList.add('pr-24');
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'absolute inset-y-0 right-0 min-w-20 rounded-r-xl px-3 text-xs font-semibold text-primary hover:bg-primary-subtle';
+      toggle.textContent = 'Tampilkan';
+      toggle.dataset.togglePassword = input.id;
+      toggle.setAttribute('aria-controls', input.id);
+      toggle.setAttribute('aria-pressed', 'false');
+      toggle.setAttribute('aria-label', 'Tampilkan kata sandi: ' + (input.labels?.[0]?.textContent.trim() || 'Kata sandi'));
+      wrapper.append(toggle);
+    });
+  }
+  initializeEnhancements(document);
+  document.querySelector('[data-form-errors]')?.focus();
+
+  document.addEventListener('input', function (event) {
+    if (event.target.matches('[data-list-search]')) filterRecords(event.target);
+    if (event.target.matches('[data-character-count]')) {
+      event.target.nextElementSibling.textContent = event.target.value.length + ' / ' + event.target.maxLength + ' karakter';
+    }
+  });
+  document.addEventListener('click', function (event) {
+    const toggle = event.target.closest('[data-toggle-password]');
+    if (toggle) {
+      const input = document.getElementById(toggle.dataset.togglePassword);
+      const visible = input.type === 'password';
+      input.type = visible ? 'text' : 'password';
+      toggle.textContent = visible ? 'Sembunyikan' : 'Tampilkan';
+      toggle.setAttribute('aria-pressed', String(visible));
+    }
+    const filter = event.target.closest('[data-record-filter]');
+    if (filter) {
+      const tools = filter.closest('[data-list-tools]');
+      tools.querySelectorAll('[data-record-filter]').forEach(function (button) {
+        button.setAttribute('aria-pressed', String(button === filter));
+      });
+      filterRecords(tools.querySelector('[data-list-search]'));
+    }
+  });
 
   function csrfToken() {
     return document.querySelector('meta[name="_csrf"]')?.content;
@@ -207,10 +371,10 @@
 
     const openButton = event.target.closest("[data-open-dialog]");
     if (openButton) {
+      event.preventDefault();
       const dialog = document.getElementById(openButton.dataset.openDialog);
       if (dialog && typeof dialog.showModal === "function") {
-        dialog.showModal();
-        focusDialog(dialog);
+        openDialog(dialog, openButton);
       }
       return;
     }
@@ -237,12 +401,15 @@
   });
 
   document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && document.querySelector(".ui-drawer-open")) setDrawer(false);
+    if (event.key === "Escape" && document.querySelector(".ui-drawer-open")) {
+      event.preventDefault();
+      setDrawer(false);
+    }
     if (event.key === "Tab" && document.querySelector(".ui-drawer-open")) {
       const sidebar = document.getElementById("dashboard-sidebar");
       const focusable = Array.from(sidebar?.querySelectorAll(
         'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      ) || []);
+      ) || []).filter(function (element) { return element.getClientRects().length > 0; });
       if (!focusable.length) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -305,12 +472,16 @@
     showHtmxError("Tidak dapat terhubung ke server. Periksa koneksi Anda lalu coba lagi.");
   });
 
+  document.addEventListener("htmx:timeout", function () {
+    syncActiveNavigation();
+    showHtmxError("Server membutuhkan waktu lebih lama. Silakan coba lagi.");
+  });
+
   function promoteOpenDialogs(root) {
     root.querySelectorAll?.("dialog[open]").forEach(function (dialog) {
       if (!dialog.isConnected || typeof dialog.showModal !== "function" || dialog.matches(":modal")) return;
       dialog.removeAttribute("open");
-      dialog.showModal();
-      focusDialog(dialog);
+      openDialog(dialog);
     });
   }
 
@@ -333,6 +504,9 @@
 
   promoteOpenDialogs(document);
   document.addEventListener("htmx:afterSwap", function (event) {
+    // History snapshots can contain an older name; only fresh server responses
+    // may replace the current navigation name.
+    if (event.detail.xhr) syncDisplayName(document);
     promoteOpenDialogs(document);
     if (event.detail.target?.id === "reservation-availability") {
       document.getElementById("reservation-availability")?.querySelector('input[name="startAt"]:checked, input[name="endAt"]')?.focus();
@@ -340,6 +514,8 @@
   });
 
   document.addEventListener("htmx:afterSettle", function (event) {
+    initializeEnhancements(document);
+    event.detail.target?.querySelector?.('[data-form-errors]')?.focus();
     initializeFilters(document);
     promoteOpenDialogs(document);
     syncActiveNavigation();
@@ -350,7 +526,14 @@
     }
   });
 
-  document.addEventListener("htmx:historyRestore", syncActiveNavigation);
+  document.addEventListener("htmx:historyRestore", function () {
+    initializeEnhancements(document);
+    syncActiveNavigation();
+    initializeFilters(document);
+    syncDrawerForViewport();
+    const title = document.querySelector("#dashboard-content h1")?.textContent?.trim();
+    if (title) document.title = title + " · PRISM";
+  });
 
   document.addEventListener("htmx:afterRequest", function (event) {
     if (event.detail.successful && event.detail.elt?.matches?.("[data-dashboard-link]")) {

@@ -95,6 +95,38 @@ class AccountSettingsIntegrationTest {
         assertThat(owner.getName()).isEqualTo("Original");
     }
 
+    @ParameterizedTest @EnumSource(Role.class)
+    void savedNameRefreshesRealLoginSessionAndHtmxNavigation(Role role) throws Exception {
+        owner.setRole(role);
+        users.saveAndFlush(owner);
+        MockHttpSession session = login(OLD_PASSWORD);
+        mvc.perform(post("/account/profile").session(session).with(csrf())
+                        .header("HX-Request", "true").param("name", "  Nama Baru  "))
+                .andExpect(redirectedUrl("/account"));
+        SecurityContextHolder.clearContext();
+        String html = mvc.perform(get("/account").session(session).header("HX-Request", "true"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(html).contains("data-navigation-name=\"Nama Baru\"", "data-display-name>Nama Baru</span>",
+                "value=\"Nama Baru\"", "hx-post=\"/account/profile\"");
+        assertThat(users.findById(owner.getId()).orElseThrow().getName()).isEqualTo("Nama Baru");
+        SecurityContextHolder.clearContext();
+        mvc.perform(get("/account/password").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-navigation-name=\"Nama Baru\"")));
+    }
+
+    @Test void invalidNameLeavesNavigationAndSessionUnchanged() throws Exception {
+        MockHttpSession session = login(OLD_PASSWORD);
+        mvc.perform(post("/account/profile").session(session).with(csrf())
+                        .header("HX-Request", "true").param("name", "   "))
+                .andExpect(model().attributeHasFieldErrors("profileForm", "name"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-navigation-name=\"Original\"")));
+        SecurityContextHolder.clearContext();
+        mvc.perform(get("/account").session(session))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-display-name>Original</span>")));
+        assertThat(owner.getName()).isEqualTo("Original");
+    }
+
     @Test void longNameRejectedAndSafeValueRetained() throws Exception {
         String name = "x".repeat(121);
         mvc.perform(post("/account/profile").with(user(EMAIL).roles("PENGGUNA")).with(csrf()).param("name", name))

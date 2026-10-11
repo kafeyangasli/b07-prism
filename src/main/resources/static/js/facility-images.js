@@ -20,7 +20,7 @@
     Array.from(input.files).forEach((file, index) => {
       const label = document.createElement('label');
       const image = document.createElement('img');
-      image.className = 'facility-image-small';
+      image.className = 'h-24 w-full rounded-lg object-cover';
       image.alt = `Pratinjau gambar ${index + 1}`;
       image.src = URL.createObjectURL(file); urls.push(image.src);
       const radio = document.createElement('input');
@@ -44,6 +44,11 @@
     event.preventDefault();
     const main = choice.closest('[data-facility-gallery]').querySelector('[data-gallery-main]');
     main.src = choice.href; main.alt = choice.querySelector('img').alt;
+    choice.closest('[data-facility-gallery]').querySelectorAll('[data-gallery-choice]').forEach(item => {
+      item.classList.toggle('ring-2', item === choice);
+      item.classList.toggle('ring-primary', item === choice);
+      item.setAttribute('aria-current', item === choice ? 'true' : 'false');
+    });
   });
   // Capturing also handles images inserted by HTMX.
   document.addEventListener('error', event => {

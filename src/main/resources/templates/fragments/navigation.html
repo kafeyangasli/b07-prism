@@ -2,17 +2,18 @@
 <html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
 <header th:fragment="publicNavbar(activeNav)" class="border-t-4 border-t-prism-600 border-b border-border bg-surface">
-    <div class="ui-container flex min-h-20 items-center justify-between gap-4 py-3">
+    <div class="ui-container flex min-h-20 flex-wrap items-center justify-between gap-3 py-3 sm:flex-nowrap">
         <a th:href="@{/}" class="rounded-lg" aria-label="Beranda PRISM">
-            <img th:src="@{/images/prism-light.svg}" alt="PRISM" width="412" height="112" class="h-8 w-auto sm:h-10">
+            <span th:replace="~{fragments/workspace :: themeLogo('h-8 w-auto sm:h-10')}"></span>
         </a>
-        <nav aria-label="Navigasi publik" class="flex items-center gap-2">
+        <nav aria-label="Navigasi publik" class="flex items-center gap-1 sm:gap-2">
             <a th:href="@{/facilities}" class="ui-nav-link"
                th:classappend="${activeNav == 'facilities'} ? ' ui-nav-link-active'"
                th:aria-current="${activeNav == 'facilities'} ? 'page' : null">Fasilitas</a>
             <a sec:authorize="!isAuthenticated()" th:href="@{/login}" class="ui-btn ui-btn-secondary">Masuk</a>
             <a sec:authorize="!isAuthenticated()" th:href="@{/auth/register}"
                class="ui-btn ui-btn-primary hidden sm:inline-flex">Daftar</a>
+            <button th:replace="~{fragments/workspace :: themeToggle}"></button>
         </nav>
     </div>
 </header>
@@ -27,35 +28,36 @@
         </button>
     </div>
     <nav class="ui-sidebar-nav" aria-label="Navigasi utama">
+        <p class="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-prism-200">Ruang kerja</p>
         <a sec:authorize="hasRole('PENGGUNA')" th:href="@{/}" class="ui-sidebar-link" data-dashboard-link
            data-nav-key="overview"
            hx-get="/" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
            hx-push-url="true" hx-indicator="#global-progress"
            th:classappend="${activeNav == 'minimal'} ? ' ui-sidebar-link-active'"
-           th:aria-current="${activeNav == 'minimal'} ? 'page' : null">Dashboard</a>
+           th:aria-current="${activeNav == 'minimal'} ? 'page' : null"><svg th:replace="~{fragments/workspace :: icon('dashboard')}"></svg>Dashboard</a>
         <a sec:authorize="hasAnyRole('PETUGAS','ADMIN')" th:href="@{/staff/dashboard}" class="ui-sidebar-link"
            data-dashboard-link data-nav-key="dashboard"
            hx-get="/staff/dashboard" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
            hx-push-url="true" hx-indicator="#global-progress"
            th:classappend="${activeNav == 'dashboard'} ? ' ui-sidebar-link-active'"
-           th:aria-current="${activeNav == 'dashboard'} ? 'page' : null">Dashboard</a>
+           th:aria-current="${activeNav == 'dashboard'} ? 'page' : null"><svg th:replace="~{fragments/workspace :: icon('dashboard')}"></svg>Dashboard</a>
         <a th:href="@{/facilities}" class="ui-sidebar-link" data-dashboard-link data-nav-key="facilities"
            hx-get="/facilities" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
            hx-push-url="true" hx-indicator="#global-progress"
            th:classappend="${activeNav == 'facilities'} ? ' ui-sidebar-link-active'"
-           th:aria-current="${activeNav == 'facilities'} ? 'page' : null">Fasilitas</a>
+           th:aria-current="${activeNav == 'facilities'} ? 'page' : null"><svg th:replace="~{fragments/workspace :: icon('building')}"></svg>Fasilitas</a>
         <a sec:authorize="hasRole('PENGGUNA')" th:href="@{/reservations}" class="ui-sidebar-link" data-dashboard-link
            data-nav-key="reservations"
            hx-get="/reservations" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
            hx-push-url="true" hx-indicator="#global-progress"
            th:classappend="${activeNav == 'reservations'} ? ' ui-sidebar-link-active'"
-           th:aria-current="${activeNav == 'reservations'} ? 'page' : null">Reservasi Saya</a>
+           th:aria-current="${activeNav == 'reservations'} ? 'page' : null"><svg th:replace="~{fragments/workspace :: icon('calendar')}"></svg>Reservasi Saya</a>
         <a sec:authorize="hasRole('PENGGUNA')" th:href="@{/reports}" class="ui-sidebar-link" data-dashboard-link
            data-nav-key="reports"
            hx-get="/reports" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
            hx-push-url="true" hx-indicator="#global-progress"
            th:classappend="${activeNav == 'reports'} ? ' ui-sidebar-link-active'"
-           th:aria-current="${activeNav == 'reports'} ? 'page' : null">Laporan Saya</a>
+           th:aria-current="${activeNav == 'reports'} ? 'page' : null"><svg th:replace="~{fragments/workspace :: icon('report')}"></svg>Laporan Saya</a>
 
         <div sec:authorize="hasAnyRole('PETUGAS','ADMIN')" class="ui-sidebar-group">
             <p>Operasional</p>
@@ -64,19 +66,19 @@
                hx-get="/staff/reservations" hx-target="#dashboard-content" hx-select="#dashboard-content"
                hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
                th:classappend="${activeNav == 'staff-reservations'} ? ' ui-sidebar-link-active'"
-               th:aria-current="${activeNav == 'staff-reservations'} ? 'page' : null">Reservasi</a>
+               th:aria-current="${activeNav == 'staff-reservations'} ? 'page' : null"><svg th:replace="~{fragments/workspace :: icon('calendar')}"></svg>Reservasi</a>
             <a th:href="@{/staff/reports}" class="ui-sidebar-link" data-dashboard-link
                data-nav-key="staff-reports"
                hx-get="/staff/reports" hx-target="#dashboard-content" hx-select="#dashboard-content"
                hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
                th:classappend="${activeNav == 'staff-reports'} ? ' ui-sidebar-link-active'"
-               th:aria-current="${activeNav == 'staff-reports'} ? 'page' : null">Laporan</a>
+               th:aria-current="${activeNav == 'staff-reports'} ? 'page' : null"><svg th:replace="~{fragments/workspace :: icon('report')}"></svg>Laporan</a>
             <a th:href="@{/staff/blockages}" class="ui-sidebar-link" data-dashboard-link
                data-nav-key="staff-blockages"
                hx-get="/staff/blockages" hx-target="#dashboard-content" hx-select="#dashboard-content"
                hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
                th:classappend="${activeNav == 'staff-blockages'} ? ' ui-sidebar-link-active'"
-               th:aria-current="${activeNav == 'staff-blockages'} ? 'page' : null">Blokir</a>
+               th:aria-current="${activeNav == 'staff-blockages'} ? 'page' : null"><svg th:replace="~{fragments/workspace :: icon('block')}"></svg>Blokir</a>
         </div>
 
         <div sec:authorize="hasRole('ADMIN')" class="ui-sidebar-group">
@@ -85,23 +87,23 @@
                hx-get="/admin/users" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
                hx-push-url="true" hx-indicator="#global-progress"
                th:classappend="${activeNav == 'users'} ? ' ui-sidebar-link-active'"
-               th:aria-current="${activeNav == 'users'} ? 'page' : null">Pengguna</a>
+               th:aria-current="${activeNav == 'users'} ? 'page' : null"><svg th:replace="~{fragments/workspace :: icon('users')}"></svg>Pengguna</a>
             <a th:href="@{/admin/facilities}" class="ui-sidebar-link" data-dashboard-link
                data-nav-key="admin-facilities"
                hx-get="/admin/facilities" hx-target="#dashboard-content" hx-select="#dashboard-content"
                hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
                th:classappend="${activeNav == 'admin-facilities'} ? ' ui-sidebar-link-active'"
-               th:aria-current="${activeNav == 'admin-facilities'} ? 'page' : null">Kelola Fasilitas</a>
+               th:aria-current="${activeNav == 'admin-facilities'} ? 'page' : null"><svg th:replace="~{fragments/workspace :: icon('building')}"></svg>Kelola Fasilitas</a>
             <a th:href="@{/admin/recap}" class="ui-sidebar-link" data-dashboard-link data-nav-key="recap"
                hx-get="/admin/recap" hx-target="#dashboard-content" hx-select="#dashboard-content" hx-swap="outerHTML"
                hx-push-url="true" hx-indicator="#global-progress"
                th:classappend="${activeNav == 'recap'} ? ' ui-sidebar-link-active'"
-               th:aria-current="${activeNav == 'recap'} ? 'page' : null">Rekap / Laporan</a>
+               th:aria-current="${activeNav == 'recap'} ? 'page' : null"><svg th:replace="~{fragments/workspace :: icon('chart')}"></svg>Rekap / Laporan</a>
             <a th:href="@{/admin/settings}" class="ui-sidebar-link" data-dashboard-link data-nav-key="admin-settings"
                hx-get="/admin/settings" hx-target="#dashboard-content" hx-select="#dashboard-content"
                hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress"
                th:classappend="${activeNav == 'admin-settings'} ? ' ui-sidebar-link-active'"
-               th:aria-current="${activeNav == 'admin-settings'} ? 'page' : null">Pengaturan PRISM</a>
+               th:aria-current="${activeNav == 'admin-settings'} ? 'page' : null"><svg th:replace="~{fragments/workspace :: icon('settings')}"></svg>Pengaturan PRISM</a>
         </div>
     </nav>
     <div class="ui-sidebar-account">
@@ -113,12 +115,12 @@
            th:aria-current="${activeNav == 'account'} ? 'page' : null">
             <img th:replace="~{fragments/avatar :: avatar('')}">
             <span class="min-w-0 flex-1">
-                <span class="block truncate text-sm font-semibold" sec:authentication="principal.displayName">Nama Pengguna</span>
+            <span class="block truncate text-sm font-semibold" data-display-name sec:authentication="principal.displayName">Nama Pengguna</span>
                 <span class="block text-xs opacity-75" sec:authentication="name">nama@kampus.ac.id</span>
             </span>
         </a>
         <form th:action="@{/logout}" method="post">
-            <button type="submit" class="ui-sidebar-link w-full bg-rose-900 text-rose-100 hover:bg-rose-800 transition-colors">Keluar</button>
+            <button type="submit" class="ui-sidebar-link w-full"><svg th:replace="~{fragments/workspace :: icon('logout')}"></svg>Keluar</button>
         </form>
     </div>
 </aside>

@@ -6,8 +6,11 @@ Use these rules for new Thymeleaf views so feature work remains visually and beh
 
 - Start pages with `fragments/layout :: layout(pageTitle, activeNav, content)`; do not duplicate the document shell or navigation.
 - Use `.ui-container` (`max-w-7xl`) for page content. Default page spacing is `py-8 sm:py-10` from the shared layout.
-- Page title: `text-3xl font-bold tracking-tight`; section title: `text-xl font-semibold`; supporting copy: `text-sm` or `text-base text-slate-600`.
-- Use slate page backgrounds, white surfaces, `border-slate-200`, `rounded-xl`, and `shadow-sm`. Avoid gradients and decorative motion.
+- Use the shared page heading fragment or `.ui-page-header`. Page titles inherit responsive sizing and semibold weight; section titles inherit `text-xl font-semibold`. Supporting copy uses `.ui-description`, `.ui-hint`, or `text-muted`.
+- Use the existing violet/ink tokens: `bg-page`, `bg-surface`, `border-border`, and `.ui-card`. Danger treatments use `text-danger` and `border-danger-border`. Avoid gradients and decorative motion.
+- Use the Tailwind spacing scale: 4/6 for page gutters, 5/6 for card padding, 5 for form gaps, and 6/8 for page sections on mobile/desktop. Keep grid children shrinkable with `min-w-0`.
+- Use rounded-2xl surfaces, rounded-xl controls, and rounded-full status badges. Keep violet/lavender accents and the existing system sans typography; the brand SVGs remain authoritative.
+- Compose pages around their task: facility gallery plus facts, reservation sections plus guidance, report information plus evidence, and profile plus security. Avoid stretching short forms across the workspace.
 
 ## Shared controls
 
@@ -19,8 +22,14 @@ Use these rules for new Thymeleaf views so feature work remains visually and beh
 ## Surfaces, tables, and empty states
 
 - Cards use `.ui-card` with an inner `.ui-card-body`.
-- Wrap tables in `.ui-table-wrap` and apply `.ui-table` to the table. Keep action columns rightmost and use horizontal scrolling on narrow screens.
+- Wrap tables in `.ui-table-wrap` and apply `.ui-table` to the table. Keep action columns rightmost with `.ui-table-actions`. Every data cell needs `data-label` because ordinary tables become labelled records below 1024px.
+- Comparison tables use `.ui-table-scroll` to retain columns, a focusable labelled region, and a scroll hint. Use `.ui-table-number` on numeric headers and cells for right alignment and tabular figures.
+- Keep labels, inputs, and help text together in a field wrapper. Connect help/error text with `aria-describedby`; reservation fields also expose server validation with `aria-invalid`.
 - Empty states use `.ui-empty-state`, a short title, one helpful sentence, and at most one next action.
+- `fragments/workspace` provides decorative SVG icons, numbered form headings, account tabs, search tools, history status filters, and the shared authentication aside. Icons supplement visible labels.
+- Search tools use `data-list-search` with a stable region ID and `data-list-record` on each item. Use `data-search-text` on cards when text must include facility code/location. History records expose `data-record-status`. These controls are hidden until JavaScript initializes; server filters and records remain usable without it.
+- Character counts use `data-character-count` on a textarea with `maxlength`. Password fields may use `data-password-toggle`; generated controls never change field names or values.
+- Full-page and dialog report submissions share `reports/form :: report-fields(modal)`. The full-page form is the normal-link fallback; the dialog retains its HTMX target and upload encoding.
 - Pagination should preserve active filters, use normal links by default, and expose the current page with `aria-current="page"`.
 
 ## Status badges
@@ -30,7 +39,8 @@ Render enums with `fragments/status :: badge(status)`. The badge always includes
 | Meaning | Values | Treatment |
 | --- | --- | --- |
 | Awaiting work | `PENDING`, `NEW`, `SCHEDULED` | Amber |
-| In progress / usable | `APPROVED`, `ACTIVE`, `IN_PROGRESS` | Blue |
+| Usable / approved | `APPROVED`, `ACTIVE` | Violet |
+| In progress | `IN_PROGRESS` | Blue |
 | Finished successfully | `COMPLETED`, `RESOLVED` | Emerald |
 | Rejected | `REJECTED` | Red |
 | No longer active | `CANCELLED`, `EXPIRED`, `INACTIVE` | Slate |

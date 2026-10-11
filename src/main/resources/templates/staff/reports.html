@@ -15,7 +15,8 @@
             <p class="ui-empty-state" th:if="${#lists.isEmpty(dashboard.unresolvedReports)}">
                 Tidak ada laporan terbuka.
             </p>
-            <div class="ui-table-wrap" th:unless="${#lists.isEmpty(dashboard.unresolvedReports)}">
+            <div th:replace="~{fragments/workspace :: search('report-queue-search', 'report-queue-records', 'Cari dalam daftar…')}"></div>
+<div class="ui-table-wrap" th:unless="${#lists.isEmpty(dashboard.unresolvedReports)}" id="report-queue-records">
                 <table class="ui-table">
                     <thead>
                     <tr>
@@ -27,7 +28,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="row : ${dashboard.unresolvedReports}">
+                    <tr data-list-record th:each="row : ${dashboard.unresolvedReports}">
                         <td data-label="Fasilitas" th:text="${row.facilityName}">
                         </td>
                         <td data-label="Kategori" th:text="${row.category}">
@@ -39,7 +40,7 @@
                         <td data-label="Masuk"
                             th:text="${row.createdAt != null ? #temporals.format(row.createdAt, 'dd MMM yyyy, HH:mm') : '—'}">
                         </td>
-                        <td data-label="Tindakan">
+                        <td data-label="Tindakan" class="ui-table-actions">
                             <a class="ui-btn ui-btn-secondary" th:href="@{/staff/reports/{id}(id=${row.id})}">Detail dan foto</a>
                             <div th:replace="~{reports/actions :: actions(${row.id}, ${row.status})}"></div>
                         </td>
@@ -55,12 +56,12 @@
             <div class="ui-table-wrap" th:unless="${#lists.isEmpty(reportHistory)}">
                 <table class="ui-table">
                     <thead><tr><th scope="col">Fasilitas</th><th scope="col">Kategori</th><th scope="col">Status</th><th scope="col">Masuk</th><th scope="col">Detail</th></tr></thead>
-                    <tbody><tr th:each="row : ${reportHistory}">
+                    <tbody><tr data-list-record th:each="row : ${reportHistory}">
                         <td data-label="Fasilitas" th:text="${row.facilityName}"></td>
                         <td data-label="Kategori" th:text="${row.category}"></td>
                         <td data-label="Status"><span th:replace="~{fragments/status :: badge(${row.status})}"></span></td>
                         <td data-label="Masuk" th:text="${row.createdAt != null ? #temporals.format(row.createdAt, 'dd MMM yyyy, HH:mm') : '—'}"></td>
-                        <td data-label="Detail"><a class="ui-btn ui-btn-secondary" th:href="@{/staff/reports/{id}(id=${row.id})}">Lihat laporan</a></td>
+                        <td data-label="Detail" class="ui-table-actions"><a class="ui-btn ui-btn-secondary" th:href="@{/staff/reports/{id}(id=${row.id})}">Lihat laporan</a></td>
                     </tr></tbody>
                 </table>
             </div>

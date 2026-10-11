@@ -2,10 +2,13 @@
 <html lang="id" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{fragments/layout :: layout('Detail Laporan', ${staffView ? 'staff-reports' : 'reports'}, ~{::main})}">
 <body><main><div class="ui-page">
-    <header th:replace="~{fragments/page :: heading('Laporan', 'Detail Laporan', 'Informasi masalah dan perkembangan penanganannya.')}"></header>
-    <div th:replace="~{fragments/feedback :: flash}"></div>
+    <header class="ui-page-header">
+        <div><p class="ui-eyebrow">Laporan</p><h1>Detail Laporan</h1><p class="ui-description">Informasi masalah dan perkembangan penanganannya.</p></div>
     <a class="ui-btn ui-btn-secondary" th:href="${staffView ? '/staff/reports' : '/reports'}">Kembali ke daftar laporan</a>
-    <section class="ui-card ui-card-body space-y-4">
+    </header>
+    <div th:replace="~{fragments/feedback :: flash}"></div>
+    <div class="grid items-start gap-6 xl:grid-cols-3">
+    <section class="ui-card ui-card-body space-y-4 xl:col-span-2">
         <h2 th:text="${report.facility.name}"></h2>
         <span th:replace="~{fragments/status :: badge(${report.status})}"></span>
         <div class="ui-alert ui-alert-info" th:switch="${report.status.name()}">
@@ -25,16 +28,20 @@
             <div><dt>Waktu penyelesaian</dt><dd th:text="${report.resolvedAt != null ? #temporals.format(report.resolvedAt, 'dd MMM yyyy, HH:mm') : '—'}"></dd></div>
             <div class="sm:col-span-2"><dt>Catatan penanganan</dt><dd class="whitespace-pre-wrap" th:text="${report.resolutionNote ?: '—'}"></dd></div>
         </dl>
-        <div th:if="${report.photoUrl != null}"><h3>Foto laporan</h3>
-            <a class="ui-link" th:href="@{/reports/{id}/photo(id=${report.id})}" target="_blank" rel="noopener">Buka foto di tab baru</a>
-            <img class="max-w-full rounded-lg" style="max-height: 32rem" th:src="@{/reports/{id}/photo(id=${report.id})}" alt="Foto masalah fasilitas">
-        </div>
         <th:block th:if="${staffView}">
             <div class="ui-form-actions" th:if="${report.status.name() == 'NEW' or report.status.name() == 'IN_PROGRESS'}">
                 <a class="ui-btn ui-btn-secondary" th:href="@{/staff/blockages(reportId=${report.id})}">Buat blokir perbaikan</a>
-                <p class="ui-hint">Fasilitas dan nomor laporan akan terisi. Tinjau dampak reservasi sebelum menyimpan.</p>
+                <p class="ui-hint basis-full">Fasilitas dan nomor laporan akan terisi. Tinjau dampak reservasi sebelum menyimpan.</p>
             </div>
             <div th:replace="~{reports/actions :: actions(${report.id}, ${report.status})}"></div>
         </th:block>
     </section>
+    <aside class="ui-card ui-card-body space-y-4 xl:sticky xl:top-6">
+        <div th:if="${report.photoUrl != null}"><h3>Foto laporan</h3>
+            <a class="ui-link" th:href="@{/reports/{id}/photo(id=${report.id})}" target="_blank" rel="noopener">Buka foto di tab baru</a>
+            <img class="mt-4 max-h-128 max-w-full rounded-xl object-contain"  th:src="@{/reports/{id}/photo(id=${report.id})}" alt="Foto masalah fasilitas">
+        </div>
+        <p th:if="${report.photoUrl == null}" class="ui-hint">Foto laporan tidak tersedia.</p>
+    </aside>
+    </div>
 </div></main></body></html>

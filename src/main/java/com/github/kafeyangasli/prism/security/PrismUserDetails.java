@@ -6,7 +6,7 @@ import java.util.List;
 
 public class PrismUserDetails extends org.springframework.security.core.userdetails.User {
     private final Long accountId;
-    private final String displayName;
+    private volatile String displayName;
 
     public PrismUserDetails(User user) {
         super(user.getEmail(), user.getPasswordHash(),
@@ -17,4 +17,5 @@ public class PrismUserDetails extends org.springframework.security.core.userdeta
 
     public Long getAccountId() { return accountId; }
     public String getDisplayName() { return displayName; }
+    public void setDisplayName(String displayName) { this.displayName = displayName; }
 }

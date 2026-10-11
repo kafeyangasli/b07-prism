@@ -100,7 +100,7 @@
                             </p>
                         </td>
                         <td data-label="Proposal"
-                            th:text="${!row.proposalRequired ? 'Tidak wajib' : (row.proposalValidated ? 'Valid' : 'Belum valid')}">
+                            th:text="${row.proposalSubmitted ? ((row.proposalRequired ? 'Wajib' : 'Sukarela') + ' · ' + (row.proposalValidated ? 'Valid' : 'Belum valid')) : (row.proposalRequired ? 'Wajib · belum dilampirkan' : 'Opsional · tidak dilampirkan')}">
                         </td>
                         <td th:replace="~{staff/reservation-actions :: actions(${row})}"></td>
                     </tr>

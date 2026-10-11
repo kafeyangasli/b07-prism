@@ -2,23 +2,32 @@
 <html lang="id" xmlns:th="http://www.thymeleaf.org">
 <body>
 <td th:fragment="actions(row)" data-label="Tindakan" class="ui-table-actions">
-    <p th:if="${row.proposalRequired and !row.proposalValidated}" class="ui-hint mb-3">Tinjau lalu validasi proposal untuk mengaktifkan persetujuan.</p>
+    <p th:if="${row.approvalBlockedByProposal}" class="ui-hint mb-3">Tinjau lalu validasi proposal untuk mengaktifkan persetujuan.</p>
     <p th:if="${row.conflictingPendingCount > 0}" class="ui-hint mb-3" th:text="${row.conflictingPendingCount + ' pengajuan menunggu bertumpang tindih. Persetujuan akan menolaknya otomatis.'}"></p>
-    <a th:if="${row.proposalRequired}" class="ui-btn ui-btn-secondary"
+    <a th:if="${row.proposalSubmitted}" class="ui-btn ui-btn-secondary"
        th:href="@{/staff/reservations/{id}/proposal(id=${row.id})}">Unduh proposal</a>
-    <form th:if="${row.proposalRequired and !row.proposalValidated}"
-          th:action="@{/staff/reservations/{id}/proposal/validate(id=${row.id})}" method="post">
+    <a th:if="${row.validatedProposalAvailable}" class="ui-btn ui-btn-secondary"
+       th:href="@{/documents/reservations/{id}/validated-proposal(id=${row.id})}">Unduh PDF tervalidasi</a>
+    <p th:if="${row.proposalValidationLegacy}" class="ui-hint">Validasi historis; PDF tervalidasi belum tersedia.</p>
+    <form th:if="${row.proposalSubmitted and !row.proposalValidated}"
+          th:action="@{/staff/reservations/{id}/proposal/validate(id=${row.id})}" method="post"
+          enctype="multipart/form-data">
+        <label class="ui-label" th:for="${'validated-proposal-' + row.id}">PDF proposal resmi yang sudah divalidasi</label>
+        <input class="ui-input" type="file" name="validatedProposal" required accept=".pdf,application/pdf"
+               th:id="${'validated-proposal-' + row.id}" data-validated-proposal
+               th:attr="data-max-bytes=${validatedProposalMaxBytes}">
+        <p class="ui-hint">Unggah salinan yang telah diberi stempel atau tanda tangan persetujuan institusi.</p>
         <button class="ui-btn ui-btn-secondary" type="submit">Validasi proposal</button>
     </form>
     <form th:if="${row.conflictingPendingCount == 0}"
           th:action="@{/staff/reservations/{id}/approve(id=${row.id})}" method="post">
         <button class="ui-btn ui-btn-primary" type="submit"
-                th:disabled="${row.proposalRequired and !row.proposalValidated}">
+                th:disabled="${row.approvalBlockedByProposal}">
             Setujui
         </button>
     </form>
     <button th:if="${row.conflictingPendingCount > 0}" class="ui-btn ui-btn-primary" type="button"
-            th:disabled="${row.proposalRequired and !row.proposalValidated}"
+            th:disabled="${row.approvalBlockedByProposal}"
             th:attr="data-open-dialog=${'approve-reservation-' + row.id}">
         Setujui
     </button>
@@ -55,7 +64,7 @@
                 <div class="ui-form-actions">
                     <button class="ui-btn ui-btn-secondary" type="button" data-close-dialog autofocus>Batal</button>
                     <button class="ui-btn ui-btn-primary" type="submit"
-                            th:disabled="${row.proposalRequired and !row.proposalValidated}">Setujui dan tolak konflik</button>
+                            th:disabled="${row.approvalBlockedByProposal}">Setujui dan tolak konflik</button>
                 </div>
             </form>
         </div>

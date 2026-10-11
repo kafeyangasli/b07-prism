@@ -6,6 +6,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static com.github.kafeyangasli.prism.support.PrismTestUsers.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static com.github.kafeyangasli.prism.support.ProposalPdf.upload;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.nio.charset.StandardCharsets;
@@ -114,11 +116,13 @@ class ProposalValidationIntegrationTest {
     @Test
     @WithPrismUser(roles = "PENGGUNA")
     void penggunaCannotValidateOrDownloadThroughRouteOrService() throws Exception {
-        assertThatThrownBy(() -> service.validateProposal(pending.getId(), staff.getId()))
+        assertThatThrownBy(() -> service.validateProposal(pending.getId(), staff.getId(), upload()))
                 .isInstanceOf(AccessDeniedException.class);
         assertThatThrownBy(() -> service.proposalForReview(pending.getId(), staff.getId()))
                 .isInstanceOf(AccessDeniedException.class);
         mvc.perform(post(validateUrl()).with(user(requester.getEmail()).roles("PENGGUNA")).with(csrf()))
+                .andExpect(status().isForbidden());
+        mvc.perform(multipart(validateUrl()).file(upload()).with(user(requester.getEmail()).roles("PENGGUNA")).with(csrf()))
                 .andExpect(status().isForbidden());
         mvc.perform(get(proposalUrl()).with(user(requester.getEmail()).roles("PENGGUNA")))
                 .andExpect(status().isForbidden());
@@ -130,6 +134,8 @@ class ProposalValidationIntegrationTest {
         mvc.perform(post(validateUrl()).with(csrf())).andExpect(status().is3xxRedirection());
         mvc.perform(get(proposalUrl())).andExpect(status().is3xxRedirection());
         mvc.perform(post(validateUrl()).with(user(staff.getEmail()).roles("PETUGAS")))
+                .andExpect(status().isForbidden());
+        mvc.perform(multipart(validateUrl()).file(upload()).with(user(staff.getEmail()).roles("PETUGAS")))
                 .andExpect(status().isForbidden());
     }
 
@@ -187,9 +193,167 @@ class ProposalValidationIntegrationTest {
     @Test
     void repeatedValidationPreservesOriginalAudit() throws Exception {
         validate(staff, "PETUGAS").andExpect(flash().attributeExists("success"));
-        validate(admin, "ADMIN").andExpect(flash().attributeExists("success"));
+        validate(admin, "ADMIN").andExpect(flash().attributeExists("error"));
         assertThat(pending.getProposalValidatedBy().getId()).isEqualTo(staff.getId());
         assertThat(pending.getProposalValidatedAt()).isEqualTo(NOW);
+        assertThat(pending.getStatus()).isEqualTo(ReservationStatus.PENDING);
+    }
+
+    @Test
+    void verificationWithoutUploadedPdfFailsWithoutAuditOrStateChange() throws Exception {
+        mvc.perform(post(validateUrl()).with(user(staff.getEmail()).roles("PETUGAS")).with(csrf()))
+                .andExpect(flash().attributeExists("error"));
+        assertUnverified();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"non-pdf", "forged-header", "empty", "oversized", "wrong-extension", "traversal"})
+    void invalidValidatedPdfFailsWithoutChangingReservation(String invalid) throws Exception {
+        byte[] data = switch (invalid) {
+            case "empty" -> new byte[0];
+            case "oversized" -> new byte[10 * 1024 * 1024 + 1];
+            case "forged-header" -> "%PDF-this-is-not-a-document".getBytes(StandardCharsets.UTF_8);
+            default -> "not a PDF".getBytes(StandardCharsets.UTF_8);
+        };
+        String filename = switch (invalid) {
+            case "wrong-extension" -> "approved.docx";
+            case "traversal" -> "../approved.pdf";
+            default -> "approved.pdf";
+        };
+        mvc.perform(multipart(validateUrl()).file(new MockMultipartFile("validatedProposal", filename,
+                        "application/pdf", data)).with(user(staff.getEmail()).roles("PETUGAS")).with(csrf()))
+                .andExpect(flash().attributeExists("error"));
+        assertUnverified();
+    }
+
+    @Test
+    void uploadReadFailureDoesNotRecordVerification() throws Exception {
+        MockMultipartFile broken = new MockMultipartFile("validatedProposal", "approved.pdf", "application/pdf", new byte[]{1}) {
+            @Override public java.io.InputStream getInputStream() throws java.io.IOException {
+                throw new java.io.IOException("Berkas gagal dibaca");
+            }
+        };
+        mvc.perform(multipart(validateUrl()).file(broken).with(user(staff.getEmail()).roles("PETUGAS")).with(csrf()))
+                .andExpect(flash().attributeExists("error"));
+        assertUnverified();
+    }
+
+    @Test
+    void verifiedDocumentIsSeparateAndAccessibleOnlyToOwnerAndStaff() throws Exception {
+        String originalPath = pending.getProposalPath();
+        var pdf = upload();
+        mvc.perform(multipart(validateUrl()).file(pdf).with(user(staff.getEmail()).roles("PETUGAS")).with(csrf()))
+                .andExpect(flash().attributeExists("success"));
+        entityManager.flush();
+        entityManager.clear();
+        var saved = reservations.findById(pending.getId()).orElseThrow();
+        assertThat(saved.getProposalPath()).isEqualTo(originalPath);
+        assertThat(saved.getValidatedProposalPath()).isNotEqualTo(originalPath);
+        try (var original = proposalStorage.load(originalPath).getInputStream();
+             var validated = proposalStorage.load(saved.getValidatedProposalPath()).getInputStream()) {
+            assertThat(original.readAllBytes()).isEqualTo(PROPOSAL);
+            assertThat(validated.readAllBytes()).isEqualTo(pdf.getBytes());
+        }
+        for (User actor : new User[]{requester, staff, admin}) {
+            mvc.perform(get(validatedUrl()).with(user(actor.getEmail()).roles(actor.getRole().name())))
+                    .andExpect(status().isOk()).andExpect(content().bytes(pdf.getBytes()))
+                    .andExpect(content().contentType("application/pdf"))
+                    .andExpect(header().string("Cache-Control", "no-store"))
+                    .andExpect(header().string("X-Content-Type-Options", "nosniff"));
+        }
+        User other = actor("other", Role.PENGGUNA);
+        entityManager.flush();
+        mvc.perform(get(validatedUrl()).with(user(other.getEmail()).roles("PENGGUNA"))).andExpect(status().isNotFound());
+        mvc.perform(get(validatedUrl())).andExpect(redirectedUrl("/login"));
+        mvc.perform(multipart(validatedUrl()).file(upload()).with(user(requester.getEmail()).roles("PENGGUNA")).with(csrf()))
+                .andExpect(status().isMethodNotAllowed());
+        mvc.perform(get("/reservations/{id}/proposal", saved.getId()).with(user(requester.getEmail()).roles("PENGGUNA")))
+                .andExpect(content().bytes(PROPOSAL));
+        // Availability survives reservation approval; the historical review endpoint stays unchanged.
+        mvc.perform(post("/staff/reservations/{id}/approve", saved.getId())
+                .with(user(staff.getEmail()).roles("PETUGAS")).with(csrf())).andExpect(flash().attributeExists("success"));
+        mvc.perform(get(validatedUrl()).with(user(requester.getEmail()).roles("PENGGUNA")))
+                .andExpect(status().isOk()).andExpect(content().bytes(pdf.getBytes()));
+    }
+
+    @Test
+    void unverifiedAndLegacyRecordsHaveNoDownloadableValidatedPdf() throws Exception {
+        mvc.perform(get(validatedUrl()).with(user(requester.getEmail()).roles("PENGGUNA")))
+                .andExpect(status().isNotFound());
+        pending.setProposalValidationLegacy(true);
+        pending.setProposalValidatedAt(NOW.minusDays(1));
+        pending.setProposalValidatedBy(staff);
+        reservations.saveAndFlush(pending);
+        assertThat(pending.isProposalValidated()).isTrue();
+        mvc.perform(get(validatedUrl()).with(user(requester.getEmail()).roles("PENGGUNA")))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/reservations/{id}", pending.getId()).with(user(requester.getEmail()).roles("PENGGUNA")))
+                .andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("Validasi historis")));
+        mvc.perform(post("/staff/reservations/{id}/approve", pending.getId())
+                        .with(user(staff.getEmail()).roles("PETUGAS")).with(csrf()))
+                .andExpect(flash().attributeExists("success"));
+    }
+
+    @Test
+    void optionalSubmittedProposalUsesSameQueueAndBlocksApprovalUntilValidated() throws Exception {
+        pending.setEndAt(pending.getStartAt().plusHours(1));
+        reservations.saveAndFlush(pending);
+        mvc.perform(post("/staff/reservations/{id}/approve", pending.getId())
+                        .with(user(staff.getEmail()).roles("PETUGAS")).with(csrf()))
+                .andExpect(flash().attributeExists("error"));
+        String html = mvc.perform(get("/staff/reservations").with(user(staff.getEmail()).roles("PETUGAS")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(html).contains("Sukarela", validateUrl(), "validatedProposal", "multipart/form-data", "required", "disabled");
+        String detail = mvc.perform(get("/reservations/{id}", pending.getId()).with(user(requester.getEmail()).roles("PENGGUNA")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(detail).contains("Opsional", "sukarela", "Persetujuan menunggu validasi proposal");
+        validate(staff, "PETUGAS").andExpect(flash().attributeExists("success"));
+        mvc.perform(post("/staff/reservations/{id}/approve", pending.getId())
+                        .with(user(staff.getEmail()).roles("PETUGAS")).with(csrf()))
+                .andExpect(flash().attributeExists("success"));
+    }
+
+    @Test
+    void requiredMissingProposalBlocksApprovalAndCannotBeVerified() throws Exception {
+        pending.setProposalPath(null);
+        reservations.saveAndFlush(pending);
+        mvc.perform(post("/staff/reservations/{id}/approve", pending.getId())
+                .with(user(staff.getEmail()).roles("PETUGAS")).with(csrf())).andExpect(flash().attributeExists("error"));
+        validate(staff, "PETUGAS").andExpect(flash().attributeExists("error"));
+        assertUnverified();
+    }
+
+    @Test
+    void optionalMissingProposalHasNoMisleadingValidationStateAndCanBeApproved() throws Exception {
+        pending.setEndAt(pending.getStartAt().plusHours(1));
+        pending.setProposalPath(null);
+        reservations.saveAndFlush(pending);
+        String detail = mvc.perform(get("/reservations/{id}", pending.getId()).with(user(requester.getEmail()).roles("PENGGUNA")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(detail).contains("Tidak diperlukan").doesNotContain("Belum divalidasi petugas", "Persetujuan menunggu validasi proposal");
+        mvc.perform(post("/staff/reservations/{id}/approve", pending.getId())
+                .with(user(staff.getEmail()).roles("PETUGAS")).with(csrf())).andExpect(flash().attributeExists("success"));
+    }
+
+    @Test
+    void rejectionNeedsNoValidatedPdfAndCannotSatisfyApprovalPrerequisite() throws Exception {
+        mvc.perform(post("/staff/reservations/{id}/reject", pending.getId()).param("reasonDetail", "Proposal tidak sesuai")
+                        .with(user(staff.getEmail()).roles("PETUGAS")).with(csrf()))
+                .andExpect(flash().attributeExists("success"));
+        assertThat(pending.getStatus()).isEqualTo(ReservationStatus.REJECTED);
+        assertThat(pending.getReasonDetail()).isEqualTo("Proposal tidak sesuai");
+        assertThat(pending.isProposalValidated()).isFalse();
+        assertThat(pending.getValidatedProposalPath()).isNull();
+        mvc.perform(post("/staff/reservations/{id}/approve", pending.getId())
+                .with(user(staff.getEmail()).roles("PETUGAS")).with(csrf())).andExpect(flash().attributeExists("error"));
+    }
+
+    private String validatedUrl() { return "/documents/reservations/" + pending.getId() + "/validated-proposal"; }
+
+    private void assertUnverified() {
+        assertThat(pending.getProposalValidatedAt()).isNull();
+        assertThat(pending.getProposalValidatedBy()).isNull();
+        assertThat(pending.getValidatedProposalPath()).isNull();
         assertThat(pending.getStatus()).isEqualTo(ReservationStatus.PENDING);
     }
 
@@ -236,7 +400,7 @@ class ProposalValidationIntegrationTest {
     }
 
     private org.springframework.test.web.servlet.ResultActions validate(User actor, String role) throws Exception {
-        return mvc.perform(post(validateUrl()).with(user(actor.getEmail()).roles(role)).with(csrf()))
+        return mvc.perform(multipart(validateUrl()).file(upload()).with(user(actor.getEmail()).roles(role)).with(csrf()))
                 .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/staff/reservations"));
     }
 

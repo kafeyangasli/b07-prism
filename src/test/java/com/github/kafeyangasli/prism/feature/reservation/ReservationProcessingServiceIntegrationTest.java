@@ -118,7 +118,7 @@ class ReservationProcessingServiceIntegrationTest {
         try {
             pending.setProposalPath(path);
             reservations.saveAndFlush(pending);
-            service.validateProposal(pending.getId(), staff.getId());
+            service.validateProposal(pending.getId(), staff.getId(), com.github.kafeyangasli.prism.support.ProposalPdf.upload());
             assertThat(pending.getStatus()).isEqualTo(ReservationStatus.PENDING);
             assertThat(pending.getProposalValidatedAt()).isEqualTo(NOW);
             assertThat(pending.getProposalValidatedBy().getId()).isEqualTo(staff.getId());

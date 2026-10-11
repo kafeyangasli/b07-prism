@@ -109,7 +109,7 @@ class UiRenderingIntegrationTest {
         assertThat(render("/reservations/new?facilityId=" + room.getId() + "&date=" + date, "reservation-prefilled"))
                 .contains("value=\"" + date + "\"", "name=\"startAt\"", "Pengajuan akan menunggu");
         assertThat(render("/reservations/" + reservation.getId(), "reservation-cancellation"))
-                .contains("Konfirmasi pembatalan", "tidak dapat dipulihkan", "belum divalidasi");
+                .contains("Konfirmasi pembatalan", "tidak dapat dipulihkan", "Belum divalidasi");
         reservation.setStatus(ReservationStatus.APPROVED);
         reservation.setStartAt(LocalDateTime.now().plusHours(12));
         reservation.setEndAt(LocalDateTime.now().plusHours(13));
@@ -271,6 +271,9 @@ class UiRenderingIntegrationTest {
 
     @Test @WithPrismUser(username="staff-ui@example.test", roles="PETUGAS")
     void conflictingApprovalRequiresModalConfirmationAndCascadesAfterConfirmation() throws Exception {
+        // This test exercises cascade approval; submitted proposals now need separate validation.
+        reservation.setProposalPath(null);
+        reservations.saveAndFlush(reservation);
         Reservation conflict = reservations.save(new Reservation(reservation.getUser(), room,
                 reservation.getStartAt().plusMinutes(30), reservation.getEndAt().plusHours(1),
                 "Kegiatan yang bertumpang tindih", null, ReservationStatus.PENDING,

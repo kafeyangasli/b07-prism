@@ -19,10 +19,11 @@ import org.springframework.core.io.Resource;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 
 import java.time.Clock;
 import java.net.MalformedURLException;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.List;
@@ -57,7 +58,14 @@ public class ReservationProcessingService {
 
     @Transactional
     @PreAuthorize("hasAnyRole('PETUGAS','ADMIN')")
-    public Reservation validateProposal(long reservationId, long actorId) {
+    public Reservation validateProposal(long reservationId, long actorId, MultipartFile validatedProposal) {
+        // Use the same lock order as approval, including the joined facility/user rows.
+        var context = reservationRepository.findLockContextById(reservationId)
+                .orElseThrow(() -> notFound(reservationId));
+        facilityRepository.findByIdForUpdate(context.getFacilityId())
+                .orElseThrow(() -> new ResourceNotFoundException("Fasilitas tidak ditemukan"));
+        userRepository.findByIdForUpdate(context.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Pengguna pemohon tidak ditemukan"));
         Reservation reservation = reservationRepository.findByIdForUpdate(reservationId)
                 .orElseThrow(() -> notFound(reservationId));
         User actor = requireStaffActor(actorId);
@@ -65,11 +73,21 @@ public class ReservationProcessingService {
         validateProcessable(reservation, now);
         loadProposal(reservation);
 
-        // A repeated validation preserves the original, complete audit record.
-        if (reservation.getProposalValidatedAt() == null || reservation.getProposalValidatedBy() == null) {
-            reservation.setProposalValidatedAt(now);
-            reservation.setProposalValidatedBy(actor);
+        if (reservation.isProposalValidated()) {
+            throw rule("PROPOSAL_ALREADY_VALIDATED", "Proposal sudah divalidasi; dokumen dan audit tidak dapat diganti");
         }
+        String path;
+        try {
+            path = proposalStorageService.storeValidatedForTransaction(validatedProposal);
+        } catch (IOException exception) {
+            throw rule(ReservationReasonCode.INVALID_PROPOSAL, "PDF proposal tervalidasi gagal disimpan. Silakan coba lagi.");
+        }
+        reservation.setValidatedProposalPath(path);
+        reservation.setProposalValidatedAt(now);
+        reservation.setProposalValidatedBy(actor);
+        reservation.setProposalValidationLegacy(false);
+        // Flush inside the operation; rollback synchronization also covers failures at commit.
+        reservationRepository.flush();
         return reservation;
     }
 
@@ -125,8 +143,10 @@ public class ReservationProcessingService {
         if (reservation.getFacility().getAdministrativeStatus() != AdministrativeStatus.ACTIVE) {
             throw rule("FACILITY_INACTIVE", "Fasilitas sudah tidak aktif");
         }
-        if (requiresProposal(reservation)
-                && (reservation.getProposalValidatedAt() == null || reservation.getProposalValidatedBy() == null)) {
+        if (reservation.isProposalRequired() && !reservation.isProposalSubmitted()) {
+            throw rule(ReservationReasonCode.INVALID_PROPOSAL, "Proposal wajib diunggah sebelum persetujuan");
+        }
+        if (reservation.isProposalSubmitted() && !reservation.isProposalValidated()) {
             throw rule(ReservationReasonCode.INVALID_PROPOSAL,
                     "Proposal wajib divalidasi Petugas atau Admin sebelum persetujuan");
         }
@@ -228,11 +248,6 @@ public class ReservationProcessingService {
             throw rule(ReservationReasonCode.RESERVATION_START_REACHED,
                     "Waktu mulai reservasi telah tercapai");
         }
-    }
-
-    private boolean requiresProposal(Reservation reservation) {
-        return Duration.between(reservation.getStartAt(), reservation.getEndAt()).toHours() >= 6
-                || "Aula".equalsIgnoreCase(reservation.getFacility().getType());
     }
 
     private User requireStaffActor(long actorId) {

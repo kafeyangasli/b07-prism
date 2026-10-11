@@ -24,6 +24,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.dao.DataAccessException;
+import org.springframework.transaction.TransactionException;
 
 @Controller
 @PreAuthorize("hasAnyRole('PETUGAS','ADMIN')")
@@ -40,11 +45,23 @@ public class ReservationProcessingController {
 
     @PostMapping("/staff/reservations/{id}/proposal/validate")
     public String validateProposal(@PathVariable long id,
+                                   @RequestParam(required = false) MultipartFile validatedProposal,
                                    Authentication authentication,
                                    RedirectAttributes redirect) {
-        return execute(redirect, () -> processingService.validateProposal(id,
-                actorResolver.resolveId(authentication.getName())),
-                "Proposal berhasil divalidasi. Reservasi tetap menunggu persetujuan");
+        try {
+            return execute(redirect, () -> processingService.validateProposal(id,
+                    actorResolver.resolveId(authentication.getName()), validatedProposal),
+                    "Proposal dan PDF tervalidasi berhasil disimpan. Reservasi tetap menunggu persetujuan");
+        } catch (DataAccessException | TransactionException exception) {
+            redirect.addFlashAttribute("error", "Validasi proposal gagal disimpan. Silakan coba lagi.");
+            return "redirect:/staff/reservations";
+        }
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<String> oversizedProposal() {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body("Ukuran PDF tervalidasi melebihi batas unggahan. Pilih berkas yang lebih kecil.");
     }
 
     @GetMapping("/staff/reservations/{id}/proposal")

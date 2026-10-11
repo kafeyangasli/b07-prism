@@ -13,6 +13,19 @@ import org.springframework.data.repository.query.Param;
 
 public interface FacilityBlockageRepository extends JpaRepository<FacilityBlockage, Long> {
 
+    interface LifecycleCandidate {
+        Long getId();
+        Long getFacilityId();
+    }
+
+    @Query("""
+            select b.id as id, b.facility.id as facilityId from FacilityBlockage b
+            where b.status in (com.github.kafeyangasli.prism.feature.blockage.model.BlockageStatus.SCHEDULED,
+                               com.github.kafeyangasli.prism.feature.blockage.model.BlockageStatus.ACTIVE)
+            order by b.facility.id, b.id
+            """)
+    List<LifecycleCandidate> findLifecycleCandidates();
+
     // US-12: scheduled maintenance, active outages, and facility blockage history.
     List<FacilityBlockage> findByFacilityIdOrderByStartAtAsc(Long facilityId);
 
@@ -24,8 +37,11 @@ public interface FacilityBlockageRepository extends JpaRepository<FacilityBlocka
             select b from FacilityBlockage b
             where b.facility.id = :facilityId
               and b.status in :statuses
-              and b.startAt < :endAt
-              and (b.plannedEndAt is null or b.plannedEndAt > :startAt)
+              and (:endAt is null or b.startAt < :endAt)
+              and (
+                  (b.actualEndAt is not null and b.actualEndAt > :startAt)
+                  or (b.actualEndAt is null and (b.plannedEndAt is null or b.plannedEndAt > :startAt))
+              )
             order by b.startAt asc
             """)
     List<FacilityBlockage> findOverlapping(@Param("facilityId") Long facilityId,
@@ -38,8 +54,11 @@ public interface FacilityBlockageRepository extends JpaRepository<FacilityBlocka
             from FacilityBlockage b
             where b.facility.id = :facilityId
               and b.status in :statuses
-              and b.startAt < :endAt
-              and (b.plannedEndAt is null or b.plannedEndAt > :startAt)
+              and (:endAt is null or b.startAt < :endAt)
+              and (
+                  (b.actualEndAt is not null and b.actualEndAt > :startAt)
+                  or (b.actualEndAt is null and (b.plannedEndAt is null or b.plannedEndAt > :startAt))
+              )
               and (:ignoredId is null or b.id <> :ignoredId)
             """)
     boolean existsOverlapping(@Param("facilityId") Long facilityId,
@@ -61,4 +80,17 @@ public interface FacilityBlockageRepository extends JpaRepository<FacilityBlocka
     boolean existsByBlockageTypeId(Long blockageTypeId);
 
     List<FacilityBlockage> findByCreatedByIdOrderByCreatedAtDesc(Long userId);
+
+    @Query("""
+            select b from FacilityBlockage b
+            join fetch b.facility
+            where b.facility.id in :facilityIds
+              and b.status <> :cancelledStatus
+              and b.startAt < :periodEnd
+              and coalesce(b.actualEndAt, b.plannedEndAt, :periodEnd) > :periodStart
+            """)
+    List<FacilityBlockage> findForCapacity(@Param("facilityIds") Collection<Long> facilityIds,
+                                          @Param("periodStart") LocalDateTime periodStart,
+                                          @Param("periodEnd") LocalDateTime periodEnd,
+                                          @Param("cancelledStatus") BlockageStatus cancelledStatus);
 }

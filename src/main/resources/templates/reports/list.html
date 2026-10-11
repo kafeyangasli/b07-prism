@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Laporan Saya', 'reports', ~{::main})}">
+<body><main><div class="ui-page">
+    <header class="ui-page-header">
+        <div><p class="ui-eyebrow">Laporan</p><h1>Laporan Saya</h1><p class="ui-description">Pantau perkembangan laporan fasilitas Anda.</p></div>
+    <a class="ui-btn ui-btn-primary" th:href="@{/reports/new}" hx-get="/reports/new"
+       hx-target="#report-modal-region" hx-swap="outerHTML" hx-indicator="#global-progress">Buat laporan</a>
+    </header>
+    <div th:replace="~{fragments/feedback :: flash}"></div>
+    <div class="ui-empty-state" th:if="${#lists.isEmpty(reports)}"><h3>Anda belum mengirim laporan</h3><p class="mt-2 text-sm">Menemukan masalah fasilitas? Gunakan Buat laporan dan sertakan foto agar petugas dapat menindaklanjuti.</p></div>
+    <div th:replace="~{fragments/workspace :: historyTools('my-reports-search', 'my-reports-records', true, false)}"></div>
+<div class="ui-table-wrap" th:unless="${#lists.isEmpty(reports)}" id="my-reports-records"><table class="ui-table">
+        <thead><tr><th scope="col">Fasilitas</th><th scope="col">Kategori</th><th scope="col">Status</th><th scope="col">Masuk</th><th scope="col">Detail</th></tr></thead>
+        <tbody><tr data-list-record th:attr="data-record-status=${report.status},data-record-date=${report.createdAt != null ? #temporals.format(report.createdAt, 'yyyy-MM-dd') : ''}" th:each="report : ${reports}">
+            <td data-label="Fasilitas" th:text="${report.facility.name}"></td>
+            <td data-label="Kategori" th:text="${report.category}"></td>
+            <td data-label="Status"><span th:replace="~{fragments/status :: badge(${report.status})}"></span></td>
+            <td data-label="Masuk" th:text="${report.createdAt != null ? #temporals.format(report.createdAt, 'dd MMM yyyy, HH:mm') : '—'}"></td>
+            <td data-label="Detail" class="ui-table-actions"><a class="ui-btn ui-btn-secondary" th:href="@{/reports/{id}(id=${report.id})}">Lihat laporan</a></td>
+        </tr></tbody>
+    </table></div>
+    <div id="report-modal-region"></div>
+</div></main></body></html>

@@ -19,17 +19,24 @@ import org.springframework.data.repository.query.Param;
 
 public interface FacilityRepository extends JpaRepository<Facility, Long> {
 
+    @Override
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "facilityType")
+    Optional<Facility> findById(Long id);
+
     // Public facility catalogue and admin facility management.
     Optional<Facility> findByCodeIgnoreCase(String code);
 
     boolean existsByCodeIgnoreCase(String code);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "facilityType")
     List<Facility> findByAdministrativeStatusOrderByNameAsc(AdministrativeStatus status);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "facilityType")
     @Query("""
             select f from Facility f
             where f.administrativeStatus = :status
-              and (:type is null or lower(f.type) = lower(:type))
+              and (:type is null or lower(f.facilityType.name) = lower(:type)
+                   or lower(f.facilityType.code) = lower(:type))
               and (:location is null or lower(f.location) like lower(concat('%', :location, '%')))
               and (:minimumCapacity is null or f.capacity >= :minimumCapacity)
             order by f.name asc
@@ -69,4 +76,16 @@ public interface FacilityRepository extends JpaRepository<Facility, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select f from Facility f where f.id = :id")
     Optional<Facility> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("""
+            select f from Facility f
+            where (:facilityId is null or f.id = :facilityId)
+              and (:type is null or lower(f.facilityType.name) = lower(:type)
+                   or lower(f.facilityType.code) = lower(:type))
+              and (:location is null or lower(f.location) like lower(concat('%', :location, '%')))
+            order by f.name asc
+            """)
+    List<Facility> findForRecap(@Param("facilityId") Long facilityId,
+                                @Param("type") String type,
+                                @Param("location") String location);
 }

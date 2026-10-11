@@ -1,0 +1,142 @@
+package com.github.kafeyangasli.prism.feature.facility.controller;
+
+import com.github.kafeyangasli.prism.feature.facility.dto.FacilityDto;
+import com.github.kafeyangasli.prism.feature.user.service.UserService;
+import com.github.kafeyangasli.prism.feature.facility.service.FacilityService;
+import com.github.kafeyangasli.prism.feature.facility.service.FacilityTypeService;
+import com.github.kafeyangasli.prism.feature.facility.service.FacilityImageService;
+import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
+import com.github.kafeyangasli.prism.shared.exception.ResourceNotFoundException;
+import jakarta.validation.Valid;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
+
+@Controller
+@RequestMapping("/admin/facilities")
+public class AdminFacilityController {
+
+    private final FacilityService facilityService;
+    private final UserService userService;
+    private final FacilityTypeService facilityTypeService;
+    private final FacilityImageService facilityImages;
+
+    public AdminFacilityController(FacilityService facilityService, UserService userService,
+                                   FacilityTypeService facilityTypeService,
+                                   FacilityImageService facilityImages) {
+        this.facilityService = facilityService;
+        this.userService = userService;
+        this.facilityTypeService = facilityTypeService;
+        this.facilityImages = facilityImages;
+    }
+
+    @GetMapping
+    public String listFacilities(Model model) {
+        populatePage(model);
+        return "admin/facilities";
+    }
+
+    @PostMapping
+    public String createFacility(@Valid @ModelAttribute("facilityDto") FacilityDto dto,
+                                 BindingResult bindingResult,
+                                 Authentication authentication,
+                                 Model model,
+                                 RedirectAttributes redirectAttributes,
+                                 @RequestHeader(value = "HX-Request", required = false) String htmxRequest,
+                                 @RequestParam(required = false) List<MultipartFile> images,
+                                 @RequestParam(required = false) Integer thumbnailIndex) {
+        if (bindingResult.hasErrors()) {
+            return renderCreateFailure(model, htmxRequest);
+        }
+        try {
+            com.github.kafeyangasli.prism.feature.user.model.User admin = userService.findByEmail(authentication.getName());
+            facilityImages.create(admin.getId(), dto, images, thumbnailIndex);
+            if (isHtmx(htmxRequest)) {
+                model.addAttribute("facilityDto", new FacilityDto());
+                model.addAttribute("facilities", facilityService.getAllFacilities());
+                model.addAttribute("facilityTypes", facilityTypeService.getActive());
+                model.addAttribute("successMessage", "Fasilitas berhasil ditambahkan.");
+                model.addAttribute("facilityCreationSuccess", true);
+                return "admin/facilities :: facility-creation-success";
+            }
+            redirectAttributes.addFlashAttribute("successMessage", "Fasilitas berhasil ditambahkan.");
+        } catch (BusinessRuleException | ResourceNotFoundException e) {
+            if (isHtmx(htmxRequest)) {
+                bindingResult.reject("facility.create", e.getMessage());
+                return renderCreateFailure(model, htmxRequest);
+            }
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/facilities";
+    }
+
+    @PostMapping("/{id}/update")
+    public String updateFacility(@PathVariable("id") Long id,
+                                 @ModelAttribute("facilityDto") FacilityDto dto,
+                                 Authentication authentication,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            com.github.kafeyangasli.prism.feature.user.model.User admin = userService.findByEmail(authentication.getName());
+            facilityService.updateFacility(admin.getId(), id, dto);
+            redirectAttributes.addFlashAttribute("successMessage", "Fasilitas berhasil diperbarui.");
+        } catch (BusinessRuleException | ResourceNotFoundException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/facilities";
+    }
+
+    @PostMapping("/{id}/activate")
+    public String activateFacility(@PathVariable("id") Long id,
+                                     Authentication authentication,
+                                     RedirectAttributes redirectAttributes) {
+        try {
+            com.github.kafeyangasli.prism.feature.user.model.User admin = userService.findByEmail(authentication.getName());
+            facilityService.activateFacility(admin.getId(), id);
+            redirectAttributes.addFlashAttribute("successMessage", "Fasilitas berhasil diaktifkan kembali.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/facilities";
+    }
+
+    @PostMapping("/{id}/deactivate")
+    public String deactivateFacility(@PathVariable("id") Long id,
+                                     Authentication authentication,
+                                     RedirectAttributes redirectAttributes) {
+        try {
+            com.github.kafeyangasli.prism.feature.user.model.User admin = userService.findByEmail(authentication.getName());
+            facilityService.deactivateFacility(admin.getId(), id);
+            redirectAttributes.addFlashAttribute("successMessage", "Fasilitas berhasil dinonaktifkan.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/facilities";
+    }
+
+    private String renderCreateFailure(Model model, String htmxRequest) {
+        model.addAttribute("openFacilityDialog", true);
+        model.addAttribute("facilityTypes", facilityTypeService.getActive());
+        if (isHtmx(htmxRequest)) {
+            return "admin/facilities :: facility-modal";
+        }
+        model.addAttribute("facilities", facilityService.getAllFacilities());
+        return "admin/facilities";
+    }
+
+    private void populatePage(Model model) {
+        model.addAttribute("facilities", facilityService.getAllFacilities());
+        model.addAttribute("facilityTypes", facilityTypeService.getActive());
+        if (!model.containsAttribute("facilityDto")) {
+            model.addAttribute("facilityDto", new FacilityDto());
+        }
+    }
+
+    private boolean isHtmx(String htmxRequest) {
+        return "true".equalsIgnoreCase(htmxRequest);
+    }
+}

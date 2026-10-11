@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{fragments/layout :: layout('Login', 'minimal', ~{::main})}">
+<body>
+<main>
+    <div class="ui-page">
+        <div class="ui-auth">
+            <aside th:replace="~{fragments/workspace :: authAside}"></aside>
+            <section class="ui-auth-content">
+                <div>
+                    <p class="ui-eyebrow">
+                        Akun PRISM
+                    </p>
+                    <h1 class="text-2xl sm:text-3xl">
+                        Selamat datang kembali
+                    </h1>
+                    <p class="ui-description text-sm">
+                        Masuk untuk mengelola reservasi dan aktivitas fasilitas Anda.
+                    </p>
+                </div>
+                <div th:replace="~{fragments/feedback :: flash}">
+                </div>
+                <div th:if="${param.error}" class="ui-alert ui-alert-error" role="alert">
+                    Email atau kata sandi tidak sesuai, atau akun belum aktif maupun telah ditolak.
+                </div>
+                <div th:if="${param.logout}" class="ui-alert ui-alert-success" role="status">
+                    Anda berhasil keluar.
+                </div>
+                <div th:if="${param.passwordChanged}" class="ui-alert ui-alert-success" role="status">
+                    Kata sandi berhasil diubah. Sesi ini telah berakhir; masuk kembali dengan kata sandi baru.
+                </div>
+                <div th:if="${param.accountDeactivated}" class="ui-alert ui-alert-success" role="status">
+                    Akun berhasil dinonaktifkan. Riwayat reservasi dan laporan tetap tersimpan.
+                </div>
+                <div th:if="${param.inactive}" class="ui-alert ui-alert-error" role="alert">
+                    Sesi berakhir karena akun sudah tidak aktif.
+                </div>
+                <form class="ui-form" th:action="@{/login}" method="post">
+                    <div>
+                        <label class="ui-label">
+                            Email
+                            <input class="ui-input" type="email" autocomplete="username" name="username" required/>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="ui-label">
+                            Kata sandi
+                            <input class="ui-input" type="password" data-password-toggle autocomplete="current-password" name="password"
+                                   required/>
+                        </label>
+                    </div>
+                    <div>
+                        <button class="ui-btn ui-btn-primary w-full" type="submit">
+                            Masuk
+                        </button>
+                    </div>
+                </form>
+                <p class="text-sm text-muted">
+                    Belum punya akun?
+                    <a class="ui-link" th:href="@{/auth/register}">
+                        Daftar sekarang
+                    </a>
+                </p>
+                <a class="ui-link text-sm" th:href="@{/facilities}">
+                    Lihat katalog fasilitas
+                </a>
+            </section>
+        </div>
+    </div>
+</main>
+</body>
+</html>

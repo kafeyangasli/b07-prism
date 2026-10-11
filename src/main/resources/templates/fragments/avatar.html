@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"><body>
+<img th:fragment="avatar(sizeClass)" th:src="@{/account/avatar}" alt="Foto profil Anda"
+     class="ui-avatar" th:classappend="${sizeClass}" width="48" height="48">
+</body></html>

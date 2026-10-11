@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Rekap dan ekspor', 'recap', ~{::main})}">
+<body>
+<main>
+    <div class="ui-page">
+        <header th:replace="~{fragments/page :: heading('Administrasi', 'Rekap dan ekspor', 'Tinjau tingkat penggunaan fasilitas dan jumlah laporan berdasarkan periode.')}"></header>
+        <div th:replace="~{fragments/feedback :: flash}"></div>
+
+        <div id="recap-content" class="ui-sidebar-layout">
+            <aside class="ui-card ui-card-body ui-filter-panel" aria-labelledby="recap-filter-title">
+                <div>
+                    <h2 id="recap-filter-title">Konfigurasi rekap</h2>
+                    <p class="ui-hint">Tentukan periode. Fasilitas, tipe, dan lokasi dapat dikosongkan.</p>
+                </div>
+                <form id="recap-filter-form" class="ui-form" method="get" th:action="@{/admin/recap}"
+                      data-auto-filter hx-get="/admin/recap" hx-trigger="submit, prism:filter"
+                      hx-target="#recap-results" hx-select="#recap-results" hx-swap="outerHTML"
+                      hx-push-url="true" hx-sync="this:replace" hx-indicator="#global-progress">
+                    <div>
+                        <label class="ui-label" for="recap-start">Tanggal mulai</label>
+                        <input id="recap-start" class="ui-input" type="date" name="startDate"
+                               th:value="${filter.startDate}" required>
+                    </div>
+                    <div>
+                        <label class="ui-label" for="recap-end">Tanggal selesai</label>
+                        <input id="recap-end" class="ui-input" type="date" name="endDate" th:value="${filter.endDate}"
+                               required>
+                    </div>
+                    <div>
+                        <label class="ui-label" for="recap-facility">Fasilitas</label>
+                        <select id="recap-facility" class="ui-input" name="facilityId">
+                            <option value="">Semua fasilitas</option>
+                            <option th:each="facility : ${facilities}" th:value="${facility.id}"
+                                    th:text="${facility.name}"
+                                    th:selected="${facility.id == filter.facilityId}"></option>
+                        </select>
+                    </div>
+                    <fieldset th:replace="~{fragments/workspace :: multiFilter('recap-type', 'Tipe fasilitas', 'facilityTypes', ${typeOptions})}"></fieldset>
+                    <fieldset th:replace="~{fragments/workspace :: multiFilter('recap-location', 'Lokasi', 'locations', ${locationOptions})}"></fieldset>
+                    <div class="ui-form-actions">
+                        <a class="ui-btn ui-btn-secondary" th:href="@{/admin/recap}" hx-get="/admin/recap"
+                           hx-target="#recap-content" hx-select="#recap-content" hx-swap="outerHTML"
+                           hx-push-url="true" hx-sync="#recap-filter-form:replace">Atur ulang</a>
+                    </div>
+                </form>
+            </aside>
+
+            <section id="recap-results" class="min-w-0 space-y-5" aria-labelledby="recap-result-title" aria-live="polite">
+                <div th:if="${error != null}" class="ui-alert ui-alert-error" role="alert">
+                    <p th:text="${error}">Rekap tidak dapat dibuat.</p>
+                </div>
+                <div class="ui-section-heading">
+                    <div>
+                        <h2 id="recap-result-title">Hasil rekap fasilitas</h2>
+                        <p class="ui-hint">Kapasitas “Tidak diketahui” berarti riwayat status fasilitas belum lengkap untuk periode ini. N/A berarti kapasitas nol; persentase tidak dapat dihitung.</p>
+                        <p class="ui-hint" th:text="${'Periode ' + #temporals.format(filter.startDate, 'dd MMM yyyy') + ' – ' + #temporals.format(filter.endDate, 'dd MMM yyyy')}"></p>
+                    </div>
+                </div>
+
+                <form th:if="${recap != null}"
+                      class="ui-card ui-card-body grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+                      method="get" th:action="@{/admin/recap/export}">
+                    <input type="hidden" name="startDate" th:value="${filter.startDate}">
+                    <input type="hidden" name="endDate" th:value="${filter.endDate}">
+                    <input type="hidden" name="facilityId" th:value="${filter.facilityId}">
+                    <input th:each="type : ${filter.facilityTypes}" type="hidden" name="facilityTypes" th:value="${type}">
+                    <input th:each="location : ${filter.locations}" type="hidden" name="locations" th:value="${location}">
+                    <div>
+                        <label class="ui-label" for="export-format">Format ekspor</label>
+                        <p class="ui-hint mb-2">Ekspor menggunakan periode dan filter hasil yang sedang ditampilkan.</p>
+                        <select id="export-format" class="ui-input" name="format" required>
+                            <option value="csv">CSV</option>
+                            <option value="xlsx">XLSX</option>
+                            <option value="pdf">PDF</option>
+                        </select>
+                    </div>
+                    <button class="ui-btn ui-btn-secondary" type="submit">Unduh rekap</button>
+                </form>
+
+                <p th:if="${recap != null and !#lists.isEmpty(recap.rows)}" class="ui-hint lg:hidden" id="recap-scroll-help">Geser tabel ke samping untuk membandingkan penggunaan dan laporan.</p>
+                <div th:if="${recap != null and !#lists.isEmpty(recap.rows)}" class="ui-table-wrap ui-table-scroll" tabindex="0" role="region" aria-label="Rekap fasilitas" aria-describedby="recap-scroll-help">
+                    <table class="ui-table">
+                        <thead>
+                        <tr>
+                            <th scope="col">Kode</th>
+                            <th scope="col">Fasilitas</th>
+                            <th scope="col">Tipe</th>
+                            <th scope="col">Lokasi</th>
+                            <th scope="col" class="ui-table-number">Slot disetujui</th>
+                            <th scope="col" class="ui-table-number">Slot tersedia</th>
+                            <th scope="col" class="ui-table-number">Tingkat penggunaan</th>
+                            <th scope="col" class="ui-table-number">Laporan</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="row : ${recap.rows}">
+                            <td data-label="Kode" th:text="${row.facilityCode}"></td>
+                            <td data-label="Fasilitas" th:text="${row.facilityName}"></td>
+                            <td data-label="Tipe" th:text="${row.facilityType}"></td>
+                            <td data-label="Lokasi" th:text="${row.location}"></td>
+                            <td class="ui-table-number" data-label="Slot disetujui" th:text="${row.approvedSlots}"></td>
+                            <td class="ui-table-number" data-label="Slot tersedia" th:text="${row.capacityDisplay()}"></td>
+                            <td class="ui-table-number" data-label="Tingkat penggunaan">
+                                <span th:text="${row.occupancyDisplay() + (row.occupancyPercent != null ? '%' : '')}"></span>
+                                <meter th:if="${row.occupancyPercent != null}" class="ui-meter ml-auto mt-2 block h-2 w-24" min="0" max="100" th:value="${row.occupancyPercent}" th:aria-label="${'Tingkat penggunaan ' + row.facilityName}"></meter>
+                            </td>
+                            <td class="ui-table-number" data-label="Laporan" th:text="${row.issueCount}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div th:if="${recap != null and #lists.isEmpty(recap.rows)}" class="ui-empty-state">
+                    <h3>Tidak ada data ditemukan</h3>
+                    <p class="mt-2 text-sm">Coba periode atau filter yang berbeda.</p>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+</body>
+</html>

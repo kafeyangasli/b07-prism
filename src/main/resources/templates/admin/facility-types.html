@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Jenis Fasilitas', 'admin-settings', ~{::main})}">
+<body>
+<main>
+    <div class="ui-page">
+        <header class="ui-page-header">
+            <div>
+                <a class="ui-link text-sm" th:href="@{/admin/settings}">← Pengaturan</a>
+                <p class="ui-eyebrow mt-4">Pengaturan</p>
+                <h1>Jenis Fasilitas</h1>
+                <p class="ui-description">Kelola kategori yang dapat dipilih untuk fasilitas.</p>
+            </div>
+        </header>
+
+        <div th:replace="~{fragments/feedback :: flash}"></div>
+
+        <div class="ui-sidebar-layout">
+    <section class="ui-card ui-card-body lg:sticky lg:top-6">
+            <h2>Tambah tipe</h2>
+            <form class="ui-form mt-4" th:action="@{/admin/facility-types}"
+                  th:object="${facilityTypeDto}" method="post">
+                <div class="md:col-span-full" th:replace="~{fragments/feedback :: formErrors}"></div>
+                <div>
+                    <label class="ui-label" for="type-code">Kode</label>
+                    <input id="type-code" class="ui-input" th:field="*{code}" maxlength="80" required>
+                    <p class="ui-field-error" th:errors="*{code}"></p>
+                </div>
+                <div>
+                    <label class="ui-label" for="type-name">Nama</label>
+                    <input id="type-name" class="ui-input" th:field="*{name}" maxlength="150" required>
+                    <p class="ui-field-error" th:errors="*{name}"></p>
+                </div>
+                <div class="md:col-span-full">
+                    <label class="ui-label" for="type-description">Deskripsi</label>
+                    <textarea id="type-description" class="ui-input" th:field="*{description}" maxlength="2000" data-character-count></textarea>
+                </div>
+                <div class="ui-form-actions md:col-span-full">
+                    <button class="ui-btn ui-btn-primary" type="submit">Tambah Tipe</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="ui-section">
+            <div class="ui-section-heading">
+                <div>
+                    <h2>Daftar tipe</h2>
+                    <p class="ui-hint" th:text="${#lists.size(facilityTypes) + ' tipe tercatat'}">0 tipe tercatat</p>
+                </div>
+            </div>
+            <div th:replace="~{fragments/workspace :: search('facility-types-search', 'facility-types-records', 'Cari dalam daftar…')}"></div>
+<div class="ui-table-wrap" id="facility-types-records">
+                <table class="ui-table">
+                    <thead><tr><th scope="col">Kode</th><th scope="col">Nama dan deskripsi</th><th scope="col">Status</th><th scope="col">Aksi</th></tr></thead>
+                    <tbody>
+                    <tr data-list-record th:each="type : ${facilityTypes}">
+                        <td data-label="Kode" th:text="${type.code}"></td>
+                        <td data-label="Nama dan deskripsi">
+                            <strong th:text="${type.name}"></strong><p th:text="${type.description}"></p>
+                            <details class="mt-3"><summary class="ui-link py-2">Ubah tipe fasilitas</summary>
+                            <form class="ui-form mt-3" th:action="@{/admin/facility-types/{id}/update(id=${type.id})}" method="post">
+                                <input type="hidden" name="code" th:value="${type.code}">
+                                <div><label class="ui-label" th:for="${'type-name-' + type.id}">Nama</label>
+                                <input class="ui-input" th:id="${'type-name-' + type.id}" name="name" th:value="${type.name}" maxlength="150" required></div>
+                                <div><label class="ui-label" th:for="${'type-description-' + type.id}">Deskripsi (opsional)</label>
+                                <textarea class="ui-input" th:id="${'type-description-' + type.id}" name="description" th:text="${type.description}" maxlength="2000" data-character-count></textarea></div>
+                                <button class="ui-btn ui-btn-secondary" type="submit">Simpan perubahan</button>
+                            </form>
+                            </details>
+                        </td>
+                        <td data-label="Status"><span th:replace="~{fragments/status :: badge(${type.active ? 'ACTIVE' : 'INACTIVE'})}"></span></td>
+                        <td data-label="Aksi" class="ui-table-actions">
+                            <details th:if="${type.active}"><summary class="ui-link py-2">Nonaktifkan</summary>
+                            <p class="ui-hint">Tipe ini tidak dapat dipilih untuk fasilitas baru. Fasilitas yang sudah menggunakannya tetap tersimpan.</p>
+                            <form class="mt-3" th:action="@{/admin/facility-types/{id}/deactivate(id=${type.id})}" method="post">
+                                <button class="ui-btn ui-btn-danger" type="submit">Nonaktifkan</button>
+                            </form>
+                            </details>
+                            <form th:unless="${type.active}" th:action="@{/admin/facility-types/{id}/activate(id=${type.id})}" method="post">
+                                <button class="ui-btn ui-btn-primary" type="submit">Aktifkan</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(facilityTypes)}"><td colspan="4">Belum ada tipe fasilitas. Tambahkan tipe melalui formulir di atas.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    </div>
+</main>
+</body>
+</html>

@@ -21,6 +21,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 
 @Getter
 @Setter
@@ -53,8 +54,18 @@ public class Reservation {
     @Column(nullable = false, length = 1000)
     private String purpose;
 
+    @Column(name = "quantity")
+    private Integer quantity;
+
     @Column(name = "proposal_path", length = 1000)
     private String proposalPath;
+
+    @Column(name = "validated_proposal_path", length = 1000)
+    private String validatedProposalPath;
+
+    // Only the migration grants this exception to pre-upload verification records.
+    @Column(name = "proposal_validation_legacy", nullable = false)
+    private boolean proposalValidationLegacy;
 
     @Column(name = "proposal_validated_at")
     private LocalDateTime proposalValidatedAt;
@@ -114,7 +125,9 @@ public class Reservation {
 
     @PrePersist
     void beforeInsert() {
+        validateQuantity();
         validateTimeRange();
+        validateProposalEvidence();
         LocalDateTime now = LocalDateTime.now();
         createdAt = now;
         updatedAt = now;
@@ -122,13 +135,51 @@ public class Reservation {
 
     @PreUpdate
     void beforeUpdate() {
+        validateQuantity();
         validateTimeRange();
+        validateProposalEvidence();
         updatedAt = LocalDateTime.now();
     }
 
     private void validateTimeRange() {
         if (startAt == null || endAt == null || !startAt.isBefore(endAt)) {
-            throw new IllegalArgumentException("Reservation startAt must be before endAt");
+            throw new IllegalArgumentException("Waktu mulai reservasi harus lebih awal dari waktu selesai.");
+        }
+    }
+
+    public boolean isProposalRequired() {
+        return Duration.between(startAt, endAt).toMinutes() >= 360
+                || (quantity != null && quantity > 5)
+                || "Aula".equalsIgnoreCase(facility.getType());
+    }
+
+    private void validateQuantity() {
+        if (facility.isEquipment() ? quantity == null || quantity <= 0 : quantity != null) {
+            throw new IllegalArgumentException("Jumlah positif wajib untuk reservasi Alat saja.");
+        }
+    }
+
+    public boolean isProposalSubmitted() {
+        return proposalPath != null && !proposalPath.isBlank();
+    }
+
+    public boolean isProposalValidated() {
+        return isProposalSubmitted() && proposalValidatedAt != null && proposalValidatedBy != null
+                && (hasValidatedProposal() || proposalValidationLegacy);
+    }
+
+    public boolean hasValidatedProposal() {
+        return validatedProposalPath != null && !validatedProposalPath.isBlank();
+    }
+
+    private void validateProposalEvidence() {
+        if (hasValidatedProposal() && (!isProposalSubmitted()
+                || proposalValidatedAt == null || proposalValidatedBy == null)) {
+            throw new IllegalArgumentException("PDF tervalidasi harus memiliki proposal asli dan audit validasi lengkap.");
+        }
+        if (!proposalValidationLegacy && proposalValidatedAt != null && proposalValidatedBy != null
+                && (!isProposalSubmitted() || !hasValidatedProposal())) {
+            throw new IllegalArgumentException("Validasi proposal memerlukan PDF tervalidasi.");
         }
     }
 

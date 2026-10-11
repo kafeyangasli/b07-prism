@@ -1,0 +1,3 @@
+/* Layout and image sizing use Tailwind. These selectors cover generated thumbnail choices. */
+.facility-image-grid label:has(input:checked) { outline: 3px solid var(--color-primary); outline-offset: 3px; border-radius: .5rem; }
+.facility-image-grid label:has(input:focus-visible) { outline: 3px solid var(--color-primary); outline-offset: 3px; }

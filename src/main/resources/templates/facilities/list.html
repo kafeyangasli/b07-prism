@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="id"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{fragments/layout :: layout('Katalog fasilitas', 'facilities', ~{::main})}">
+<body>
+<main>
+    <div class="ui-page">
+        <div th:replace="~{fragments/feedback :: flash}"></div>
+        <section class="ui-page-header" aria-labelledby="page-title">
+            <div class="max-w-3xl">
+                <p class="ui-eyebrow">Fasilitas kampus</p>
+                <h1 id="page-title">Temukan fasilitas yang sesuai</h1>
+                <p class="ui-description">
+                    Telusuri fasilitas berdasarkan tipe, lokasi, kapasitas, atau waktu penggunaan.
+                </p>
+            </div>
+            <a sec:authorize="hasRole('PENGGUNA')" th:href="@{/reservations/new}"
+               class="ui-btn ui-btn-primary shrink-0">
+                Mulai Reservasi
+            </a>
+        </section>
+
+        <div id="facility-catalogue" class="ui-sidebar-layout">
+            <aside class="ui-card ui-card-body ui-filter-panel" aria-labelledby="filter-title">
+                <details open data-responsive-filter class="space-y-4">
+                <summary class="ui-filter-summary"><h2 id="filter-title" class="inline">Filter fasilitas</h2></summary>
+                <div>
+                    <p class="ui-hint">Semua filter bersifat opsional. Waktu mulai dan selesai harus diisi
+                        berpasangan.</p>
+                </div>
+                <form id="facility-filter-form"
+                      th:action="@{/facilities}"
+                      method="get"
+                      hx-get="/facilities"
+                      hx-trigger="submit, prism:filter"
+                      hx-sync="this:replace"
+                      hx-target="#facility-results"
+                      hx-select="#facility-results"
+                      hx-swap="outerHTML"
+                      hx-push-url="true"
+                      hx-indicator="#global-progress, #facility-filter-loading"
+                      class="ui-form" data-auto-filter>
+                    <fieldset th:replace="~{fragments/workspace :: multiFilter('facility-type', 'Tipe fasilitas', 'type', ${typeOptions})}"></fieldset>
+                    <fieldset th:replace="~{fragments/workspace :: multiFilter('facility-location', 'Lokasi', 'location', ${locationOptions})}"></fieldset>
+                    <div>
+                        <label for="capacity" class="ui-label">Kapasitas minimum</label>
+                        <input id="capacity" class="ui-input" type="number" name="capacity" th:value="${capacity}"
+                               min="1" inputmode="numeric" placeholder="Contoh: 30">
+                    </div>
+                    <fieldset class="space-y-4 border-t border-border pt-4"><legend class="pt-4 text-sm font-semibold">Waktu penggunaan</legend>
+                    <div>
+                        <label for="startAt" class="ui-label">Mulai penggunaan</label>
+                        <input id="startAt" class="ui-input" type="datetime-local" name="startAt" th:value="${startAt}"
+                               step="1800">
+                    </div>
+                    <div>
+                        <label for="endAt" class="ui-label">Selesai penggunaan</label>
+                        <input id="endAt" class="ui-input" type="datetime-local" name="endAt" th:value="${endAt}"
+                               step="1800">
+                    </div>
+                    </fieldset>
+                    <div class="ui-form-actions">
+                        <a th:href="@{/facilities}" hx-get="/facilities" hx-target="#facility-catalogue"
+                           hx-select="#facility-catalogue" hx-swap="outerHTML" hx-push-url="true"
+                           hx-sync="#facility-filter-form:replace" class="ui-btn ui-btn-secondary">Atur ulang</a>
+                    </div>
+                    <span id="facility-filter-loading" class="htmx-indicator ui-local-indicator text-sm font-medium text-prism-700" role="status">
+                                Memperbarui hasil…
+                            </span>
+                </form>
+                </details>
+            </aside>
+
+            <section id="facility-results" aria-labelledby="result-title" aria-live="polite" class="min-w-0 space-y-4">
+                <div th:if="${filterError != null}" class="ui-alert ui-alert-error" role="alert">
+                    <p th:text="${filterError}"></p>
+                </div>
+                <th:block th:if="${filterError == null}">
+                <div class="ui-section-heading">
+                    <div>
+                        <h2 id="result-title">Daftar fasilitas</h2>
+                        <p class="ui-hint" th:text="${#lists.size(facilities) + ' fasilitas ditemukan'}">0 fasilitas
+                            ditemukan</p>
+                    </div>
+                </div>
+                <div th:replace="~{fragments/workspace :: search('catalog-search', 'facility-results', 'Cari nama atau kode fasilitas…')}"></div>
+                <div th:if="${!#lists.isEmpty(facilities)}" class="grid gap-5 md:grid-cols-2">
+                    <article th:each="facility : ${facilities}" class="ui-card group flex flex-col overflow-hidden transition-colors hover:border-prism-300" data-list-record th:attr="data-search-text=${facility.code + ' ' + facility.name + ' ' + facility.location + ' ' + facility.facilityType.name}">
+                        <img class="facility-image-card aspect-video w-full bg-ink-100 object-cover" th:src="${facility.thumbnail != null ? facility.thumbnail.url : '/images/facility-placeholder.svg'}"
+                             th:alt="${'Foto ' + facility.name}" loading="lazy" data-facility-image>
+                        <div class="ui-card-body flex flex-1 flex-col">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="min-w-0">
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-muted"
+                                       th:text="${facility.code}">KODE</p>
+                                    <h3 class="mt-1">
+                                        <a class="rounded hover:text-prism-700"
+                                           th:href="@{/facilities/{id}(id=${facility.id})}" th:text="${facility.name}">
+                                            Nama fasilitas
+                                        </a>
+                                    </h3>
+                                </div>
+                                <span th:replace="~{fragments/status :: badge(${facility.administrativeStatus})}"></span>
+                            </div>
+                            <dl class="mt-5 grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <dt class="text-muted">Tipe</dt>
+                                    <dd class="mt-1 font-medium" th:text="${facility.facilityType.name}">Tipe</dd>
+                                </div>
+                                <div th:unless="${facility.equipment}">
+                                    <dt class="text-muted">Kapasitas</dt>
+                                    <dd class="mt-1 font-medium" th:text="${facility.capacity + ' orang'}">0 orang</dd>
+                                </div>
+                                <div th:if="${facility.equipment}">
+                                    <dt class="text-muted">Stok tersedia</dt>
+                                    <dd class="mt-1 font-medium" th:text="${availableStock[facility.id] + ' unit'}">0 unit</dd>
+                                    <p class="mt-1 text-xs text-muted" th:text="${stockForSelectedInterval ? 'Pada waktu yang dipilih' : 'Saat ini'}"></p>
+                                </div>
+                                <div class="col-span-2">
+                                    <dt class="text-muted">Lokasi</dt>
+                                    <dd class="mt-1 font-medium" th:text="${facility.location}">Lokasi</dd>
+                                </div>
+                            </dl>
+                            <div class="mt-auto pt-6">
+                                <a th:href="@{/facilities/{id}(id=${facility.id})}"
+                                   class="ui-btn ui-btn-secondary w-full justify-between">
+                                    Lihat detail dan jadwal <svg th:replace="~{fragments/workspace :: icon('arrow')}"></svg>
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+                <div th:if="${#lists.isEmpty(facilities)}" class="ui-empty-state">
+                    <h3>Tidak ada fasilitas ditemukan</h3>
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6">Coba longgarkan filter atau pilih rentang waktu
+                        lain.</p>
+                    <a th:href="@{/facilities}" hx-get="/facilities" hx-target="#facility-catalogue"
+                       hx-select="#facility-catalogue" hx-swap="outerHTML" hx-push-url="true"
+                       hx-sync="#facility-filter-form:replace" class="ui-btn ui-btn-secondary mt-5">Hapus semua filter</a>
+                </div>
+                </th:block>
+            </section>
+        </div>
+    </div>
+</main>
+</body>
+</html>

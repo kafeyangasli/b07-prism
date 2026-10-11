@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{fragments/layout :: layout('Reservasiku', 'reservations', ~{::main})}">
+<body>
+<main>
+    <div class="ui-page">
+        <header th:replace="~{fragments/page :: heading('Reservasi', 'Reservasiku', 'Pantau status pengajuan dan buka detail setiap reservasi.')}">
+        </header>
+        <div th:replace="~{fragments/feedback :: flash}">
+        </div>
+        <div class="ui-section-heading">
+            <h2>
+                Riwayat reservasi
+            </h2>
+            <a th:href="@{/reservations/new}" class="ui-btn ui-btn-primary">
+                Ajukan reservasi baru
+            </a>
+        </div>
+        <div th:replace="~{fragments/workspace :: historyTools('reservations-search', 'reservations-records', false, false)}"></div>
+<div class="ui-table-wrap" id="reservations-records">
+            <table class="ui-table">
+                <thead>
+                <tr>
+                    <th scope="col">
+                        Fasilitas
+                    </th>
+                    <th scope="col">
+                        Mulai
+                    </th>
+                    <th scope="col">
+                        Selesai
+                    </th>
+                    <th scope="col">
+                        Status
+                    </th>
+                    <th scope="col">
+                        Detail
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr data-list-record th:attr="data-record-status=${reservation.status},data-record-date=${reservation.startAt != null ? #temporals.format(reservation.startAt, 'yyyy-MM-dd') : ''}"
+                        th:each="reservation : ${reservations}">
+                    <td data-label="Fasilitas"
+                        th:text="${reservation.facility.name + (reservation.quantity != null ? ' · ' + reservation.quantity + ' unit' : '')}">
+                    </td>
+                    <td data-label="Mulai"
+                        th:text="${reservation.startAt != null ? #temporals.format(reservation.startAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                    </td>
+                    <td data-label="Selesai"
+                        th:text="${reservation.endAt != null ? #temporals.format(reservation.endAt, 'dd MMM yyyy, HH:mm') : '—'}">
+                    </td>
+                    <td data-label="Status"
+                    >
+                                    <span th:replace="~{fragments/status :: badge(${reservation.status})}">
+                                    </span>
+                    </td>
+                    <td data-label="Detail">
+                        <a class="ui-btn ui-btn-secondary"
+                           th:href="@{/reservations/{id}(id=${reservation.id})}">
+                            Lihat reservasi
+                        </a>
+                        <a th:replace="~{reports/form :: reservation-action(${reservation})}"></a>
+                    </td>
+                </tr>
+                <tr
+                        th:if="${#lists.isEmpty(reservations)}">
+                    <td colspan="5">
+                        <h3>Belum ada reservasi</h3>
+                        <p class="mt-2">Temukan fasilitas dan pilih jadwal untuk mengajukan reservasi pertama Anda.</p>
+                        <a class="ui-btn ui-btn-secondary mt-4" th:href="@{/facilities}">Lihat fasilitas</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="report-modal-region"></div>
+    </div>
+</main>
+</body>
+</html>

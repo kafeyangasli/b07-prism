@@ -2,24 +2,49 @@ package com.github.kafeyangasli.prism.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
+import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated());
-        http.formLogin(Customizer.withDefaults());
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, UserRepository users) throws Exception {
+        http
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/", "/facilities", "/facilities/**", "/auth/register", "/login", "/css/**", "/js/**", "/images/**", "/vendor/**", "/webjars/**").permitAll()
+                .requestMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/staff/**").hasAnyRole("ADMIN", "PETUGAS")
+                .requestMatchers("/reservations/**").hasRole("PENGGUNA")
+                .requestMatchers("/account/delete").hasRole("PENGGUNA")
+                .requestMatchers("/account/**").hasAnyRole("PENGGUNA", "PETUGAS", "ADMIN")
+                .anyRequest().authenticated()
+            )
+            .formLogin(form -> form
+                .loginPage("/login")
+                .defaultSuccessUrl("/", true)
+                .permitAll()
+            )
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/login?logout")
+                .invalidateHttpSession(true)
+                .deleteCookies("JSESSIONID")
+                .permitAll()
+            );
+
+        http.addFilterAfter(new AccountStatusFilter(users), AnonymousAuthenticationFilter.class);
         return http.build();
     }
 
     @Bean
-    PasswordEncoder passwordEncoder() {
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 }

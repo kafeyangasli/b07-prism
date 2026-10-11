@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Foto profil bawaan">
+  <circle cx="64" cy="64" r="64" fill="#e8e2f4"/>
+  <circle cx="64" cy="46" r="23" fill="#7469b6"/>
+  <path d="M21 113c0-27 19-43 43-43s43 16 43 43" fill="#7469b6"/>
+</svg>

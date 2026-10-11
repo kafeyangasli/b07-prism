@@ -107,13 +107,13 @@ public class FacilityBlockage {
 
     private void validateTimeRange() {
         if (startAt == null || (plannedEndAt != null && !startAt.isBefore(plannedEndAt))) {
-            throw new IllegalArgumentException("Facility blockage startAt must be before plannedEndAt");
+            throw new IllegalArgumentException("Waktu mulai blokir harus lebih awal dari rencana waktu selesai.");
         }
     }
 
     private void validateRepairReportReference() {
         if (blockageType != null && "REPAIR".equalsIgnoreCase(blockageType.getCode()) && report == null) {
-            throw new IllegalArgumentException("A repair blockage must reference a report");
+            throw new IllegalArgumentException("Blokir perbaikan harus terhubung dengan laporan fasilitas.");
         }
     }
 

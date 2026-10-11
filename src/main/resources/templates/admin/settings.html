@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Pengaturan', 'admin-settings', ~{::main})}">
+<body>
+<main>
+    <div class="ui-page">
+        <header class="ui-page-header">
+            <div>
+                <p class="ui-eyebrow">Administrasi</p>
+                <h1>Pengaturan</h1>
+                <p class="ui-description">Kelola jenis fasilitas, jenis blokir, dan templat proposal.</p>
+            </div>
+        </header>
+
+        <div th:replace="~{fragments/feedback :: flash}"></div>
+
+        <section class="ui-section" aria-labelledby="settings-types-title">
+            <h2 id="settings-types-title">Jenis fasilitas dan blokir</h2>
+            <div class="grid gap-4 md:grid-cols-2">
+                <article class="ui-card ui-card-body space-y-4">
+                    <span class="flex size-11 items-center justify-center rounded-xl bg-primary-subtle text-primary"><svg th:replace="~{fragments/workspace :: icon('building')}"></svg></span>
+                    <h3>Jenis Fasilitas</h3>
+                    <p class="text-sm text-muted">Kelola kategori yang dapat dipilih saat membuat atau mengubah fasilitas.</p>
+                    <a class="ui-btn ui-btn-secondary" th:href="@{/admin/facility-types}">Kelola jenis fasilitas</a>
+                </article>
+                <article class="ui-card ui-card-body space-y-4">
+                    <span class="flex size-11 items-center justify-center rounded-xl bg-primary-subtle text-primary"><svg th:replace="~{fragments/workspace :: icon('block')}"></svg></span>
+                    <h3>Jenis Blokir</h3>
+                    <p class="text-sm text-muted">Kelola kategori yang digunakan untuk memblokir fasilitas.</p>
+                    <a class="ui-btn ui-btn-secondary" th:href="@{/admin/blockage-types}">Kelola jenis blokir</a>
+                </article>
+            </div>
+        </section>
+
+        <section class="ui-card ui-card-body grid items-start gap-6 lg:grid-cols-3">
+            <div>
+            <h2>Templat proposal</h2>
+            <p class="ui-hint mt-2">Masukkan tautan berbagi dokumen yang dapat dibuka oleh seluruh pengguna.</p>
+            </div>
+            <form class="ui-form lg:col-span-2" th:action="@{/admin/settings/proposal-template}" method="post">
+                <div>
+                    <label class="ui-label" for="proposal-template-url">Tautan templat</label>
+                    <input id="proposal-template-url" class="ui-input" type="url" name="proposalTemplateUrl"
+                           th:value="${proposalTemplateUrl}" maxlength="2000" required
+                           placeholder="https://docs.example.com/proposal-template">
+                    <p class="ui-hint">Gunakan URL HTTP atau HTTPS tanpa informasi login pada alamatnya.</p>
+                </div>
+                <div class="ui-form-actions">
+                    <a th:if="${proposalTemplateUrl != null and !#strings.isEmpty(proposalTemplateUrl)}"
+                       class="ui-btn ui-btn-secondary" th:href="${proposalTemplateUrl}"
+                       target="_blank" rel="noopener noreferrer">Uji tautan</a>
+                    <button class="ui-btn ui-btn-primary" type="submit">Simpan tautan</button>
+                </div>
+            </form>
+        </section>
+    </div>
+</main>
+</body>
+</html>

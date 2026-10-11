@@ -44,6 +44,10 @@ public class User {
     private String passwordHash;
 
     @Setter
+    @Column(name = "profile_picture_path", length = 255)
+    private String profilePicturePath;
+
+    @Setter
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Role role;

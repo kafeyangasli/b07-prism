@@ -322,6 +322,24 @@ class AdministrationFeaturesIntegrationTest {
     void dashboardRejectsOrdinaryUser() throws Exception {
         mockMvc.perform(get("/staff/dashboard"))
                 .andExpect(status().isForbidden());
+        mockMvc.perform(get("/staff/reservations")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/staff/reports")).andExpect(status().isForbidden());
+    }
+
+    @Test @WithPrismUser(roles = "PETUGAS")
+    void reservationHistoryIncludesAllProcessedStatusesAndExcludesPendingQueue() {
+        for (var status : ReservationStatus.values()) {
+            reservations.save(new Reservation(requester, room, NOW.plusDays(2), NOW.plusDays(2).plusHours(1),
+                    status.name(), null, status, NOW.plusHours(2)));
+        }
+        var history = dashboardService.reservationHistory();
+        assertThat(history).hasSize(5).extracting("status").containsExactly(
+                ReservationStatus.COMPLETED, ReservationStatus.EXPIRED, ReservationStatus.CANCELLED,
+                ReservationStatus.REJECTED, ReservationStatus.APPROVED);
+        assertThat(history).allSatisfy(row -> {
+            assertThat(row.requesterName()).isEqualTo("Pemohon");
+            assertThat(row.facilityName()).isEqualTo("Laboratorium 1");
+        });
     }
 
     private String readZipEntry(byte[] bytes, String expectedName) throws Exception {

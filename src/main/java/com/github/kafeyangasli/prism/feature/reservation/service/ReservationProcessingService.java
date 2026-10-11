@@ -96,11 +96,18 @@ public class ReservationProcessingService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAnyRole('PETUGAS','ADMIN')")
+    public Reservation managementDetail(long reservationId, long actorId) {
+        requireStaffActor(actorId);
+        return reservationRepository.findManagementDetail(reservationId).orElseThrow(() -> notFound(reservationId));
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('PETUGAS','ADMIN')")
     public Resource proposalForReview(long reservationId, long actorId) {
         requireStaffActor(actorId);
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> notFound(reservationId));
-        validateProcessable(reservation, LocalDateTime.now(clock));
+        // Historical reservations remain readable; only validation/approval requires a processable status.
         return loadProposal(reservation);
     }
 

@@ -30,17 +30,17 @@
     <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-sm font-bold text-primary" th:text="${number}">1</span>
     <div class="min-w-0"><h2 class="text-lg" th:text="${title}">Judul</h2><p class="mt-1 text-sm leading-6 text-muted" th:text="${description}">Keterangan</p></div>
 </div>
-<div th:fragment="historyTools(id, target, report)" class="ui-list-tools flex-wrap" data-list-tools hidden>
+<div th:fragment="historyTools(id, target, report, processed)" class="ui-list-tools flex-wrap" data-list-tools hidden>
     <div class="relative min-w-0 w-full sm:max-w-sm">
-        <label class="sr-only" th:for="${id}">Cari fasilitas dalam riwayat</label>
-        <input class="ui-input pr-10" type="search" th:id="${id}" placeholder="Cari fasilitas dalam riwayat…" th:attr="data-list-search=${target}" autocomplete="off">
+        <label class="sr-only" th:for="${id}">Cari dalam riwayat</label>
+        <input class="ui-input pr-10" type="search" th:id="${id}" th:placeholder="${report ? 'Cari fasilitas atau kategori…' : (processed ? 'Cari fasilitas, pemohon, atau catatan…' : 'Cari fasilitas dalam riwayat…')}" th:attr="data-list-search=${target}" autocomplete="off">
         <span class="pointer-events-none absolute right-3 top-3 text-muted"><svg th:replace="~{fragments/workspace :: icon('search')}"></svg></span>
     </div>
     <p class="text-sm text-muted" data-list-count aria-live="polite"></p>
     <div class="ui-record-filters w-full" role="group" aria-label="Filter status riwayat">
         <button type="button" data-record-filter="" aria-pressed="true">Semua</button>
         <th:block th:unless="${report}">
-            <button type="button" data-record-filter="PENDING" aria-pressed="false">Menunggu</button>
+            <button th:unless="${processed}" type="button" data-record-filter="PENDING" aria-pressed="false">Menunggu</button>
             <button type="button" data-record-filter="APPROVED" aria-pressed="false">Disetujui</button>
             <button type="button" data-record-filter="COMPLETED" aria-pressed="false">Selesai</button>
             <button type="button" data-record-filter="REJECTED" aria-pressed="false">Ditolak</button>
@@ -48,12 +48,18 @@
             <button type="button" data-record-filter="EXPIRED" aria-pressed="false">Kedaluwarsa</button>
         </th:block>
         <th:block th:if="${report}">
-            <button type="button" data-record-filter="NEW" aria-pressed="false">Baru</button>
-            <button type="button" data-record-filter="IN_PROGRESS" aria-pressed="false">Diproses</button>
+            <button th:unless="${processed}" type="button" data-record-filter="NEW" aria-pressed="false">Baru</button>
+            <button th:unless="${processed}" type="button" data-record-filter="IN_PROGRESS" aria-pressed="false">Diproses</button>
             <button type="button" data-record-filter="RESOLVED" aria-pressed="false">Selesai</button>
             <button type="button" data-record-filter="REJECTED" aria-pressed="false">Ditolak</button>
         </th:block>
     </div>
+    <div class="flex w-full flex-wrap items-end gap-3">
+        <div><label class="ui-label" th:for="${id + '-from'}" th:text="${report ? 'Tanggal laporan dari' : 'Tanggal penggunaan dari'}"></label><input type="date" class="ui-input" th:id="${id + '-from'}" data-record-from></div>
+        <div><label class="ui-label" th:for="${id + '-to'}">Sampai tanggal</label><input type="date" class="ui-input" th:id="${id + '-to'}" data-record-to></div>
+        <button type="button" class="ui-btn ui-btn-secondary" data-history-reset>Atur ulang filter</button>
+    </div>
+    <p class="ui-field-error w-full" data-date-range-error role="alert" hidden>Tanggal akhir tidak boleh sebelum tanggal awal.</p>
 </div>
 <aside th:fragment="authAside" class="ui-auth-aside">
     <a th:href="@{/}" aria-label="Beranda PRISM" class="inline-flex self-start rounded-lg"><img th:src="@{/images/prism-dark.svg}" alt="PRISM" width="442" height="112" class="h-10 w-auto"></a>

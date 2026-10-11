@@ -4,7 +4,7 @@
 <body>
 <main>
     <div class="ui-page">
-        <header th:replace="~{fragments/page :: heading('Operasional', 'Manajemen Reservasi', 'Tinjau dan proses pengajuan reservasi yang masih menunggu.')}">
+        <header th:replace="~{fragments/page :: heading('Operasional', 'Manajemen Reservasi', 'Proses pengajuan yang menunggu dan telusuri riwayat reservasi.')}">
         </header>
         <div th:replace="~{fragments/feedback :: flash}">
         </div>
@@ -38,7 +38,8 @@
                 Semua pengajuan telah ditangani. Tidak ada reservasi yang dapat diproses.
             </p>
             <div th:replace="~{fragments/workspace :: search('reservation-queue-search', 'reservation-queue-records', 'Cari dalam daftar…')}"></div>
-<div class="ui-table-wrap" th:unless="${#lists.isEmpty(dashboard.pendingReservations)}" id="reservation-queue-records">
+            <div class="ui-table-wrap" th:unless="${#lists.isEmpty(dashboard.pendingReservations)}"
+                 id="reservation-queue-records">
                 <table class="ui-table">
                     <thead>
                     <tr>
@@ -54,14 +55,18 @@
                     <tr data-list-record th:each="row : ${dashboard.pendingReservations}">
                         <td data-label="Pemohon" th:text="${row.requesterName}">
                         </td>
-                        <td data-label="Fasilitas"><strong th:text="${row.facilityName + (row.quantity != null ? ' · ' + row.quantity + ' unit' : '')}"></strong>
-                            <details class="mt-2" th:if="${row.purpose != null}"><summary class="ui-link py-2">Tujuan penggunaan</summary><p class="mt-2 whitespace-pre-wrap" th:text="${row.purpose}"></p></details>
+                        <td data-label="Fasilitas"><strong
+                                th:text="${row.facilityName + (row.quantity != null ? ' · ' + row.quantity + ' unit' : '')}"></strong>
+                            <details class="mt-2" th:if="${row.purpose != null}">
+                                <summary class="ui-link py-2">Tujuan penggunaan</summary>
+                                <p class="mt-2 whitespace-pre-wrap" th:text="${row.purpose}"></p></details>
                         </td>
                         <td data-label="Penggunaan"
                             th:text="${#temporals.format(row.startAt, 'dd MMM yyyy, HH:mm') + ' – ' + #temporals.format(row.endAt, 'dd MMM yyyy, HH:mm')}">
                         </td>
                         <td data-label="Masuk">
-                            <span th:if="${row.expiresAt != null and !row.expiresAt.isAfter(urgentBefore)}" class="ui-badge status-pending mb-2">Segera</span>
+                            <span th:if="${row.expiresAt != null and !row.expiresAt.isAfter(urgentBefore)}"
+                                  class="ui-badge status-pending mb-2">Segera</span>
                             <p th:text="${row.createdAt != null ? #temporals.format(row.createdAt, 'dd MMM yyyy, HH:mm') : '—'}">
                             </p>
                             <p class="mt-2 text-xs font-semibold text-warning">
@@ -75,6 +80,45 @@
                             th:text="${row.proposalSubmitted ? ((row.proposalRequired ? 'Wajib' : 'Sukarela') + ' · ' + (row.proposalValidated ? 'Valid' : 'Belum valid')) : (row.proposalRequired ? 'Wajib · belum dilampirkan' : 'Opsional · tidak dilampirkan')}">
                         </td>
                         <td th:replace="~{staff/reservation-actions :: actions(${row})}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section class="ui-section" aria-labelledby="reservation-history-title">
+            <h2 id="reservation-history-title">Riwayat reservasi</h2>
+            <p class="ui-hint">Reservasi yang sudah disetujui, selesai, ditolak, dibatalkan, atau kedaluwarsa. Filter
+                tanggal berdasarkan waktu mulai penggunaan.</p>
+            <div th:replace="~{fragments/workspace :: historyTools('staff-reservation-history-search', 'staff-reservation-history-records', false, true)}"></div>
+            <p class="ui-empty-state" th:if="${#lists.isEmpty(reservationHistory)}">Belum ada riwayat reservasi yang
+                telah diproses.</p>
+            <div id="staff-reservation-history-records" class="ui-table-wrap"
+                 th:unless="${#lists.isEmpty(reservationHistory)}">
+                <table class="ui-table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Pemohon</th>
+                        <th scope="col">Fasilitas</th>
+                        <th scope="col">Penggunaan</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Detail</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr data-list-record th:each="row : ${reservationHistory}"
+                        th:attr="data-record-status=${row.status},data-record-date=${#temporals.format(row.startAt, 'yyyy-MM-dd')},data-search-text=${row.requesterName + ' ' + row.facilityName + ' ' + row.purpose + ' ' + (row.reasonDetail ?: '')}">
+                        <td data-label="Pemohon" th:text="${row.requesterName}"></td>
+                        <td data-label="Fasilitas"
+                            th:text="${row.facilityName + (row.quantity != null ? ' · ' + row.quantity + ' unit' : '')}"></td>
+                        <td data-label="Penggunaan"
+                            th:text="${#temporals.format(row.startAt, 'dd MMM yyyy, HH:mm') + ' – ' + #temporals.format(row.endAt, 'dd MMM yyyy, HH:mm')}"></td>
+                        <td data-label="Status"><span th:replace="~{fragments/status :: badge(${row.status})}"></span>
+                        </td>
+                        <td data-label="Detail">
+                            <a class="ui-btn ui-btn-secondary" th:href="@{/staff/reservations/{id}(id=${row.id})}">
+                                Lihat reservasi
+                            </a>
+                        </td>
                     </tr>
                     </tbody>
                 </table>

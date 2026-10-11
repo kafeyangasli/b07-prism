@@ -17,6 +17,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     boolean existsByFacilityId(Long facilityId);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {
+            "user", "facility", "facility.facilityType", "processedBy", "cancelledBy", "proposalValidatedBy"})
+    @Query("select r from Reservation r where r.id = :id")
+    Optional<Reservation> findManagementDetail(@Param("id") long id);
+
     // A current scalar read avoids stale managed Reservation instances and a MySQL
     // repeatable-read snapshot established before waiting for the facility lock.
     interface EquipmentAllocation {
@@ -76,6 +81,15 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     // Staff/Admin dashboard and approval queue.
     List<Reservation> findByStatusOrderByCreatedAtAsc(ReservationStatus status);
+
+    @Query("""
+            select r from Reservation r
+            join fetch r.facility
+            join fetch r.user
+            where r.status <> :pending
+            order by r.createdAt desc, r.id desc
+            """)
+    List<Reservation> findManagementHistory(@Param("pending") ReservationStatus pending);
 
     @Query("""
             select r from Reservation r

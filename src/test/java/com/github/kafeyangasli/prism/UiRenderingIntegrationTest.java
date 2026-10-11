@@ -123,6 +123,135 @@ class UiRenderingIntegrationTest {
     }
 
     @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
+    void reservationSearchUsesSharedContextAndPreservesSelectionAfterValidationErrors() throws Exception {
+        var inactive = facilities.save(new Facility("INACTIVE-PICKER", "Fasilitas nonaktif", room.getFacilityType(),
+                "Gedung X", 10, null, AdministrativeStatus.INACTIVE));
+        String generic = render("/reservations/new", "reservation-search");
+        assertThat(generic).contains("type=\"search\"", "data-facility-picker", "data-select-facility",
+                "data-facility-context-template", "data-selected-facility-input", "Laboratorium Informatika")
+                .doesNotContain("<select", "Fasilitas nonaktif", "data-facility-id=\"" + inactive.getId() + "\"");
+        String fixed = render("/reservations/new?facilityId=" + room.getId(), "reservation-fixed-context");
+        assertThat(fixed).contains("ui-facility-context", "data-selected-facility-id=\"" + room.getId() + "\"")
+                .doesNotContain("data-facility-picker", "<select");
+        String invalid = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/reservations")
+                        .with(csrf()).param("facilityId", room.getId().toString()).param("facilityFixed", "false")
+                        .param("date", LocalDate.now().plusDays(2).toString()).param("purpose", ""))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(invalid).contains("data-selected-facility-context", "data-selected-facility-id=\"" + room.getId() + "\"",
+                "value=\"Laboratorium Informatika\"").doesNotContain("<select");
+    }
+
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
+    void userHistoriesExposeStatusSearchAndInclusiveDateFilters() throws Exception {
+        var approved = new Reservation(reservation.getUser(), room, reservation.getStartAt().plusDays(3),
+                reservation.getEndAt().plusDays(3), "Kegiatan lain", null, ReservationStatus.APPROVED, reservation.getExpiresAt());
+        reservations.save(approved);
+        reports.save(new com.github.kafeyangasli.prism.feature.report.model.Report(reservation.getUser(), room,
+                "Kursi", "Kursi rusak", null, com.github.kafeyangasli.prism.feature.report.model.ReportStatus.RESOLVED));
+        String history = render("/reservations", "reservation-history-filters");
+        assertThat(history).contains("data-record-from", "data-record-to", "data-history-reset",
+                "data-record-status=\"PENDING\"", "data-record-status=\"APPROVED\"",
+                "data-record-date=\"" + reservation.getStartAt().toLocalDate() + "\"");
+        assertThat(render("/reports", "report-history-filters")).contains("data-record-from", "data-record-to",
+                "data-record-status=\"RESOLVED\"", "Tanggal laporan dari", "data-date-range-error");
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"PETUGAS", "ADMIN"})
+    void managementHistoriesRenderProcessedRecordsAndFilters(String role) throws Exception {
+        var approved = new Reservation(reservation.getUser(), room, reservation.getStartAt(), reservation.getEndAt(),
+                "Kegiatan disetujui", null, ReservationStatus.APPROVED, reservation.getExpiresAt());
+        reservations.save(approved);
+        var rejected = new Reservation(reservation.getUser(), room, reservation.getStartAt().plusDays(1),
+                reservation.getEndAt().plusDays(1), "Kegiatan ditolak", null, ReservationStatus.REJECTED, reservation.getExpiresAt());
+        rejected.setReasonDetail("Jadwal tidak sesuai");
+        reservations.save(rejected);
+        reports.save(new com.github.kafeyangasli.prism.feature.report.model.Report(reservation.getUser(), room,
+                "Kursi", "Perbaikan selesai", null, com.github.kafeyangasli.prism.feature.report.model.ReportStatus.RESOLVED));
+        var actor = com.github.kafeyangasli.prism.support.PrismTestUsers.user("history-" + role + "@example.test").roles(role);
+        String html = mvc.perform(get("/staff/reservations").with(actor).header("HX-Request", "true"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(html).contains("Riwayat reservasi", "Kegiatan disetujui", "Jadwal tidak sesuai",
+                "staff-reservation-history-records", "data-record-from", "data-record-status=\"APPROVED\"");
+        assertThat(html.substring(html.indexOf("id=\"reservation-history-title\"")))
+                .doesNotContain("data-record-filter=\"PENDING\"", "data-record-status=\"PENDING\"", "/approve", "/reject");
+        String issues = mvc.perform(get("/staff/reports").with(actor)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(issues).contains("staff-report-history-records", "data-record-from", "data-record-status=\"RESOLVED\"");
+        if (Boolean.getBoolean("prism.ui.snapshots")) {
+            Files.createDirectories(Path.of("target/ui-preview"));
+            Files.writeString(Path.of("target/ui-preview/staff-history-filters.html"), html);
+            Files.writeString(Path.of("target/ui-preview/staff-issue-history-filters.html"), issues);
+        }
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"PETUGAS", "ADMIN"})
+    void staffReservationDetailsSupportCancellationWithRequiredReasonAndAudit(String role) throws Exception {
+        reservation.setStatus(ReservationStatus.APPROVED);
+        reservations.saveAndFlush(reservation);
+        String actorEmail = "cancel-" + role + "@example.test";
+        var actor = com.github.kafeyangasli.prism.support.PrismTestUsers.user(actorEmail).roles(role);
+        String detailUrl = "/staff/reservations/" + reservation.getId();
+        String cancelUrl = detailUrl + "/cancel";
+        String history = mvc.perform(get("/staff/reservations").with(actor)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(history).contains("Lihat reservasi", "href=\"" + detailUrl + "\"")
+                .doesNotContain("<td data-label=\"Catatan\"");
+        String before = mvc.perform(get(detailUrl).with(actor)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(before).contains("Detail Reservasi", "Pengguna UI", "Diskusi kelompok mahasiswa",
+                "data-active-nav=\"staff-reservations\"", "name=\"reason\"", "maxlength=\"2000\"",
+                "staff-cancel-reservation", "name=\"_csrf\"", "action=\"" + cancelUrl + "\"");
+        if (Boolean.getBoolean("prism.ui.snapshots")) {
+            Files.createDirectories(Path.of("target/ui-preview"));
+            Files.writeString(Path.of("target/ui-preview/staff-reservation-detail.html"), before);
+        }
+        mvc.perform(post(cancelUrl).with(actor).param("reason", "Valid reason"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post(cancelUrl).with(actor).with(csrf()).param("reason", " "))
+                .andExpect(redirectedUrl(detailUrl)).andExpect(flash().attributeExists("error"));
+        mvc.perform(post(cancelUrl).with(actor).with(csrf()).param("reason", "x".repeat(2001)))
+                .andExpect(redirectedUrl(detailUrl)).andExpect(flash().attributeExists("error"));
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.APPROVED);
+        mvc.perform(post(cancelUrl).with(actor).with(csrf()).param("reason", "  Fasilitas sedang diperbaiki  "))
+                .andExpect(redirectedUrl(detailUrl)).andExpect(flash().attributeExists("success"));
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
+        assertThat(reservation.getReasonDetail()).isEqualTo("Fasilitas sedang diperbaiki");
+        assertThat(reservation.getCancelledBy().getId()).isEqualTo(users.findByEmailIgnoreCase(actorEmail).orElseThrow().getId());
+        assertThat(reservation.getCancelledAt()).isNotNull();
+        String after = mvc.perform(get(detailUrl).with(actor)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(after).contains("Dibatalkan oleh", "Waktu pembatalan", "Alasan pembatalan", "Fasilitas sedang diperbaiki")
+                .doesNotContain("id=\"staff-cancel-reservation\"");
+        mvc.perform(post(cancelUrl).with(actor).with(csrf()).param("reason", "Repeated request"))
+                .andExpect(redirectedUrl(detailUrl)).andExpect(flash().attributeExists("error"));
+        assertThat(reservation.getReasonDetail()).isEqualTo("Fasilitas sedang diperbaiki");
+    }
+
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
+    void staffReservationDetailAndCancellationRejectOrdinaryUsers() throws Exception {
+        mvc.perform(get("/staff/reservations/" + reservation.getId())).andExpect(status().isForbidden());
+        mvc.perform(post("/staff/reservations/" + reservation.getId() + "/cancel").with(csrf()).param("reason", "Not allowed"))
+                .andExpect(status().isForbidden());
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.PENDING);
+    }
+
+    @Test @WithPrismUser(roles = "PETUGAS")
+    void staffReservationDetailsDoNotOfferCancellationForOtherStatuses() throws Exception {
+        for (ReservationStatus state : java.util.List.of(ReservationStatus.PENDING, ReservationStatus.REJECTED,
+                ReservationStatus.CANCELLED, ReservationStatus.EXPIRED, ReservationStatus.COMPLETED)) {
+            reservation.setStatus(state);
+            reservations.saveAndFlush(reservation);
+            String html = mvc.perform(get("/staff/reservations/" + reservation.getId())).andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+            assertThat(html).doesNotContain("id=\"staff-cancel-reservation\"", "data-open-dialog=\"staff-cancel-reservation\"");
+            mvc.perform(post("/staff/reservations/" + reservation.getId() + "/cancel").with(csrf()).param("reason", "Cannot cancel"))
+                    .andExpect(redirectedUrl("/staff/reservations/" + reservation.getId())).andExpect(flash().attributeExists("error"));
+            assertThat(reservation.getStatus()).isEqualTo(state);
+        }
+        mvc.perform(get("/staff/reservations/999999")).andExpect(status().isNotFound());
+    }
+
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
     void modalSubmissionCarriesSuccessFeedbackToDetailOnce() throws Exception {
         String date = LocalDate.now().plusDays(4).toString();
         var result = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/reservations")

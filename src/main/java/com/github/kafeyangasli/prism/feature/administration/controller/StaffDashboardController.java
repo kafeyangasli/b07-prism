@@ -37,6 +37,7 @@ public class StaffDashboardController {
     @GetMapping("/staff/reservations")
     public String reservations(@RequestParam(defaultValue = "created") String sort, Model model) {
         model.addAttribute("dashboard", dashboardService.load(sort));
+        model.addAttribute("reservationHistory", dashboardService.reservationHistory());
         model.addAttribute("urgentBefore", java.time.LocalDateTime.now(clock).plusHours(24));
         return "staff/reservations";
     }

@@ -16,7 +16,7 @@
                 Ajukan reservasi baru
             </a>
         </div>
-        <div th:replace="~{fragments/workspace :: historyTools('reservations-search', 'reservations-records', false)}"></div>
+        <div th:replace="~{fragments/workspace :: historyTools('reservations-search', 'reservations-records', false, false)}"></div>
 <div class="ui-table-wrap" id="reservations-records">
             <table class="ui-table">
                 <thead>
@@ -39,7 +39,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr data-list-record th:attr="data-record-status=${reservation.status}"
+                <tr data-list-record th:attr="data-record-status=${reservation.status},data-record-date=${reservation.startAt != null ? #temporals.format(reservation.startAt, 'yyyy-MM-dd') : ''}"
                         th:each="reservation : ${reservations}">
                     <td data-label="Fasilitas"
                         th:text="${reservation.facility.name + (reservation.quantity != null ? ' · ' + reservation.quantity + ' unit' : '')}">
@@ -56,9 +56,9 @@
                                     </span>
                     </td>
                     <td data-label="Detail">
-                        <a class="ui-link"
+                        <a class="ui-btn ui-btn-secondary"
                            th:href="@{/reservations/{id}(id=${reservation.id})}">
-                            Lihat
+                            Lihat reservasi
                         </a>
                         <a th:replace="~{reports/form :: reservation-action(${reservation})}"></a>
                     </td>

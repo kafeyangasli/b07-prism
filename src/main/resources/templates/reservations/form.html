@@ -9,7 +9,7 @@
         <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,0.8fr)]">
             <section class="ui-card ui-card-body">
                 <form class="ui-form" th:action="@{/reservations}" th:object="${reservationForm}"
-                      method="post" enctype="multipart/form-data">
+                      method="post" enctype="multipart/form-data" hx-sync="closest form:replace">
                     <div th:replace="~{reservations/form :: reservation-fields(false)}"></div>
                 </form>
             </section>
@@ -38,7 +38,7 @@
             <button class="ui-btn ui-btn-ghost" type="button" data-close-dialog aria-label="Tutup dialog">×</button>
         </div>
         <form class="ui-form" th:action="@{/reservations}" th:object="${reservationForm}"
-              method="post" enctype="multipart/form-data" hx-post="/reservations"
+              method="post" enctype="multipart/form-data" hx-post="/reservations" hx-sync="closest form:replace"
               hx-encoding="multipart/form-data"
               hx-target="#reservation-modal-region" hx-swap="outerHTML" hx-indicator="#global-progress">
             <div th:replace="~{reservations/form :: reservation-fields(true)}"></div>
@@ -52,25 +52,36 @@
     <div th:if="${error != null}" class="ui-alert ui-alert-error" role="alert"><p th:text="${error}">Reservasi tidak
         dapat diajukan.</p></div>
     <input type="hidden" th:field="*{facilityFixed}">
+    <input type="hidden" th:field="*{facilityId}" data-selected-facility-input
+           hx-get="/reservations/availability" hx-trigger="change" hx-include="closest form"
+           hx-target="#reservation-availability" hx-swap="outerHTML" hx-indicator="#global-progress" hx-vals='{"reset":"true"}'>
     <fieldset class="ui-form-section"><legend class="sr-only">Fasilitas dan jadwal</legend>
     <div th:replace="~{fragments/workspace :: step('01', 'Fasilitas &amp; jadwal', 'Tentukan tempat dan tanggal kegiatan Anda.')}"></div>
-    <div th:if="*{facilityFixed} and ${selectedFacility != null}" class="ui-facility-context">
-        <input type="hidden" th:field="*{facilityId}">
-        <div><span class="ui-eyebrow">Fasilitas dipilih</span><strong th:text="${selectedFacility.name}">Nama
-            fasilitas</strong>
-            <p th:text="${selectedFacility.location + ' · Kapasitas ' + selectedFacility.capacity}">Lokasi ·
-                Kapasitas</p></div>
-    </div>
-    <div th:unless="*{facilityFixed} and ${selectedFacility != null}">
-        <label class="ui-label" for="facilityId">Fasilitas</label>
-        <select class="ui-input" id="facilityId" th:field="*{facilityId}" required
-                th:aria-invalid="${#fields.hasErrors('facilityId')}" aria-describedby="facility-error"
-                hx-get="/reservations/availability" hx-include="closest form" hx-target="#reservation-availability"
-                hx-swap="outerHTML" hx-indicator="#global-progress" hx-vals='{"reset":"true"}'>
-            <option value="">Pilih fasilitas</option>
-            <option th:each="facility : ${facilities}" th:value="${facility.id}"
-                    th:text="${facility.name + ' (' + facility.code + ')'}"></option>
-        </select>
+    <th:block th:if="*{facilityFixed} and ${selectedFacility != null}">
+        <div th:replace="~{reservations/form :: facility-context(${selectedFacility})}"></div>
+    </th:block>
+    <div th:unless="*{facilityFixed} and ${selectedFacility != null}" data-facility-picker>
+        <label class="ui-label" for="facility-search">Cari fasilitas</label>
+        <div data-list-tools>
+            <input class="ui-input" id="facility-search" type="search" data-facility-search data-list-search="facility-search-results"
+                   th:value="${selectedFacility != null ? selectedFacility.name : ''}" required autocomplete="off"
+                   placeholder="Cari nama, kode, atau lokasi fasilitas…"
+                   th:aria-invalid="${#fields.hasErrors('facilityId')}" aria-describedby="facility-search-help facility-error" aria-controls="facility-search-results">
+            <p id="facility-search-help" class="ui-hint">Pilih fasilitas dari hasil pencarian.</p>
+            <p class="ui-hint" data-list-count aria-live="polite"></p>
+        </div>
+        <div id="facility-search-results" class="mt-3 max-h-72 overflow-y-auto space-y-2" th:attr="hidden=${selectedFacility != null ? 'hidden' : null}">
+            <a th:each="facility : ${facilities}" th:href="@{/reservations/new(facilityId=${facility.id})}" class="ui-btn ui-btn-secondary w-full text-left justify-start"
+                    data-list-record data-select-facility th:attr="data-facility-id=${facility.id},data-facility-name=${facility.name},data-search-text=${facility.name + ' ' + facility.code + ' ' + facility.location + ' ' + facility.facilityType.name}">
+                <span><strong class="block" th:text="${facility.name}"></strong><span class="text-xs" th:text="${facility.code + ' · ' + facility.location}"></span></span>
+                <template data-facility-context-template><div th:replace="~{reservations/form :: facility-context(${facility})}"></div></template>
+            </a>
+            <p th:if="${#lists.isEmpty(facilities)}" class="ui-empty-state">Belum ada fasilitas aktif yang dapat dipesan.</p>
+        </div>
+        <div class="mt-3" data-selected-facility-context>
+            <th:block th:if="${selectedFacility != null}"><div th:replace="~{reservations/form :: facility-context(${selectedFacility})}"></div></th:block>
+        </div>
+        <button type="button" class="ui-btn ui-btn-ghost mt-2" data-clear-facility th:attr="hidden=${selectedFacility == null ? 'hidden' : null}">Ganti fasilitas</button>
         <p id="facility-error" class="ui-field-error" th:errors="*{facilityId}"></p>
     </div>
     <div>
@@ -121,5 +132,12 @@
     </div>
     <p class="ui-hint">Setelah dikirim, detail reservasi menampilkan status dan batas waktu persetujuan. Maksimal 7 reservasi disetujui yang belum berakhir.</p>
 </th:block>
+
+<div th:fragment="facility-context(facility)" class="ui-facility-context"
+     th:attr="data-selected-facility-id=${facility.id},data-selected-facility-name=${facility.name}">
+    <div><span class="ui-eyebrow">Fasilitas dipilih</span><strong th:text="${facility.name}">Nama fasilitas</strong>
+        <p th:text="${facility.location + (facility.equipment ? ' · Alat' : ' · Kapasitas ' + facility.capacity + ' orang')}">Lokasi</p>
+    </div>
+</div>
 </body>
 </html>

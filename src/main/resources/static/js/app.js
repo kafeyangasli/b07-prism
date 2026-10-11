@@ -254,13 +254,21 @@
     const query = input.value.trim().toLocaleLowerCase('id');
     const tools = input.closest('[data-list-tools]');
     const status = tools?.querySelector('[data-record-filter][aria-pressed="true"]')?.dataset.recordFilter || '';
+    const from = tools?.querySelector('[data-record-from]')?.value || '';
+    const to = tools?.querySelector('[data-record-to]')?.value || '';
+    const invalidRange = Boolean(from && to && from > to);
+    const dateError = tools?.querySelector('[data-date-range-error]');
+    if (dateError) dateError.hidden = !invalidRange;
     const records = Array.from(region.querySelectorAll('[data-list-record]'));
     let visible = 0;
     records.forEach(function (record) {
       // Action forms and dialogs should not contribute to search results.
       const text = record.dataset.searchText || Array.from(record.querySelectorAll('td:not(.ui-table-actions), h3, dl'))
         .map(function (node) { return node.textContent; }).join(' ');
-      const show = text.toLocaleLowerCase('id').includes(query) && (!status || record.dataset.recordStatus === status);
+      const date = record.dataset.recordDate || '';
+      const show = !invalidRange && text.toLocaleLowerCase('id').includes(query)
+        && (!status || record.dataset.recordStatus === status)
+        && (!from || date >= from) && (!to || (date && date <= to));
       record.hidden = !show;
       if (show) visible++;
     });
@@ -271,7 +279,7 @@
       empty = document.createElement('p');
       empty.className = 'p-6 text-center text-sm text-muted';
       empty.dataset.searchEmpty = '';
-      empty.textContent = 'Tidak ada hasil yang sesuai. Ubah pencarian atau status.';
+      empty.textContent = 'Tidak ada hasil yang sesuai. Ubah pencarian atau filter.';
       region.append(empty);
     }
     empty.hidden = visible > 0 || records.length === 0;
@@ -279,6 +287,7 @@
 
   function initializeEnhancements(root) {
     initializeActionDialogs(root);
+    initializeFacilityPickers(root);
     root.querySelectorAll?.('[data-list-search]').forEach(function (input) {
       const region = document.getElementById(input.dataset.listSearch);
       const tools = input.closest('[data-list-tools]');
@@ -316,12 +325,47 @@
   document.querySelector('[data-form-errors]')?.focus();
 
   document.addEventListener('input', function (event) {
+    if (event.target.matches('[data-facility-search]')) {
+      const picker = event.target.closest('[data-facility-picker]');
+      if (picker.closest('form').querySelector('[data-selected-facility-input]').value) clearFacility(picker, false);
+      picker.querySelector('#facility-search-results').hidden = false;
+      event.target.setCustomValidity(event.target.value.trim() ? 'Pilih fasilitas dari hasil pencarian.' : '');
+    }
     if (event.target.matches('[data-list-search]')) filterRecords(event.target);
     if (event.target.matches('[data-character-count]')) {
       event.target.nextElementSibling.textContent = event.target.value.length + ' / ' + event.target.maxLength + ' karakter';
     }
   });
   document.addEventListener('click', function (event) {
+    const facilityChoice = event.target.closest('[data-select-facility]');
+    if (facilityChoice) {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      const picker = facilityChoice.closest('[data-facility-picker]');
+      const input = picker.closest('form').querySelector('[data-selected-facility-input]');
+      const search = picker.querySelector('[data-facility-search]');
+      input.value = facilityChoice.dataset.facilityId;
+      search.value = facilityChoice.dataset.facilityName;
+      search.setCustomValidity('');
+      picker.querySelector('[data-selected-facility-context]').replaceChildren(
+        facilityChoice.querySelector('[data-facility-context-template]').content.cloneNode(true));
+      picker.querySelector('#facility-search-results').hidden = true;
+      picker.querySelector('[data-clear-facility]').hidden = false;
+      resetFacilitySchedule(picker.closest('form'));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      search.focus();
+      return;
+    }
+    const clearChoice = event.target.closest('[data-clear-facility]');
+    if (clearChoice) { clearFacility(clearChoice.closest('[data-facility-picker]'), true); return; }
+    const resetHistory = event.target.closest('[data-history-reset]');
+    if (resetHistory) {
+      const tools = resetHistory.closest('[data-list-tools]');
+      tools.querySelectorAll('[data-list-search], [data-record-from], [data-record-to]').forEach(input => { input.value = ''; });
+      tools.querySelectorAll('[data-record-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.recordFilter === '')));
+      filterRecords(tools.querySelector('[data-list-search]'));
+      return;
+    }
     const toggle = event.target.closest('[data-toggle-password]');
     if (toggle) {
       const input = document.getElementById(toggle.dataset.togglePassword);
@@ -339,6 +383,43 @@
       filterRecords(tools.querySelector('[data-list-search]'));
     }
   });
+
+  document.addEventListener('change', function (event) {
+    if (event.target.matches('[data-record-from], [data-record-to]')) {
+      filterRecords(event.target.closest('[data-list-tools]').querySelector('[data-list-search]'));
+    }
+  });
+
+  function initializeFacilityPickers(root) {
+    root.querySelectorAll?.('[data-facility-picker]').forEach(function (picker) {
+      const input = picker.closest('form').querySelector('[data-selected-facility-input]');
+      const search = picker.querySelector('[data-facility-search]');
+      const selected = picker.querySelector('[data-selected-facility-context] [data-selected-facility-id]');
+      search.setCustomValidity(input.value && selected ? '' : (search.value.trim() ? 'Pilih fasilitas dari hasil pencarian.' : ''));
+    });
+  }
+
+  function resetFacilitySchedule(form) {
+    form.querySelectorAll('[name="startAt"], [name="endAt"]').forEach(function (input) {
+      if (input.type === 'radio') input.checked = false;
+      else input.value = '';
+    });
+    const quantity = form.querySelector('[name="quantity"]');
+    if (quantity) quantity.value = '1';
+  }
+
+  function clearFacility(picker, resetSearch) {
+    const form = picker.closest('form');
+    const input = form.querySelector('[data-selected-facility-input]');
+    const search = picker.querySelector('[data-facility-search]');
+    input.value = '';
+    picker.querySelector('[data-selected-facility-context]').replaceChildren();
+    picker.querySelector('[data-clear-facility]').hidden = true;
+    picker.querySelector('#facility-search-results').hidden = false;
+    if (resetSearch) { search.value = ''; search.setCustomValidity(''); filterRecords(search); search.focus(); }
+    resetFacilitySchedule(form);
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
 
   function csrfToken() {
     return document.querySelector('meta[name="_csrf"]')?.content;

@@ -52,11 +52,12 @@
         <section class="ui-section" aria-labelledby="report-history-title">
             <h2 id="report-history-title">Riwayat laporan</h2>
             <p class="ui-hint">Laporan yang telah selesai atau ditolak tetap dapat dilihat di sini.</p>
+            <div th:replace="~{fragments/workspace :: historyTools('staff-report-history-search', 'staff-report-history-records', true, true)}"></div>
             <p class="ui-empty-state" th:if="${#lists.isEmpty(reportHistory)}">Belum ada laporan yang selesai atau ditolak.</p>
-            <div class="ui-table-wrap" th:unless="${#lists.isEmpty(reportHistory)}">
+            <div id="staff-report-history-records" class="ui-table-wrap" th:unless="${#lists.isEmpty(reportHistory)}">
                 <table class="ui-table">
                     <thead><tr><th scope="col">Fasilitas</th><th scope="col">Kategori</th><th scope="col">Status</th><th scope="col">Masuk</th><th scope="col">Detail</th></tr></thead>
-                    <tbody><tr data-list-record th:each="row : ${reportHistory}">
+                    <tbody><tr data-list-record th:each="row : ${reportHistory}" th:attr="data-record-status=${row.status},data-record-date=${row.createdAt != null ? #temporals.format(row.createdAt, 'yyyy-MM-dd') : ''}">
                         <td data-label="Fasilitas" th:text="${row.facilityName}"></td>
                         <td data-label="Kategori" th:text="${row.category}"></td>
                         <td data-label="Status"><span th:replace="~{fragments/status :: badge(${row.status})}"></span></td>

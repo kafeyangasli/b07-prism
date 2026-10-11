@@ -43,7 +43,7 @@
 <div sec:authorize="isAuthenticated()" class="ui-dashboard-shell" data-dashboard-shell>
     <header class="ui-mobile-header">
         <button type="button" class="ui-btn ui-btn-ghost" data-open-drawer aria-controls="dashboard-sidebar"
-                aria-expanded="false" aria-label="Buka navigasi">☰
+                aria-expanded="false" aria-label="Buka navigasi"><svg th:replace="~{fragments/workspace :: icon('menu')}"></svg>
         </button>
         <a th:href="@{/}" aria-label="Beranda PRISM"><img th:src="@{/images/prism-light.svg}" alt="PRISM" width="442"
                                                           height="112" class="h-7 w-auto"></a>
@@ -53,6 +53,10 @@
             tabindex="-1"></button>
     <aside th:replace="~{fragments/navigation :: sidebar(${activeNav})}"></aside>
     <div class="ui-dashboard-main">
+        <header class="ui-workspace-bar" aria-label="Ruang kerja PRISM">
+            <div class="flex items-center gap-3"><span class="size-2 rounded-full bg-accent" aria-hidden="true"></span><span class="font-semibold text-content">Ruang kerja PRISM</span><span class="text-border" aria-hidden="true">/</span><span sec:authorize="hasRole('PENGGUNA')" class="text-muted">Pengguna</span><span sec:authorize="hasRole('PETUGAS')" class="text-muted">Petugas</span><span sec:authorize="hasRole('ADMIN')" class="text-muted">Admin</span></div>
+            <a class="flex min-h-11 items-center gap-3 rounded-xl px-2 hover:bg-primary-subtle" th:href="@{/account}" aria-label="Pengaturan Akun"><span class="max-w-48 truncate font-medium" sec:authentication="principal.displayName">Pengguna</span><svg th:replace="~{fragments/workspace :: icon('settings')}"></svg></a>
+        </header>
         <div class="ui-dashboard-feedback has-[[hidden]]:hidden">
             <div id="htmx-error" class="ui-alert ui-alert-error" role="alert" tabindex="-1" hidden>
                 <p data-error-message>Permintaan tidak dapat diproses. Silakan coba lagi.</p>

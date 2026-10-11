@@ -13,7 +13,7 @@
                     <div th:replace="~{reservations/form :: reservation-fields(false)}"></div>
                 </form>
             </section>
-            <aside class="ui-card ui-card-body space-y-4">
+            <aside class="ui-card ui-card-body space-y-4 lg:sticky lg:top-6">
                 <p class="ui-eyebrow">Alur reservasi</p>
                 <h2>Pilih jadwal dengan jelas</h2>
                 <ol class="list-decimal space-y-3 pl-5 text-sm leading-6 text-muted">
@@ -52,6 +52,8 @@
     <div th:if="${error != null}" class="ui-alert ui-alert-error" role="alert"><p th:text="${error}">Reservasi tidak
         dapat diajukan.</p></div>
     <input type="hidden" th:field="*{facilityFixed}">
+    <fieldset class="ui-form-section"><legend class="sr-only">Fasilitas dan jadwal</legend>
+    <div th:replace="~{fragments/workspace :: step('01', 'Fasilitas &amp; jadwal', 'Tentukan tempat dan tanggal kegiatan Anda.')}"></div>
     <div th:if="*{facilityFixed} and ${selectedFacility != null}" class="ui-facility-context">
         <input type="hidden" th:field="*{facilityId}">
         <div><span class="ui-eyebrow">Fasilitas dipilih</span><strong th:text="${selectedFacility.name}">Nama
@@ -62,28 +64,41 @@
     <div th:unless="*{facilityFixed} and ${selectedFacility != null}">
         <label class="ui-label" for="facilityId">Fasilitas</label>
         <select class="ui-input" id="facilityId" th:field="*{facilityId}" required
+                th:aria-invalid="${#fields.hasErrors('facilityId')}" aria-describedby="facility-error"
                 hx-get="/reservations/availability" hx-include="closest form" hx-target="#reservation-availability"
                 hx-swap="outerHTML" hx-indicator="#global-progress" hx-vals='{"reset":"true"}'>
             <option value="">Pilih fasilitas</option>
             <option th:each="facility : ${facilities}" th:value="${facility.id}"
                     th:text="${facility.name + ' (' + facility.code + ')'}"></option>
         </select>
+        <p id="facility-error" class="ui-field-error" th:errors="*{facilityId}"></p>
     </div>
     <div>
         <label class="ui-label" for="reservation-date">Tanggal</label>
         <input id="reservation-date" class="ui-input" type="date" th:field="*{date}"
+               th:aria-invalid="${#fields.hasErrors('date')}" aria-describedby="reservation-date-help reservation-date-error"
                th:min="${minimumDate}" th:max="${maximumDate}" required autofocus
                hx-get="/reservations/availability" hx-include="closest form" hx-target="#reservation-availability"
                hx-swap="outerHTML" hx-indicator="#global-progress" hx-vals='{"reset":"true"}'>
-        <p class="ui-hint" th:text="${'Dapat dipilih sampai ' + #temporals.format(maximumDate, 'dd MMMM yyyy')}"></p>
+        <p id="reservation-date-error" class="ui-field-error" th:errors="*{date}"></p>
+        <p id="reservation-date-help" class="ui-hint" th:text="${'Dapat dipilih sampai ' + #temporals.format(maximumDate, 'dd MMMM yyyy')}"></p>
         <p class="ui-hint">Satu tanggal, pukul 07:00–20:00 WIB, dalam interval 30 menit. Ajukan minimal 30 menit sebelum mulai. Aula dipesan sehari penuh (07:00–20:00).</p>
     </div>
     <div th:replace="~{reservations/availability :: availability}"></div>
+    </fieldset>
+    <fieldset class="ui-form-section"><legend class="sr-only">Detail kegiatan</legend>
+    <div th:replace="~{fragments/workspace :: step('02', 'Detail kegiatan', 'Bantu petugas memahami kebutuhan penggunaan.')}"></div>
     <div>
         <label class="ui-label" for="purpose">Tujuan penggunaan</label>
         <textarea class="ui-input" id="purpose" th:field="*{purpose}" maxlength="1000" required
-                  placeholder="Jelaskan kegiatan dan kebutuhan penggunaan fasilitas"></textarea>
+                  th:aria-invalid="${#fields.hasErrors('purpose')}" aria-describedby="purpose-help purpose-error"
+                  placeholder="Jelaskan kegiatan dan kebutuhan penggunaan fasilitas" data-character-count></textarea>
+        <p id="purpose-help" class="ui-hint">Maksimal 1000 karakter.</p>
+        <p id="purpose-error" class="ui-field-error" th:errors="*{purpose}"></p>
     </div>
+    </fieldset>
+    <fieldset class="ui-form-section"><legend class="sr-only">Dokumen pendukung</legend>
+    <div th:replace="~{fragments/workspace :: step('03', 'Dokumen pendukung', 'Periksa ketentuan proposal sebelum mengirim.')}"></div>
     <div>
         <div class="flex flex-wrap items-center justify-between gap-2">
             <label class="ui-label mb-0" for="proposal">Proposal bertanda tangan</label>
@@ -98,6 +113,7 @@
             Proposal tidak dapat diganti setelah reservasi diajukan. Jika pengajuan gagal, pilih kembali berkas sebelum
             mengajukan ulang.</small>
     </div>
+    </fieldset>
     <div class="ui-form-actions">
         <button th:if="${modal}" class="ui-btn ui-btn-secondary" type="button" data-close-dialog>Batal</button>
         <a th:unless="${modal}" class="ui-btn ui-btn-secondary" th:href="@{/reservations}">Kembali</a>

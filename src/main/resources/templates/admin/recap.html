@@ -97,10 +97,10 @@
                             <th scope="col">Fasilitas</th>
                             <th scope="col">Tipe</th>
                             <th scope="col">Lokasi</th>
-                            <th scope="col">Slot disetujui</th>
-                            <th scope="col">Slot tersedia</th>
-                            <th scope="col">Tingkat penggunaan</th>
-                            <th scope="col">Laporan</th>
+                            <th scope="col" class="ui-table-number">Slot disetujui</th>
+                            <th scope="col" class="ui-table-number">Slot tersedia</th>
+                            <th scope="col" class="ui-table-number">Tingkat penggunaan</th>
+                            <th scope="col" class="ui-table-number">Laporan</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -109,10 +109,13 @@
                             <td data-label="Fasilitas" th:text="${row.facilityName}"></td>
                             <td data-label="Tipe" th:text="${row.facilityType}"></td>
                             <td data-label="Lokasi" th:text="${row.location}"></td>
-                            <td data-label="Slot disetujui" th:text="${row.approvedSlots}"></td>
-                            <td data-label="Slot tersedia" th:text="${row.capacityDisplay()}"></td>
-                            <td data-label="Tingkat penggunaan" th:text="${row.occupancyDisplay() + (row.occupancyPercent != null ? '%' : '')}"></td>
-                            <td data-label="Laporan" th:text="${row.issueCount}"></td>
+                            <td class="ui-table-number" data-label="Slot disetujui" th:text="${row.approvedSlots}"></td>
+                            <td class="ui-table-number" data-label="Slot tersedia" th:text="${row.capacityDisplay()}"></td>
+                            <td class="ui-table-number" data-label="Tingkat penggunaan">
+                                <span th:text="${row.occupancyDisplay() + (row.occupancyPercent != null ? '%' : '')}"></span>
+                                <meter th:if="${row.occupancyPercent != null}" class="ui-meter ml-auto mt-2 block h-2 w-24" min="0" max="100" th:value="${row.occupancyPercent}" th:aria-label="${'Tingkat penggunaan ' + row.facilityName}"></meter>
+                            </td>
+                            <td class="ui-table-number" data-label="Laporan" th:text="${row.issueCount}"></td>
                         </tr>
                         </tbody>
                     </table>

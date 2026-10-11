@@ -5,23 +5,7 @@
 <main>
     <div class="ui-page">
         <div class="ui-auth">
-            <aside class="ui-auth-aside">
-                <a th:href="@{/}" aria-label="Beranda PRISM" class="inline-flex rounded-lg">
-                    <img th:src="@{/images/prism-dark.svg}" alt="PRISM" width="442" height="112" class="h-12 w-auto"/>
-                </a>
-                <div>
-                    <p class="mb-3 text-sm font-semibold uppercase tracking-widest">
-                        Fasilitas kampus
-                    </p>
-                    <h2 class="text-3xl leading-tight text-white">
-                        Ruang untuk setiap kegiatan.
-                    </h2>
-                    <p class="mt-4">
-                        Temukan fasilitas, rencanakan penggunaan, dan pantau reservasi dalam satu tempat.
-                    </p>
-                </div>
-                <div></div>
-            </aside>
+            <aside th:replace="~{fragments/workspace :: authAside}"></aside>
             <section class="ui-auth-content">
                 <div>
                     <p class="ui-eyebrow">
@@ -54,19 +38,19 @@
                 <form class="ui-form" th:action="@{/login}" method="post">
                     <div>
                         <label class="ui-label">
-                            Email:
+                            Email
                             <input class="ui-input" type="email" autocomplete="username" name="username" required/>
                         </label>
                     </div>
                     <div>
                         <label class="ui-label">
-                            Kata sandi:
-                            <input class="ui-input" type="password" autocomplete="current-password" name="password"
+                            Kata sandi
+                            <input class="ui-input" type="password" data-password-toggle autocomplete="current-password" name="password"
                                    required/>
                         </label>
                     </div>
                     <div>
-                        <button class="ui-btn ui-btn-primary" type="submit">
+                        <button class="ui-btn ui-btn-primary w-full" type="submit">
                             Masuk
                         </button>
                     </div>

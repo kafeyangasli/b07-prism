@@ -8,7 +8,7 @@
     <form class="ui-form" th:if="${status.name() == 'IN_PROGRESS'}" th:action="@{/staff/reports/{id}/status(id=${id})}" method="post">
         <input type="hidden" name="status" value="RESOLVED">
         <label class="ui-label" th:for="${'resolution-' + id}">Catatan penyelesaian</label>
-        <textarea class="ui-input" th:id="${'resolution-' + id}" name="resolutionNote" maxlength="2000" rows="2" required></textarea>
+        <textarea class="ui-input" th:id="${'resolution-' + id}" name="resolutionNote" maxlength="2000" rows="2" required data-character-count></textarea>
         <button class="ui-btn ui-btn-primary" type="submit">Selesaikan laporan</button>
     </form>
     <details th:if="${status.name() == 'NEW' or status.name() == 'IN_PROGRESS'}">
@@ -17,7 +17,7 @@
         <p class="ui-hint">Laporan akan berstatus Ditolak dan keluar dari antrean laporan terbuka. Catatan dapat dibaca pelapor.</p>
         <input type="hidden" name="status" value="REJECTED">
         <label class="ui-label" th:for="${'rejection-' + id}">Catatan penolakan (opsional)</label>
-        <textarea class="ui-input" th:id="${'rejection-' + id}" name="resolutionNote" maxlength="2000" rows="2"></textarea>
+        <textarea class="ui-input" th:id="${'rejection-' + id}" name="resolutionNote" maxlength="2000" rows="2" data-character-count></textarea>
         <button class="ui-btn ui-btn-danger" type="submit">Konfirmasi penolakan</button>
     </form>
     </details>

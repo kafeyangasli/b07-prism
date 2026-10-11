@@ -16,6 +16,7 @@
                 <p class="ui-stat-value" th:text="${#lists.size(dashboard.pendingReservations)}">
                     0
                 </p>
+                <span class="ui-stat-action">Tinjau reservasi →</span>
             </a>
             <a th:href="@{/staff/reports}" class="ui-stat">
                 <p class="text-sm font-medium text-muted">
@@ -24,8 +25,14 @@
                 <p class="ui-stat-value" th:text="${#lists.size(dashboard.unresolvedReports)}">
                     0
                 </p>
+                <span class="ui-stat-action">Tangani laporan →</span>
             </a>
         </div>
+        <nav class="flex flex-wrap gap-2" aria-label="Bagian dashboard">
+            <a href="#pending-reservations" class="ui-btn ui-btn-secondary"><svg th:replace="~{fragments/workspace :: icon('calendar')}"></svg>Antrean reservasi</a>
+            <a href="#open-reports" class="ui-btn ui-btn-secondary"><svg th:replace="~{fragments/workspace :: icon('report')}"></svg>Laporan terbuka</a>
+            <a th:href="@{/staff/blockages}" class="ui-btn ui-btn-ghost"><svg th:replace="~{fragments/workspace :: icon('block')}"></svg>Kelola blokir</a>
+        </nav>
         <section id="pending-reservations" class="ui-section">
             <div class="ui-section-heading">
                 <h2>
@@ -37,11 +44,13 @@
                             </span>
                     <a class="ui-btn ui-btn-neutral"
                        th:classappend="${dashboard.reservationSort == 'created'} ? 'ui-nav-link-active'"
+                       th:aria-current="${dashboard.reservationSort == 'created'} ? 'true' : null"
                        th:href="@{/staff/dashboard(sort='created')}">
                         Waktu masuk
                     </a>
                     <a class="ui-btn ui-btn-neutral"
                        th:classappend="${dashboard.reservationSort == 'start'} ? 'ui-nav-link-active'"
+                       th:aria-current="${dashboard.reservationSort == 'start'} ? 'true' : null"
                        th:href="@{/staff/dashboard(sort='start')}">
                         Waktu penggunaan
                     </a>
@@ -54,7 +63,8 @@
             <p class="ui-empty-state" th:if="${#lists.isEmpty(dashboard.pendingReservations)}">
                 Semua pengajuan telah ditangani. Tidak ada reservasi yang dapat diproses.
             </p>
-            <div class="ui-table-wrap" th:unless="${#lists.isEmpty(dashboard.pendingReservations)}">
+            <div th:replace="~{fragments/workspace :: search('dashboard-queue-search', 'dashboard-queue-records', 'Cari dalam daftar…')}"></div>
+<div class="ui-table-wrap" th:unless="${#lists.isEmpty(dashboard.pendingReservations)}" id="dashboard-queue-records">
                 <table class="ui-table">
                     <thead>
                     <tr>
@@ -79,7 +89,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="row : ${dashboard.pendingReservations}">
+                    <tr data-list-record th:each="row : ${dashboard.pendingReservations}">
                         <td data-label="Pemohon" th:text="${row.requesterName}">
                         </td>
                         <td data-label="Fasilitas"><strong th:text="${row.facilityName}"></strong>
@@ -109,9 +119,9 @@
             </div>
         </section>
         <section id="open-reports" class="ui-section">
-            <h2>
+            <div class="ui-section-heading"><h2>
                 Laporan terbuka
-            </h2>
+            </h2><a class="ui-link text-sm" th:href="@{/staff/reports}">Kelola laporan →</a></div>
             <p class="ui-empty-state" th:if="${#lists.isEmpty(dashboard.unresolvedReports)}">
                 Tidak ada laporan terbuka.
             </p>
@@ -134,7 +144,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="row : ${dashboard.unresolvedReports}">
+                    <tr data-list-record th:each="row : ${dashboard.unresolvedReports}">
                         <td data-label="Fasilitas" th:text="${row.facilityName}">
                         </td>
                         <td data-label="Kategori" th:text="${row.category}">

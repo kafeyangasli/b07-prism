@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<svg th:fragment="icon(name)" class="size-5 shrink-0" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <use th:href="|@{/images/icons.svg}#${name}|"></use>
+</svg>
+<nav th:fragment="accountTabs(active)" class="flex flex-wrap gap-2" aria-label="Pengaturan akun">
+    <a th:href="@{/account}" class="ui-btn ui-btn-ghost" th:classappend="${active == 'profile'} ? ' ui-nav-link-active'" th:aria-current="${active == 'profile'} ? 'page' : null">Profil</a>
+    <a th:href="@{/account/password}" class="ui-btn ui-btn-ghost" th:classappend="${active == 'password'} ? ' ui-nav-link-active'" th:aria-current="${active == 'password'} ? 'page' : null">Kata sandi</a>
+    <a sec:authorize="hasRole('PENGGUNA')" th:href="@{/account/delete}" class="ui-btn ui-btn-ghost" th:classappend="${active == 'delete'} ? ' ui-nav-link-active'" th:aria-current="${active == 'delete'} ? 'page' : null">Penonaktifan akun</a>
+</nav>
+<div th:fragment="search(id, target, placeholder)" class="ui-list-tools" data-list-tools hidden>
+    <div class="relative min-w-0 flex-1 sm:max-w-sm">
+        <label class="sr-only" th:for="${id}" th:text="${placeholder}">Cari dalam daftar</label>
+        <input class="ui-input pr-10" type="search" th:id="${id}" th:placeholder="${placeholder}" th:attr="data-list-search=${target}" autocomplete="off">
+        <span class="pointer-events-none absolute right-3 top-3 text-muted"><svg th:replace="~{fragments/workspace :: icon('search')}"></svg></span>
+    </div>
+    <p class="text-sm text-muted" data-list-count aria-live="polite"></p>
+</div>
+<div th:fragment="step(number, title, description)" class="flex items-start gap-3">
+    <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-sm font-bold text-primary" th:text="${number}">1</span>
+    <div class="min-w-0"><h2 class="text-lg" th:text="${title}">Judul</h2><p class="mt-1 text-sm leading-6 text-muted" th:text="${description}">Keterangan</p></div>
+</div>
+<div th:fragment="historyTools(id, target, report)" class="ui-list-tools flex-wrap" data-list-tools hidden>
+    <div class="relative min-w-0 w-full sm:max-w-sm">
+        <label class="sr-only" th:for="${id}">Cari fasilitas dalam riwayat</label>
+        <input class="ui-input pr-10" type="search" th:id="${id}" placeholder="Cari fasilitas dalam riwayat…" th:attr="data-list-search=${target}" autocomplete="off">
+        <span class="pointer-events-none absolute right-3 top-3 text-muted"><svg th:replace="~{fragments/workspace :: icon('search')}"></svg></span>
+    </div>
+    <p class="text-sm text-muted" data-list-count aria-live="polite"></p>
+    <div class="ui-record-filters w-full" role="group" aria-label="Filter status riwayat">
+        <button type="button" data-record-filter="" aria-pressed="true">Semua</button>
+        <th:block th:unless="${report}">
+            <button type="button" data-record-filter="PENDING" aria-pressed="false">Menunggu</button>
+            <button type="button" data-record-filter="APPROVED" aria-pressed="false">Disetujui</button>
+            <button type="button" data-record-filter="COMPLETED" aria-pressed="false">Selesai</button>
+            <button type="button" data-record-filter="REJECTED" aria-pressed="false">Ditolak</button>
+            <button type="button" data-record-filter="CANCELLED" aria-pressed="false">Dibatalkan</button>
+            <button type="button" data-record-filter="EXPIRED" aria-pressed="false">Kedaluwarsa</button>
+        </th:block>
+        <th:block th:if="${report}">
+            <button type="button" data-record-filter="NEW" aria-pressed="false">Baru</button>
+            <button type="button" data-record-filter="IN_PROGRESS" aria-pressed="false">Diproses</button>
+            <button type="button" data-record-filter="RESOLVED" aria-pressed="false">Selesai</button>
+            <button type="button" data-record-filter="REJECTED" aria-pressed="false">Ditolak</button>
+        </th:block>
+    </div>
+</div>
+<aside th:fragment="authAside" class="ui-auth-aside">
+    <a th:href="@{/}" aria-label="Beranda PRISM" class="inline-flex self-start rounded-lg"><img th:src="@{/images/prism-dark.svg}" alt="PRISM" width="442" height="112" class="h-10 w-auto"></a>
+    <div class="space-y-5">
+        <span class="inline-flex rounded-full border border-prism-300/30 px-3 py-1 text-xs font-semibold text-prism-100">Fasilitas kampus, lebih terencana</span>
+        <h2 class="text-3xl leading-tight text-white">Ruang untuk<br>setiap kegiatan.</h2>
+        <p>Temukan fasilitas, rencanakan penggunaan, dan pantau reservasi dalam satu tempat.</p>
+        <div class="space-y-4 border-t border-white/15 pt-6 text-sm text-prism-100">
+            <div class="flex gap-3"><svg th:replace="~{fragments/workspace :: icon('building')}"></svg><span>Jelajahi fasilitas kampus</span></div>
+            <div class="flex gap-3"><svg th:replace="~{fragments/workspace :: icon('calendar')}"></svg><span>Pilih jadwal yang tersedia</span></div>
+            <div class="flex gap-3"><svg th:replace="~{fragments/workspace :: icon('report')}"></svg><span>Pantau reservasi dan laporan</span></div>
+        </div>
+    </div>
+    <p class="text-xs">Platform for Reservation and Issue Management</p>
+</aside>
+<div th:fragment="slotLegend" class="flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-muted" aria-label="Keterangan jadwal">
+    <span class="flex items-center gap-2"><span class="size-3 rounded border border-prism-300 bg-surface" aria-hidden="true"></span>Tersedia</span>
+    <span class="flex items-center gap-2"><span class="size-3 rounded border border-primary bg-primary-subtle" aria-hidden="true"></span>Dipilih</span>
+    <span class="flex items-center gap-2"><span class="size-3 rounded border border-ink-300 bg-disabled" aria-hidden="true"></span>Dipesan / tidak tersedia</span>
+    <span class="flex items-center gap-2"><span class="size-3 rounded border border-warning-border bg-warning-subtle" aria-hidden="true"></span>Diblokir</span>
+</div>
+</body>
+</html>

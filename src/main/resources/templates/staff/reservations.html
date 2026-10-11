@@ -37,7 +37,8 @@
             <p class="ui-empty-state" th:if="${#lists.isEmpty(dashboard.pendingReservations)}">
                 Semua pengajuan telah ditangani. Tidak ada reservasi yang dapat diproses.
             </p>
-            <div class="ui-table-wrap" th:unless="${#lists.isEmpty(dashboard.pendingReservations)}">
+            <div th:replace="~{fragments/workspace :: search('reservation-queue-search', 'reservation-queue-records', 'Cari dalam daftar…')}"></div>
+<div class="ui-table-wrap" th:unless="${#lists.isEmpty(dashboard.pendingReservations)}" id="reservation-queue-records">
                 <table class="ui-table">
                     <thead>
                     <tr>
@@ -50,7 +51,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="row : ${dashboard.pendingReservations}">
+                    <tr data-list-record th:each="row : ${dashboard.pendingReservations}">
                         <td data-label="Pemohon" th:text="${row.requesterName}">
                         </td>
                         <td data-label="Fasilitas"><strong th:text="${row.facilityName}"></strong>

@@ -8,10 +8,10 @@
     <section sec:authorize="!isAuthenticated()" class="ui-hero" aria-labelledby="hero-title">
         <div class="max-w-3xl">
             <p class="ui-eyebrow">Fasilitas kampus dalam satu layanan</p>
-            <h1 id="hero-title" class="text-4xl font-bold tracking-tight sm:text-5xl">
-                PRISM
+            <h1 id="hero-title" class="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
+                Rencanakan kegiatan.<br><span class="text-primary">Temukan ruangnya.</span>
             </h1>
-            <p class="mt-3 text-xl font-semibold text-prism-800">
+            <p class="mt-4 text-sm font-semibold text-prism-800">
                 Platform for Reservation and Issue Management
             </p>
             <p class="mt-5 max-w-2xl text-base leading-7 text-ink-600 sm:text-lg">
@@ -30,6 +30,15 @@
                 Anda akan diminta masuk sebelum mengajukan reservasi.
             </p>
         </div>
+        <aside class="rounded-2xl border border-prism-200 bg-prism-100/50 p-5 sm:p-8" aria-label="Mulai dengan PRISM">
+            <div class="mb-6 flex items-center gap-3"><span class="flex size-11 items-center justify-center rounded-xl bg-primary text-white"><svg th:replace="~{fragments/workspace :: icon('calendar')}"></svg></span><div><p class="font-semibold text-prism-950">Dari rencana ke reservasi</p><p class="text-sm text-muted">Semua kebutuhan fasilitas, satu tempat.</p></div></div>
+            <div class="space-y-3">
+                <a th:href="@{/facilities}" class="ui-workflow-link"><span class="text-sm font-bold text-primary">01</span><div class="flex-1"><h2 class="text-base">Jelajahi fasilitas</h2><p class="mt-1 text-sm text-muted">Sesuaikan lokasi, tipe, dan kapasitas.</p></div><svg th:replace="~{fragments/workspace :: icon('arrow')}"></svg></a>
+                <a th:href="@{/facilities}" class="ui-workflow-link"><span class="text-sm font-bold text-primary">02</span><div class="flex-1"><h2 class="text-base">Periksa ketersediaan</h2><p class="mt-1 text-sm text-muted">Lihat slot dan jadwal penggunaan.</p></div><svg th:replace="~{fragments/workspace :: icon('calendar')}"></svg></a>
+                <a th:href="@{/login}" class="ui-workflow-link"><span class="text-sm font-bold text-primary">03</span><div class="flex-1"><h2 class="text-base">Ajukan &amp; pantau</h2><p class="mt-1 text-sm text-muted">Ikuti status persetujuan dari akun Anda.</p></div><svg th:replace="~{fragments/workspace :: icon('report')}"></svg></a>
+            </div>
+            <p class="mt-5 text-xs leading-5 text-muted">Katalog dan jadwal dapat dilihat tanpa akun.</p>
+        </aside>
     </section>
 
     <div sec:authorize="hasRole('PENGGUNA')" class="ui-page" th:if="${userDashboard != null}">
@@ -43,7 +52,7 @@
             <a th:href="@{/reservations/new}" class="ui-btn ui-btn-primary">Ajukan reservasi</a>
         </header>
 
-        <section class="grid gap-4 sm:grid-cols-2" aria-label="Ringkasan reservasi">
+        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Ringkasan reservasi">
             <a th:href="@{/reservations}" class="ui-stat">
                 <p class="text-sm font-medium text-muted">Menunggu persetujuan</p>
                 <p class="ui-stat-value" th:text="${userDashboard.pendingCount}">0</p>
@@ -51,6 +60,9 @@
             <a th:href="@{/reservations}" class="ui-stat">
                 <p class="text-sm font-medium text-muted">Aktif &amp; akan datang</p>
                 <p class="ui-stat-value" th:text="${userDashboard.activeCount}">0</p>
+            </a>
+            <a th:href="@{/facilities}" class="ui-card ui-card-body flex flex-col justify-between gap-4 bg-primary-subtle sm:col-span-2 xl:col-span-1">
+                <div><svg th:replace="~{fragments/workspace :: icon('building')}"></svg><h2 class="mt-3 text-lg">Rencanakan kegiatan berikutnya</h2><p class="mt-2 text-sm leading-6 text-muted">Temukan fasilitas dan jadwal yang sesuai kebutuhan Anda.</p></div><span class="text-sm font-semibold text-primary">Jelajahi fasilitas →</span>
             </a>
         </section>
 

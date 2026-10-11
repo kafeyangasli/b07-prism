@@ -15,9 +15,10 @@
 
         <div th:replace="~{fragments/feedback :: flash}"></div>
 
-        <section class="ui-card ui-card-body">
+        <div class="ui-sidebar-layout">
+    <section class="ui-card ui-card-body lg:sticky lg:top-6">
             <h2>Tambah tipe</h2>
-            <form class="ui-form ui-form-grid mt-4" th:action="@{/admin/facility-types}"
+            <form class="ui-form mt-4" th:action="@{/admin/facility-types}"
                   th:object="${facilityTypeDto}" method="post">
                 <div class="md:col-span-full" th:replace="~{fragments/feedback :: formErrors}"></div>
                 <div>
@@ -32,7 +33,7 @@
                 </div>
                 <div class="md:col-span-full">
                     <label class="ui-label" for="type-description">Deskripsi</label>
-                    <textarea id="type-description" class="ui-input" th:field="*{description}" maxlength="2000"></textarea>
+                    <textarea id="type-description" class="ui-input" th:field="*{description}" maxlength="2000" data-character-count></textarea>
                 </div>
                 <div class="ui-form-actions md:col-span-full">
                     <button class="ui-btn ui-btn-primary" type="submit">Tambah Tipe</button>
@@ -47,11 +48,12 @@
                     <p class="ui-hint" th:text="${#lists.size(facilityTypes) + ' tipe tercatat'}">0 tipe tercatat</p>
                 </div>
             </div>
-            <div class="ui-table-wrap">
+            <div th:replace="~{fragments/workspace :: search('facility-types-search', 'facility-types-records', 'Cari dalam daftar…')}"></div>
+<div class="ui-table-wrap" id="facility-types-records">
                 <table class="ui-table">
-                    <thead><tr><th>Kode</th><th>Nama dan deskripsi</th><th>Status</th><th>Aksi</th></tr></thead>
+                    <thead><tr><th scope="col">Kode</th><th scope="col">Nama dan deskripsi</th><th scope="col">Status</th><th scope="col">Aksi</th></tr></thead>
                     <tbody>
-                    <tr th:each="type : ${facilityTypes}">
+                    <tr data-list-record th:each="type : ${facilityTypes}">
                         <td data-label="Kode" th:text="${type.code}"></td>
                         <td data-label="Nama dan deskripsi">
                             <strong th:text="${type.name}"></strong><p th:text="${type.description}"></p>
@@ -61,7 +63,7 @@
                                 <div><label class="ui-label" th:for="${'type-name-' + type.id}">Nama</label>
                                 <input class="ui-input" th:id="${'type-name-' + type.id}" name="name" th:value="${type.name}" maxlength="150" required></div>
                                 <div><label class="ui-label" th:for="${'type-description-' + type.id}">Deskripsi (opsional)</label>
-                                <textarea class="ui-input" th:id="${'type-description-' + type.id}" name="description" th:text="${type.description}" maxlength="2000"></textarea></div>
+                                <textarea class="ui-input" th:id="${'type-description-' + type.id}" name="description" th:text="${type.description}" maxlength="2000" data-character-count></textarea></div>
                                 <button class="ui-btn ui-btn-secondary" type="submit">Simpan perubahan</button>
                             </form>
                             </details>
@@ -84,6 +86,7 @@
                 </table>
             </div>
         </section>
+    </div>
     </div>
 </main>
 </body>

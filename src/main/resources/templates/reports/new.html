@@ -3,6 +3,22 @@
       th:replace="~{fragments/layout :: layout('Laporan Baru', 'reports', ~{::main})}">
 <body><main><div class="ui-page">
     <header th:replace="~{fragments/page :: heading('Laporan', 'Laporkan Masalah Fasilitas', 'Sertakan deskripsi dan foto agar petugas dapat menindaklanjuti.')}"></header>
-    <a class="ui-btn ui-btn-secondary" th:href="@{/reports}">Laporan saya</a>
-    <div th:replace="~{reports/form :: report-modal}"></div>
+    <div class="grid items-start gap-6 lg:grid-cols-3">
+        <section class="ui-card ui-card-body lg:col-span-2">
+            <form class="ui-form" th:action="@{/reports}" th:object="${reportForm}" method="post" enctype="multipart/form-data">
+                <th:block th:replace="~{reports/form :: report-fields(false)}"></th:block>
+            </form>
+        </section>
+        <aside class="ui-card ui-card-body space-y-5 lg:sticky lg:top-6">
+            <p class="ui-eyebrow">Laporan yang mudah ditindaklanjuti</p>
+            <h2>Jelaskan kondisi fasilitas</h2>
+            <ol class="space-y-4 text-sm leading-6 text-muted">
+                <li><strong class="block text-content">01 · Tentukan fasilitas</strong>Pilih tempat terjadinya masalah.</li>
+                <li><strong class="block text-content">02 · Ceritakan masalahnya</strong>Sebutkan lokasi spesifik, kondisi, dan dampaknya.</li>
+                <li><strong class="block text-content">03 · Sertakan foto</strong>Foto yang jelas membantu petugas menilai kondisi.</li>
+            </ol>
+            <a class="ui-btn ui-btn-secondary w-full" th:href="@{/reports}">Laporan saya</a>
+        </aside>
+    </div>
+    <div id="report-modal-region"></div>
 </div></main></body></html>

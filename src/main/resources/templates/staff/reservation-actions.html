@@ -9,9 +9,10 @@
     <a th:if="${row.validatedProposalAvailable}" class="ui-btn ui-btn-secondary"
        th:href="@{/documents/reservations/{id}/validated-proposal(id=${row.id})}">Unduh PDF tervalidasi</a>
     <p th:if="${row.proposalValidationLegacy}" class="ui-hint">Validasi historis; PDF tervalidasi belum tersedia.</p>
-    <form th:if="${row.proposalSubmitted and !row.proposalValidated}"
-          th:action="@{/staff/reservations/{id}/proposal/validate(id=${row.id})}" method="post"
-          enctype="multipart/form-data">
+    <details th:if="${row.proposalSubmitted and !row.proposalValidated}" class="ui-action-details">
+        <summary class="ui-link py-2">Validasi proposal</summary>
+    <form th:action="@{/staff/reservations/{id}/proposal/validate(id=${row.id})}" method="post"
+          enctype="multipart/form-data" class="ui-form">
         <label class="ui-label" th:for="${'validated-proposal-' + row.id}">PDF proposal resmi yang sudah divalidasi</label>
         <input class="ui-input" type="file" name="validatedProposal" required accept=".pdf,application/pdf"
                th:id="${'validated-proposal-' + row.id}" data-validated-proposal
@@ -19,6 +20,7 @@
         <p class="ui-hint">Unggah salinan yang telah diberi stempel atau tanda tangan persetujuan institusi.</p>
         <button class="ui-btn ui-btn-secondary" type="submit">Validasi proposal</button>
     </form>
+    </details>
     <form th:if="${row.conflictingPendingCount == 0}"
           th:action="@{/staff/reservations/{id}/approve(id=${row.id})}" method="post">
         <button class="ui-btn ui-btn-primary" type="submit"
@@ -91,7 +93,7 @@
                 <label class="ui-label" th:for="${'rejection-reason-' + row.id}">Alasan penolakan</label>
                 <textarea th:id="${'rejection-reason-' + row.id}" class="ui-input" name="reasonDetail"
                           rows="5" maxlength="2000" required autofocus
-                          placeholder="Jelaskan alasan reservasi ini ditolak"></textarea>
+                          placeholder="Jelaskan alasan reservasi ini ditolak" data-character-count></textarea>
                 <p class="ui-hint">Alasan penolakan wajib diisi · Maksimal 2000 karakter.</p>
             </div>
             <div class="ui-form-actions align-right">

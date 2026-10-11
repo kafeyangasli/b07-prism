@@ -96,11 +96,11 @@
                                 <h2>Pendaftaran menunggu verifikasi</h2>
                                 <p class="ui-hint">Setujui atau tolak akun baru setelah data pendaftar diperiksa.</p>
                             </div>
-                            <div class="ui-table-wrap">
+                            <div class="ui-table-wrap" id="user-management-records">
                                 <table class="ui-table">
                                     <thead><tr><th scope="col">Nama</th><th scope="col">Email</th><th scope="col">Tanggal daftar</th><th scope="col">Aksi</th></tr></thead>
                                     <tbody>
-                                        <tr th:each="u : ${pendingUsers}" class="align-middle">
+                                        <tr data-list-record th:each="u : ${pendingUsers}" class="align-middle">
                                             <td class="align-middle" data-label="Nama" th:text="${u.name}"></td>
                                             <td class="align-middle" data-label="Email" th:text="${u.email}"></td>
                                             <td class="align-middle" data-label="Tanggal daftar" th:text="${u.createdAt != null ? #temporals.format(u.createdAt, 'dd MMM yyyy, HH:mm') : '—'}"></td>
@@ -132,7 +132,7 @@
                                 <table class="ui-table">
                                     <thead><tr><th scope="col">Nama</th><th scope="col">Email</th><th scope="col">Peran</th><th scope="col">Status</th><th scope="col">Aksi</th></tr></thead>
                                     <tbody>
-                                        <tr th:each="u : ${allUsers}">
+                                        <tr data-list-record th:each="u : ${allUsers}">
                                             <td class="align-middle" data-label="Nama" th:text="${u.name}"></td>
                                             <td class="align-middle" data-label="Email" th:text="${u.email}"></td>
                                             <td class="align-middle" data-label="Peran" th:text="${u.role.name() == 'ADMIN' ? 'Admin' : (u.role.name() == 'PETUGAS' ? 'Petugas' : 'Pengguna')}"></td>
@@ -189,7 +189,7 @@
                             </div>
                             <div>
                                 <label class="ui-label" for="new-user-password">Kata sandi</label>
-                                <input id="new-user-password" class="ui-input" type="password" th:field="*{password}" th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('password')}" autocomplete="new-password" required>
+                                <input id="new-user-password" class="ui-input" type="password" data-password-toggle th:field="*{password}" th:errorclass="ui-input-error" th:aria-invalid="${#fields.hasErrors('password')}" autocomplete="new-password" required>
                                 <p class="ui-field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></p>
                             </div>
                             <div>

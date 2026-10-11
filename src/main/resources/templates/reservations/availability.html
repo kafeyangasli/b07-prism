@@ -12,6 +12,7 @@
             <p class="ui-slot-placeholder">Pilih waktu mulai terlebih dahulu.</p></div>
     </div>
     <th:block th:if="${availability != null}">
+        <div th:replace="~{fragments/workspace :: slotLegend}"></div>
         <div th:if="${availability.aula}" class="space-y-5">
             <div th:if="${availability.aulaAvailable}" class="grid gap-4 sm:grid-cols-3">
                 <div class="ui-locked-time"><span class="ui-label">Waktu mulai</span><strong>07:00</strong><span>Ditentukan untuk Aula</span>
@@ -31,8 +32,7 @@
         <div th:unless="${availability.aula}" class="space-y-6">
             <fieldset>
                 <legend class="ui-label">Waktu mulai</legend>
-                <p class="ui-hint mb-3">Semua slot operasional ditampilkan. Status tersedia dalam teks, bukan warna
-                    saja.</p>
+                <p class="ui-hint mb-3">Pilih slot berstatus Tersedia sebagai waktu mulai. Semua waktu dalam WIB.</p>
                 <div class="ui-slot-grid">
                     <label th:each="slot : ${availability.slots}" class="ui-slot"
                            th:classappend="${' ui-slot-' + #strings.toLowerCase(slot.state.name())}"

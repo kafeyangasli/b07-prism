@@ -406,4 +406,28 @@ class UiRenderingIntegrationTest {
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(html).contains("id=\"facility-results\"", "Tidak ada fasilitas ditemukan");
     }
+
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
+    void redesignedReportPageAndModalKeepTheSameSubmissionContract() throws Exception {
+        String page = render("/reports/new", "report-form");
+        assertThat(page).contains("action=\"/reports\"", "multipart/form-data", "name=\"facilityId\"",
+                "name=\"category\"", "name=\"description\"", "name=\"photo\"", "name=\"_csrf\"",
+                "data-character-count", "Jelaskan kondisi fasilitas").doesNotContain("<dialog");
+        String modal = mvc.perform(get("/reports/new").header("HX-Request", "true"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(modal).contains("id=\"report-dialog\"", "hx-post=\"/reports\"", "name=\"facilityId\"",
+                "name=\"category\"", "name=\"description\"", "name=\"photo\"", "name=\"_csrf\"");
+        render("/reports", "my-reports-empty");
+        var report = reports.save(new com.github.kafeyangasli.prism.feature.report.model.Report(reservation.getUser(), room,
+                "AC", "Pendingin tidak berfungsi", null, com.github.kafeyangasli.prism.feature.report.model.ReportStatus.NEW));
+        assertThat(render("/reports", "my-reports")).contains("data-record-status=\"NEW\"", "data-record-filter=\"IN_PROGRESS\"");
+        render("/reports/" + report.getId(), "my-report-detail");
+    }
+
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
+    void accountViewsKeepProfilePasswordAndDeactivationForms() throws Exception {
+        assertThat(render("/account", "account")).contains("/account/profile", "/account/avatar", "name=\"name\"", "name=\"image\"", "name=\"_csrf\"");
+        assertThat(render("/account/password", "account-password")).contains("name=\"currentPassword\"", "name=\"newPassword\"", "name=\"confirmPassword\"", "data-password-toggle");
+        assertThat(render("/account/delete", "account-delete")).contains("name=\"confirmed\"", "name=\"currentPassword\"", "name=\"_csrf\"");
+    }
 }

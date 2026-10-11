@@ -37,7 +37,8 @@
                             <p class="ui-hint" th:text="${#lists.size(facilities) + ' fasilitas tercatat'}">0 fasilitas tercatat</p>
                         </div>
                     </div>
-                    <div class="ui-table-wrap">
+                    <div th:replace="~{fragments/workspace :: search('facility-management-search', 'facility-management-records', 'Cari dalam daftar…')}"></div>
+<div class="ui-table-wrap" id="facility-management-records">
                         <table class="ui-table">
                             <thead>
                                 <tr>
@@ -51,7 +52,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr th:each="f : ${facilities}">
+                                <tr data-list-record th:each="f : ${facilities}">
                                     <td class="align-middle" data-label="Kode" th:text="${f.code}"></td>
                                     <td class="align-middle" data-label="Nama" th:text="${f.name}"></td>
                                     <td class="align-middle" data-label="Tipe" th:text="${f.facilityType.name}"></td>
@@ -161,7 +162,7 @@
                                 <label class="ui-label" for="facility-upload-images">Gambar fasilitas (opsional)</label>
                                 <input id="facility-upload-images" class="ui-input" type="file" name="images" multiple accept="image/jpeg,image/png" data-image-input>
                                 <p class="ui-hint">JPEG atau PNG, maksimal 5 MB per gambar dan 20 gambar. Pilih thumbnail di pratinjau; tanpa pilihan, gambar pertama digunakan.</p>
-                                <div class="facility-image-grid" data-image-previews></div>
+                                <div class="facility-image-grid my-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-image-previews></div>
                             </div>
                             <div class="ui-form-actions md:col-span-full">
                                 <button class="ui-btn ui-btn-secondary" type="button" data-close-dialog>Batal</button>

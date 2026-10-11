@@ -36,7 +36,7 @@ class FacilitySeedSourceTest {
         assertThat(acintya.name()).isEqualTo("Acintya Prasada");
         assertThat(acintya.typeCode()).isEqualTo("AULA");
         assertThat(acintya.capacity()).isEqualTo(150);
-        assertThat(acintya.description()).isNull();
+        assertThat(acintya.description()).isEqualTo("Aula untuk seminar, kuliah umum, dan kegiatan mahasiswa berskala besar.");
     }
 
     @Test void optionalMetadataSuppliesLocationAndTypeWithoutChangingDescriptionParsing() throws Exception {

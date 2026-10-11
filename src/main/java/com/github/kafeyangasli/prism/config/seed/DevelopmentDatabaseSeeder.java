@@ -74,6 +74,7 @@ public class DevelopmentDatabaseSeeder implements ApplicationRunner {
                 facility = new Facility(entry.code(), entry.name(), type, entry.location(),
                         entry.capacity(), entry.description(), AdministrativeStatus.ACTIVE);
                 facility.setTotalStock(entry.stock());
+                facility.recordCreationStatus(LocalDateTime.now(clock));
                 facilities.save(facility);
             }
             seedImage(entry, facility);

@@ -30,7 +30,19 @@ import static org.junit.jupiter.api.Assertions.*;
         "spring.jpa.hibernate.ddl-auto=create-drop"
 })
 @Transactional
+@org.springframework.context.annotation.Import(FacilityServiceTest.FixedClockConfiguration.class)
 class FacilityServiceTest {
+
+    @org.springframework.boot.test.context.TestConfiguration
+    static class FixedClockConfiguration {
+        @org.springframework.context.annotation.Bean
+        @org.springframework.context.annotation.Primary
+        java.time.Clock clock() {
+            return java.time.Clock.fixed(java.time.Instant.parse("2030-01-07T03:00:00Z"), java.time.ZoneId.of("Asia/Jakarta"));
+        }
+    }
+
+    @Autowired java.time.Clock clock;
 
     @Autowired
     private FacilityService facilityService;
@@ -59,6 +71,7 @@ class FacilityServiceTest {
         assertNotNull(created.getId());
         assertEquals("LAB-01", created.getCode());
         assertEquals(AdministrativeStatus.ACTIVE, created.getAdministrativeStatus());
+        assertEquals(java.time.LocalDateTime.now(clock), created.getStatusHistory().getFirst().getEffectiveAt());
 
         // Negative capacity test
         FacilityDto invalidDto = facilityDto("LAB-02", "Lab 2", lab, "Tembalang", 0);
@@ -78,6 +91,7 @@ class FacilityServiceTest {
                 deactivated.getStatusHistory().stream().map(h -> h.getStatus()).toList());
         Facility activated = facilityService.activateFacility(savedAdmin.getId(), created.getId());
         assertEquals(3, activated.getStatusHistory().size());
+        assertEquals(java.time.LocalDateTime.now(clock), activated.getStatusHistory().getLast().getEffectiveAt());
         facilityService.activateFacility(savedAdmin.getId(), created.getId());
         assertEquals(3, activated.getStatusHistory().size(), "Repeated activation must not add a false transition");
     }

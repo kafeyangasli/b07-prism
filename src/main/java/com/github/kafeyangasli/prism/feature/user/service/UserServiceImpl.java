@@ -48,6 +48,7 @@ public class UserServiceImpl implements UserService {
             throw new BusinessRuleException("Email sudah terdaftar.");
         }
 
+        validatePasswordLength(dto.getPassword());
         String passwordHash = passwordEncoder.encode(dto.getPassword());
         User user = new User(dto.getName().trim(), normalizedEmail, passwordHash, Role.PENGGUNA, AccountStatus.PENDING);
         return userRepository.save(user);
@@ -106,6 +107,7 @@ public class UserServiceImpl implements UserService {
             throw new BusinessRuleException("Email sudah terdaftar.");
         }
 
+        validatePasswordLength(dto.getPassword());
         String passwordHash = passwordEncoder.encode(dto.getPassword());
         User user = new User(dto.getName().trim(), normalizedEmail, passwordHash, dto.getRole(), AccountStatus.ACTIVE);
         user.setVerifiedBy(admin);
@@ -195,5 +197,11 @@ public class UserServiceImpl implements UserService {
             throw new BusinessRuleException("Tindakan ini hanya dapat dilakukan oleh Admin.");
         }
         return admin;
+    }
+
+    private void validatePasswordLength(String password) {
+        if (password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new BusinessRuleException("Kata sandi maksimal 72 byte UTF-8.");
+        }
     }
 }

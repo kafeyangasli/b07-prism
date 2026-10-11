@@ -13,6 +13,24 @@ import java.util.Arrays;
 import static org.assertj.core.api.Assertions.*;
 
 class FacilityImageStorageTest {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1, 2})
+    void imageCleanupRequiresConfirmedRollback(int status) throws Exception {
+        var storage = new FacilityImageStorage(root.toString(), 1024 * 1024);
+        var output = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(new java.awt.image.BufferedImage(2, 2, java.awt.image.BufferedImage.TYPE_INT_RGB), "png", output);
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            String name = storage.storeForTransaction(new org.springframework.mock.web.MockMultipartFile("image", "photo.png", "image/png", output.toByteArray()));
+            for (var synchronization : org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()) {
+                synchronization.afterCompletion(status);
+            }
+            assertThat(java.nio.file.Files.exists(root.resolve(name))).isEqualTo(
+                    status != org.springframework.transaction.support.TransactionSynchronization.STATUS_ROLLED_BACK);
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
     @TempDir Path root;
     @Test void survivesRestartAndRejectsMalformedUnsupportedAndUnsafePaths() throws Exception {
         var storage = new FacilityImageStorage(root.toString(), 1024);

@@ -37,6 +37,10 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ReportServiceTest {
 
+    @org.mockito.Spy
+    private java.time.Clock clock = java.time.Clock.fixed(java.time.Instant.parse("2030-01-07T03:00:00Z"),
+            java.time.ZoneId.of("Asia/Jakarta"));
+
     @Mock
     private ReportRepository reportRepository;
 
@@ -92,7 +96,7 @@ class ReportServiceTest {
 
         MockMultipartFile photo = new MockMultipartFile("photo", "test.jpg", "image/jpeg", "dummy image content".getBytes());
 
-        when(photoStorage.store(photo)).thenReturn("generated.jpg");
+        when(photoStorage.storeForTransaction(photo)).thenReturn("generated.jpg");
         Report result = reportService.createReport(request, photo);
 
         assertNotNull(result);
@@ -130,7 +134,7 @@ class ReportServiceTest {
 
         MockMultipartFile photo = new MockMultipartFile("photo", "../secret.txt", "text/plain", "data".getBytes());
 
-        when(photoStorage.store(photo)).thenThrow(new BusinessRuleException("Invalid photo"));
+        when(photoStorage.storeForTransaction(photo)).thenThrow(new BusinessRuleException("Invalid photo"));
         assertThrows(BusinessRuleException.class, () -> reportService.createReport(request, photo));
     }
 
@@ -186,7 +190,7 @@ class ReportServiceTest {
 
         assertEquals(ReportStatus.IN_PROGRESS, result.getStatus());
         assertEquals(staff, result.getHandledBy());
-        assertNotNull(result.getHandledAt());
+        assertEquals(java.time.LocalDateTime.now(clock), result.getHandledAt());
     }
 
     @Test
@@ -223,7 +227,7 @@ class ReportServiceTest {
 
         assertEquals(ReportStatus.RESOLVED, result.getStatus());
         assertEquals("Fixed AC filter", result.getResolutionNote());
-        assertNotNull(result.getResolvedAt());
+        assertEquals(java.time.LocalDateTime.now(clock), result.getResolvedAt());
     }
 
     @Test
@@ -273,7 +277,7 @@ class ReportServiceTest {
     void finalActionAuditsCurrentActorEvenWhenAnotherStaffStartedHandling() {
         Report report = new Report(user1, facility, "AC", "Broken", null, ReportStatus.IN_PROGRESS);
         report.setHandledBy(user2);
-        var oldTime = java.time.LocalDateTime.now().minusDays(1);
+        var oldTime = java.time.LocalDateTime.now(clock).minusDays(1);
         report.setHandledAt(oldTime);
         when(reportRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(report));
         authenticate("staff@example.com", "PETUGAS");
@@ -288,17 +292,17 @@ class ReportServiceTest {
     }
 
     @Test
-    void saveFailureRemovesUploadedPhoto() {
+    void saveFailurePropagatesForTransactionalRollbackCleanup() {
         var request = new CreateReportRequest();
         request.setFacilityId(10L);
         request.setCategory("AC");
         request.setDescription("Broken");
         when(userRepository.findByEmailIgnoreCase("user1@example.com")).thenReturn(Optional.of(user1));
         when(facilityRepository.findById(10L)).thenReturn(Optional.of(facility));
-        when(photoStorage.store(any())).thenReturn("generated.jpg");
+        when(photoStorage.storeForTransaction(any())).thenReturn("generated.jpg");
         when(reportRepository.save(any())).thenThrow(new IllegalStateException("DB unavailable"));
         assertThrows(IllegalStateException.class, () -> reportService.createReport(request, new MockMultipartFile("photo", new byte[]{1})));
-        verify(photoStorage).delete("generated.jpg");
+        verify(photoStorage, never()).delete(any());
     }
 
     @Test
@@ -314,7 +318,7 @@ class ReportServiceTest {
                 com.github.kafeyangasli.prism.feature.reservation.model.ReservationStatus.COMPLETED, null);
         when(userRepository.findByEmailIgnoreCase("user1@example.com")).thenReturn(Optional.of(user1));
         when(reportReservationService.eligibleReservation(25L, 1L)).thenReturn(reservation);
-        when(photoStorage.store(any())).thenReturn("generated.jpg");
+        when(photoStorage.storeForTransaction(any())).thenReturn("generated.jpg");
         when(reportRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         var result = reportService.createReport(request, new MockMultipartFile("photo", new byte[]{1}));
         assertEquals(user1, result.getUser());

@@ -13,6 +13,19 @@ import org.springframework.data.repository.query.Param;
 
 public interface FacilityBlockageRepository extends JpaRepository<FacilityBlockage, Long> {
 
+    interface LifecycleCandidate {
+        Long getId();
+        Long getFacilityId();
+    }
+
+    @Query("""
+            select b.id as id, b.facility.id as facilityId from FacilityBlockage b
+            where b.status in (com.github.kafeyangasli.prism.feature.blockage.model.BlockageStatus.SCHEDULED,
+                               com.github.kafeyangasli.prism.feature.blockage.model.BlockageStatus.ACTIVE)
+            order by b.facility.id, b.id
+            """)
+    List<LifecycleCandidate> findLifecycleCandidates();
+
     // US-12: scheduled maintenance, active outages, and facility blockage history.
     List<FacilityBlockage> findByFacilityIdOrderByStartAtAsc(Long facilityId);
 

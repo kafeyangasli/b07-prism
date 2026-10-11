@@ -53,6 +53,8 @@ class MySqlConcurrencyIT {
     @Autowired UserRepository users;
     @Autowired PlatformTransactionManager transactions;
     @Autowired JdbcTemplate jdbc;
+    @Autowired com.github.kafeyangasli.prism.feature.report.repository.ReportRepository reports;
+    @Autowired com.github.kafeyangasli.prism.feature.report.service.ReportService reportService;
     User actor, requester;
     Facility firstRoom, secondRoom;
     static final AtomicBoolean synchronizePreviews = new AtomicBoolean();
@@ -62,6 +64,7 @@ class MySqlConcurrencyIT {
         synchronizePreviews.set(false);
         blockages.deleteAll();
         reservations.deleteAll();
+        reports.deleteAll();
         facilities.deleteAll();
         facilityTypes.deleteAll();
         users.deleteAll();
@@ -77,6 +80,48 @@ class MySqlConcurrencyIT {
     }
 
     @AfterEach void clearSecurity() { SecurityContextHolder.clearContext(); }
+
+    @Test void simultaneousBlockageReconciliationCommitsEachTransitionOnce() throws Exception {
+        var type = blockageTypes.findByCodeIgnoreCase("PLANNED_MAINTENANCE").orElseThrow();
+        for (var room : List.of(firstRoom, secondRoom)) {
+            blockages.saveAndFlush(new FacilityBlockage(room, type, null, NOW.minusHours(2), NOW,
+                    BlockageStatus.SCHEDULED, "Lifecycle test", null, actor));
+        }
+        var transitions = new java.util.concurrent.atomic.AtomicInteger();
+        race(() -> { transitions.addAndGet(blockageService.reconcileBlockageLifecycle()); return true; },
+                () -> { transitions.addAndGet(blockageService.reconcileBlockageLifecycle()); return true; });
+        assertThat(transitions.get()).isEqualTo(4);
+        assertThat(blockages.findAll()).allSatisfy(b -> assertThat(b.getStatus()).isEqualTo(BlockageStatus.COMPLETED));
+    }
+
+    @Test void reportStatusUpdateDoesNotTakeFacilityLocksInReverseOrder() throws Exception {
+        var report = reports.saveAndFlush(new com.github.kafeyangasli.prism.feature.report.model.Report(
+                requester, firstRoom, "AC", "Broken", null,
+                com.github.kafeyangasli.prism.feature.report.model.ReportStatus.NEW));
+        CountDownLatch locked = new CountDownLatch(1), release = new CountDownLatch(1);
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> holder = executor.submit(() -> new TransactionTemplate(transactions).executeWithoutResult(tx -> {
+                facilities.findByIdForUpdate(firstRoom.getId()).orElseThrow();
+                locked.countDown();
+                await(release);
+            }));
+            assertThat(locked.await(15, TimeUnit.SECONDS)).isTrue();
+            Future<?> update = executor.submit(() -> {
+                authenticate();
+                try {
+                    reportService.updateStatus(report.getId(),
+                            com.github.kafeyangasli.prism.feature.report.model.ReportStatus.IN_PROGRESS, null);
+                } finally { SecurityContextHolder.clearContext(); }
+            });
+            // A report-only update must commit while the facility is independently locked.
+            update.get(5, TimeUnit.SECONDS);
+            release.countDown();
+            holder.get(15, TimeUnit.SECONDS);
+            assertThat(reports.findById(report.getId()).orElseThrow().getStatus())
+                    .isEqualTo(com.github.kafeyangasli.prism.feature.report.model.ReportStatus.IN_PROGRESS);
+        } finally { release.countDown(); executor.shutdownNow(); }
+    }
 
     @Test void simultaneousApprovals() throws Exception {
         Reservation first = pending(firstRoom, 1), second = pending(firstRoom, 1);

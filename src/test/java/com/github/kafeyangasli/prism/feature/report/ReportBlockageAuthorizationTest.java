@@ -58,10 +58,18 @@ class ReportBlockageAuthorizationTest {
     @Configuration
     @EnableWebMvc
     @EnableWebSecurity
+    @org.springframework.transaction.annotation.EnableTransactionManagement
     @Import({SecurityConfig.class, ReportController.class, StaffReportController.class, ReportPageController.class, ReportExceptionHandler.class,
             BlockageController.class, BlockageTypeController.class,
             ReportService.class, ReportReservationService.class, BlockageService.class, StaffActorResolver.class})
     static class Config {
+        // Repositories remain mocked in this authorization fixture, but private
+        // upload storage now requires real transaction synchronization.
+        @Bean org.springframework.transaction.PlatformTransactionManager transactions() {
+            return new org.springframework.jdbc.datasource.DataSourceTransactionManager(
+                    new org.springframework.jdbc.datasource.DriverManagerDataSource(
+                            "jdbc:h2:mem:authorization-transactions;DB_CLOSE_DELAY=-1", "sa", ""));
+        }
         @Bean ReportPhotoStorage photos() { return new ReportPhotoStorage(photoDirectory.toString()); }
         @Bean org.thymeleaf.spring6.SpringTemplateEngine templateEngine() {
             var resolver = new org.thymeleaf.templateresolver.ClassLoaderTemplateResolver();

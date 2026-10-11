@@ -22,7 +22,9 @@ confirmation, and rejects reuse of the current password before encoding a new
 one. PRISM's registration workflow previously required only a nonblank password.
 For this feature, new passwords require at least eight characters and at most
 72 UTF-8 bytes, consistent with BCrypt's input limit. Passwords are not trimmed.
-The registration/admin password policies are unchanged.
+Registration/admin creation still require a nonblank password. They also reject
+passwords above BCrypt's 72-byte UTF-8 limit with a validation message, as account
+password changes do; this is a byte limit, not a character limit.
 
 Password DTOs remain local to the controller/service. Passwords and rejected
 password values never enter the view model, flash attributes, or redirects.

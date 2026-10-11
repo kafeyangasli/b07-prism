@@ -150,7 +150,8 @@ public class LocalImageStorage {
         String name = store(upload);
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCompletion(int status) {
-                if (status != STATUS_COMMITTED) cleanup(name);
+                // An unknown commit outcome may still reference this file.
+                if (status == STATUS_ROLLED_BACK) cleanup(name);
             }
         });
         return name;

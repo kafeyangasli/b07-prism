@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.List;
 
 @Service
@@ -44,6 +45,8 @@ public class BlockageService {
     private final UserRepository userRepository;
     private final ReportRepository reportRepository;
     private final StaffActorResolver staffActorResolver;
+    private final Clock clock;
+    private final org.springframework.transaction.PlatformTransactionManager transactions;
 
     private final jakarta.persistence.EntityManager entityManager;
     private final java.util.Map<String, Confirmation> confirmations = new java.util.concurrent.ConcurrentHashMap<>();
@@ -99,7 +102,7 @@ public class BlockageService {
         User actor = currentStaff();
         List<Reservation> impact = lockedImpact(facility.getId(), request.getStartAt(), request.getPlannedEndAt());
         consumeConfirmation(request.getConfirmationToken(), actor, createFingerprint(request, type), impact);
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         var blockage = new FacilityBlockage(facility, type, report, request.getStartAt(), request.getPlannedEndAt(),
                 request.getStartAt().isAfter(now) ? BlockageStatus.SCHEDULED : BlockageStatus.ACTIVE,
                 request.getPublicReason().trim(), request.getInternalNote(), actor);
@@ -182,7 +185,7 @@ public class BlockageService {
     }
 
     private synchronized void issueConfirmation(BlockageImpactPreviewResponse preview, User actor, String operation, List<Reservation> impact) {
-        java.time.Instant now = java.time.Instant.now();
+        java.time.Instant now = clock.instant();
         confirmations.entrySet().removeIf(e -> !e.getValue().expiresAt().isAfter(now));
         if (confirmations.size() >= 1000) throw new BusinessRuleException("Terlalu banyak pratinjau aktif. Coba lagi nanti.");
         String token = java.util.UUID.randomUUID().toString();
@@ -200,7 +203,7 @@ public class BlockageService {
 
     private void consumeConfirmation(String token, User actor, String operation, List<Reservation> impact) {
         Confirmation confirmation = confirmations.get(token);
-        if (confirmation == null || !confirmation.expiresAt().isAfter(java.time.Instant.now())) {
+        if (confirmation == null || !confirmation.expiresAt().isAfter(clock.instant())) {
             throw new BusinessRuleException("PREVIEW_EXPIRED", "Pratinjau kedaluwarsa atau sudah digunakan. Lihat pratinjau dan konfirmasikan kembali.");
         }
         if (!confirmation.actorId().equals(actor.getId()) || !confirmation.operation().equals(operation)) {
@@ -258,35 +261,35 @@ public class BlockageService {
     }
 
     // Step 16 & 17 — FR-25 Blockage Lifecycle Reconciliation
-    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public int reconcileBlockageLifecycle() {
-        LocalDateTime now = LocalDateTime.now();
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(transactions);
+        transaction.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        transaction.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
         int count = 0;
-
-        // 1. SCHEDULED -> ACTIVE
-        List<FacilityBlockage> scheduledToActivate = facilityBlockageRepository.findByStatusOrderByStartAtAsc(BlockageStatus.SCHEDULED);
-        for (FacilityBlockage blockage : scheduledToActivate) {
-            lockFacility(blockage.getFacility().getId());
-            entityManager.refresh(blockage, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
-            if (blockage.getStatus() == BlockageStatus.SCHEDULED && !blockage.getStartAt().isAfter(now)) {
-                blockage.setStatus(BlockageStatus.ACTIVE);
-                facilityBlockageRepository.save(blockage);
-                count++;
-            }
+        // Scalar candidates avoid detached/stale entities. Hold only one facility at a time,
+        // as reservation reconciliation does, so concurrent workers cannot form a facility lock cycle.
+        for (var candidate : facilityBlockageRepository.findLifecycleCandidates()) {
+            Integer changed = transaction.execute(tx -> {
+                lockFacility(candidate.getFacilityId());
+                FacilityBlockage blockage = facilityBlockageRepository.findById(candidate.getId()).orElse(null);
+                if (blockage == null) return 0;
+                entityManager.refresh(blockage, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+                LocalDateTime now = LocalDateTime.now(clock);
+                int transitions = 0;
+                if (blockage.getStatus() == BlockageStatus.SCHEDULED && !blockage.getStartAt().isAfter(now)) {
+                    blockage.setStatus(BlockageStatus.ACTIVE);
+                    transitions++;
+                }
+                if (blockage.getStatus() == BlockageStatus.ACTIVE && blockage.getPlannedEndAt() != null
+                        && !blockage.getPlannedEndAt().isAfter(now)) {
+                    blockage.setStatus(BlockageStatus.COMPLETED);
+                    transitions++;
+                }
+                if (transitions > 0) facilityBlockageRepository.save(blockage);
+                return transitions;
+            });
+            if (changed != null) count += changed;
         }
-
-        // 2. ACTIVE -> COMPLETED (for fixed-end blockages)
-        List<FacilityBlockage> activeToComplete = facilityBlockageRepository.findByStatusOrderByStartAtAsc(BlockageStatus.ACTIVE);
-        for (FacilityBlockage blockage : activeToComplete) {
-            lockFacility(blockage.getFacility().getId());
-            entityManager.refresh(blockage, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
-            if (blockage.getStatus() == BlockageStatus.ACTIVE && blockage.getPlannedEndAt() != null && !blockage.getPlannedEndAt().isAfter(now)) {
-                blockage.setStatus(BlockageStatus.COMPLETED);
-                facilityBlockageRepository.save(blockage);
-                count++;
-            }
-        }
-
         return count;
     }
 
@@ -307,7 +310,7 @@ public class BlockageService {
         blockage.setPublicReason(plan.publicReason());
         if (request.getInternalNote() != null) blockage.setInternalNote(request.getInternalNote());
         FacilityBlockage saved = facilityBlockageRepository.save(blockage);
-        processReservationImpact(impact, blockage.getBlockageType().getCode(), blockage.getPublicReason(), actor, LocalDateTime.now());
+        processReservationImpact(impact, blockage.getBlockageType().getCode(), blockage.getPublicReason(), actor, LocalDateTime.now(clock));
         return saved;
     }
 
@@ -354,7 +357,7 @@ public class BlockageService {
 
         User endedBy = currentStaff();
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
 
         blockage.setStatus(BlockageStatus.COMPLETED);
         blockage.setActualEndAt(now);

@@ -33,19 +33,22 @@ public class FacilityServiceImpl implements FacilityService {
     private final UserRepository userRepository;
     private final ReservationRepository reservationRepository;
     private final FacilityBlockageRepository facilityBlockageRepository;
+    private final java.time.Clock clock;
 
     public FacilityServiceImpl(FacilityRepository facilityRepository,
                                FacilityTypeRepository facilityTypeRepository,
                                UserRepository userRepository,
                                ReservationRepository reservationRepository,
                                FacilityBlockageRepository facilityBlockageRepository,
-                               com.github.kafeyangasli.prism.feature.reservation.service.EquipmentAvailabilityService equipmentAvailability) {
+                               com.github.kafeyangasli.prism.feature.reservation.service.EquipmentAvailabilityService equipmentAvailability,
+                               java.time.Clock clock) {
         this.facilityRepository = facilityRepository;
         this.equipmentAvailability = equipmentAvailability;
         this.facilityTypeRepository = facilityTypeRepository;
         this.userRepository = userRepository;
         this.reservationRepository = reservationRepository;
         this.facilityBlockageRepository = facilityBlockageRepository;
+        this.clock = clock;
     }
 
     @Override
@@ -131,6 +134,7 @@ public class FacilityServiceImpl implements FacilityService {
         Facility facility = new Facility(normalizedCode, dto.getName().trim(), facilityType, dto.getLocation().trim(), dto.getCapacity(), dto.getDescription(), status);
         validateStock(facilityType, dto.getTotalStock());
         facility.setTotalStock(dto.getTotalStock());
+        facility.recordCreationStatus(LocalDateTime.now(clock));
         return facilityRepository.save(facility);
     }
 
@@ -175,7 +179,7 @@ public class FacilityServiceImpl implements FacilityService {
             facility.setDescription(dto.getDescription());
         }
         if (dto.getAdministrativeStatus() != null) {
-            facility.setAdministrativeStatus(dto.getAdministrativeStatus());
+            facility.changeAdministrativeStatus(dto.getAdministrativeStatus(), LocalDateTime.now(clock));
         }
 
         return facilityRepository.save(facility);
@@ -187,7 +191,7 @@ public class FacilityServiceImpl implements FacilityService {
         Facility facility = facilityRepository.findByIdForUpdate(facilityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Fasilitas dengan ID " + facilityId + " tidak ditemukan."));
 
-        facility.setAdministrativeStatus(AdministrativeStatus.ACTIVE);
+        facility.changeAdministrativeStatus(AdministrativeStatus.ACTIVE, LocalDateTime.now(clock));
         return facilityRepository.save(facility);
     }
 
@@ -197,7 +201,7 @@ public class FacilityServiceImpl implements FacilityService {
         Facility facility = facilityRepository.findByIdForUpdate(facilityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Fasilitas dengan ID " + facilityId + " tidak ditemukan."));
 
-        facility.setAdministrativeStatus(AdministrativeStatus.INACTIVE);
+        facility.changeAdministrativeStatus(AdministrativeStatus.INACTIVE, LocalDateTime.now(clock));
         return facilityRepository.save(facility);
     }
 

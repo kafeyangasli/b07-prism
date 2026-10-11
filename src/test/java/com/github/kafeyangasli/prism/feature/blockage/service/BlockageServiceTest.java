@@ -38,6 +38,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,6 +49,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class BlockageServiceTest {
+
+    @org.mockito.Spy
+    private Clock clock = Clock.fixed(java.time.Instant.parse("2030-01-07T03:00:00Z"), ZoneId.of("Asia/Jakarta"));
 
     @Mock
     private FacilityRepository facilityRepository;
@@ -70,6 +75,7 @@ class BlockageServiceTest {
     private StaffActorResolver staffActorResolver;
 
     @Mock private jakarta.persistence.EntityManager entityManager;
+    @Mock private org.springframework.transaction.PlatformTransactionManager transactions;
 
     @InjectMocks
     private BlockageService blockageService;
@@ -100,7 +106,7 @@ class BlockageServiceTest {
         maintenanceType = new BlockageType("PLANNED_MAINTENANCE", "Planned Maintenance", "Maintenance blockage");
         ReflectionTestUtils.setField(maintenanceType, "id", 101L);
 
-        startAt = LocalDateTime.now().plusHours(1);
+        startAt = LocalDateTime.now(clock).plusHours(1);
         plannedEndAt = startAt.plusHours(5);
     }
 
@@ -193,14 +199,13 @@ class BlockageServiceTest {
     @Test
     void reconcileBlockageLifecycle_ActivatesScheduledAndCompletesPlanned() {
         when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
-        LocalDateTime pastStart = LocalDateTime.now().minusHours(2);
-        LocalDateTime pastEnd = LocalDateTime.now().minusHours(1);
+        LocalDateTime pastStart = LocalDateTime.now(clock).minusHours(2);
+        LocalDateTime pastEnd = LocalDateTime.now(clock).minusHours(1);
 
         FacilityBlockage scheduledBlockage = new FacilityBlockage(facility, maintenanceType, null, pastStart, plannedEndAt, BlockageStatus.SCHEDULED, "Reason", null, staff);
         FacilityBlockage activeBlockage = new FacilityBlockage(facility, maintenanceType, null, pastStart, pastEnd, BlockageStatus.ACTIVE, "Reason", null, staff);
 
-        when(facilityBlockageRepository.findByStatusOrderByStartAtAsc(BlockageStatus.SCHEDULED)).thenReturn(List.of(scheduledBlockage));
-        when(facilityBlockageRepository.findByStatusOrderByStartAtAsc(BlockageStatus.ACTIVE)).thenReturn(List.of(activeBlockage));
+        lifecycleCandidates(scheduledBlockage, activeBlockage);
 
         int count = blockageService.reconcileBlockageLifecycle();
 
@@ -253,7 +258,7 @@ class BlockageServiceTest {
         FacilityBlockage result = blockageService.earlyCompleteBlockage(200L, request);
 
         assertEquals(BlockageStatus.COMPLETED, result.getStatus());
-        assertNotNull(result.getActualEndAt());
+        assertEquals(LocalDateTime.now(clock), result.getActualEndAt());
         assertEquals(staff, result.getEndedBy());
         assertEquals("Repairs finished early", result.getEarlyCompletionReason());
         verifyNoInteractions(reservationRepository);
@@ -278,6 +283,56 @@ class BlockageServiceTest {
         request.setConfirmed(true);
         assertThrows(BusinessRuleException.class, () -> blockageService.createBlockage(request));
         verifyNoInteractions(facilityBlockageRepository, reservationRepository);
+    }
+
+    @Test
+    void lifecycleTransitionsAtExactStartAndEndUsingBusinessClock() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        var starting = new FacilityBlockage(facility, maintenanceType, null, now, now.plusHours(1),
+                BlockageStatus.SCHEDULED, "Starting", null, staff);
+        var ending = new FacilityBlockage(facility, maintenanceType, null, now.minusHours(1), now,
+                BlockageStatus.ACTIVE, "Ending", null, staff);
+        when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
+        lifecycleCandidates(starting, ending);
+        assertEquals(2, blockageService.reconcileBlockageLifecycle());
+        assertEquals(BlockageStatus.ACTIVE, starting.getStatus());
+        assertEquals(BlockageStatus.COMPLETED, ending.getStatus());
+    }
+
+    @Test
+    void confirmationExpiresAtExactFifteenMinuteBoundary() {
+        var request = prepareCreation();
+        confirmCreate(request);
+        when(clock.instant()).thenReturn(java.time.Instant.parse("2030-01-07T03:15:00Z"));
+        assertEquals("PREVIEW_EXPIRED", assertThrows(BusinessRuleException.class,
+                () -> blockageService.createBlockage(request)).getCode());
+        verify(facilityBlockageRepository, never()).save(any());
+    }
+
+    private void lifecycleCandidates(FacilityBlockage... blockages) {
+        var candidates = new java.util.ArrayList<FacilityBlockageRepository.LifecycleCandidate>();
+        for (int i = 0; i < blockages.length; i++) {
+            Long id = 500L + i;
+            ReflectionTestUtils.setField(blockages[i], "id", id);
+            var candidate = mock(FacilityBlockageRepository.LifecycleCandidate.class);
+            when(candidate.getId()).thenReturn(id);
+            when(candidate.getFacilityId()).thenReturn(blockages[i].getFacility().getId());
+            when(facilityBlockageRepository.findById(id)).thenReturn(Optional.of(blockages[i]));
+            candidates.add(candidate);
+        }
+        when(facilityBlockageRepository.findLifecycleCandidates()).thenReturn(candidates);
+    }
+
+    @Test
+    void overdueScheduledBlockageCompletesInOneReconciliation() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        var overdue = new FacilityBlockage(facility, maintenanceType, null, now.minusHours(2), now,
+                BlockageStatus.SCHEDULED, "Overdue", null, staff);
+        when(facilityRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(facility));
+        lifecycleCandidates(overdue);
+        assertEquals(2, blockageService.reconcileBlockageLifecycle());
+        assertEquals(BlockageStatus.COMPLETED, overdue.getStatus());
+        verify(transactions).commit(any());
     }
 
     private CreateBlockageRequest prepareCreation() {

@@ -47,6 +47,7 @@ class ValidatedProposalTransactionIntegrationTest {
         registry.add("prism.storage.proposals", () -> directory.toString());
     }
     @Autowired ReservationProcessingService service;
+    @Autowired com.github.kafeyangasli.prism.feature.reservation.service.ReservationSubmissionService submissions;
     @Autowired ReservationRepository reservations;
     @Autowired UserRepository users;
     @Autowired FacilityRepository facilities;
@@ -81,6 +82,25 @@ class ValidatedProposalTransactionIntegrationTest {
             reservation.setPurpose(null);
         })).isInstanceOf(RuntimeException.class);
         assertPriorState();
+        assertThat(files()).isEqualTo(before);
+    }
+
+    @Test void failedSubmissionCommitCleansOriginalProposal() throws Exception {
+        Set<String> before = files();
+        long count = reservations.count();
+        var form = new com.github.kafeyangasli.prism.feature.reservation.dto.ReservationForm();
+        form.setFacilityId(pending.getFacility().getId());
+        form.setStartAt(NOW.plusDays(2).withHour(7).toString());
+        form.setEndAt(NOW.plusDays(2).withHour(8).toString());
+        form.setPurpose("Event");
+        var transaction = new TransactionTemplate(transactions);
+        transaction.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
+        assertThatThrownBy(() -> transaction.executeWithoutResult(tx -> {
+            var reservation = submissions.submit("atomic-owner@test", form, upload());
+            assertThat(directory.resolve(reservation.getProposalPath())).exists();
+            reservation.setPurpose(null);
+        })).isInstanceOf(RuntimeException.class);
+        assertThat(reservations.count()).isEqualTo(count);
         assertThat(files()).isEqualTo(before);
     }
 

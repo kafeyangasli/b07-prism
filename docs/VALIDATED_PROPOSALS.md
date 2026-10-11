@@ -57,6 +57,11 @@ or client-controlled paths. The exact PDF bytes are stored without modification.
 upload checks the extension, actual `%PDF-` header, and readability/pages using the existing
 PDFBox dependency. It does not inspect approval stamps or authenticate digital signatures.
 
+Original submissions bound actual stream reads to 10 MiB, remove partial writes, and
+register cleanup for confirmed transaction rollback, including failures at commit.
+Original documents retain extension-based format checks; validated PDFs additionally
+undergo the content checks described above.
+
 Validated uploads use `PRISM_MULTIPART_MAX_FILE_SIZE` (default 10 MB), including bounded
 stream reading independent of the client-reported size. `PRISM_MULTIPART_MAX_REQUEST_SIZE`
 also remains in effect. Runtime storage is already excluded by `.gitignore`; MySQL stores

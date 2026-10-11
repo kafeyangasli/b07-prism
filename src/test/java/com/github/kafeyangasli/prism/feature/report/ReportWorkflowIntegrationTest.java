@@ -48,6 +48,33 @@ class ReportWorkflowIntegrationTest {
     @Autowired com.github.kafeyangasli.prism.feature.reservation.repository.ReservationRepository reservations;
     @Autowired java.time.Clock clock;
     @Autowired jakarta.persistence.EntityManager entityManager;
+    @Autowired com.github.kafeyangasli.prism.feature.report.service.ReportService reportService;
+
+    @Test void rolledBackReportDoesNotLeavePrivatePhotoBehind() throws Exception {
+        var owner = users.save(new User("Owner", "report-rollback@example.test", "hash", Role.PENGGUNA, AccountStatus.ACTIVE));
+        var type = types.save(new FacilityType("ROLLBACK_ROOM", "Rollback Room", null));
+        var facility = facilities.save(new Facility("ROLLBACK01", "Room", type, "Floor", 10, null, AdministrativeStatus.ACTIVE));
+        var output = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(2, 2, BufferedImage.TYPE_INT_RGB), "png", output);
+        var request = new com.github.kafeyangasli.prism.feature.report.dto.CreateReportRequest();
+        request.setFacilityId(facility.getId());
+        request.setCategory("AC");
+        request.setDescription("Broken AC");
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(owner.getEmail(), "n/a",
+                        org.springframework.security.core.authority.AuthorityUtils.createAuthorityList("ROLE_PENGGUNA")));
+        String path;
+        try {
+            path = reportService.createReport(request,
+                    new MockMultipartFile("photo", "photo.png", "image/png", output.toByteArray())).getPhotoPath();
+            assertTrue(java.nio.file.Files.exists(photoDirectory.resolve(path)));
+            org.springframework.test.context.transaction.TestTransaction.flagForRollback();
+            org.springframework.test.context.transaction.TestTransaction.end();
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+        assertFalse(java.nio.file.Files.exists(photoDirectory.resolve(path)));
+    }
 
     @Test void modalReportSuccessSurvivesHtmxRedirect() throws Exception {
         var owner = users.save(new User("Owner", "report-flash@example.test", "hash", Role.PENGGUNA, AccountStatus.ACTIVE));

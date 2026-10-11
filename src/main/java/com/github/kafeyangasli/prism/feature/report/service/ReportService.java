@@ -33,7 +33,9 @@ public class ReportService {
     private final StaffActorResolver staffActorResolver;
     private final ReportPhotoStorage photoStorage;
     private final ReportReservationService reportReservationService;
+    private final java.time.Clock clock;
 
+    @Transactional
     @PreAuthorize("isAuthenticated()")
     public Report createReport(CreateReportRequest request, MultipartFile photo) {
         User user = currentUser();
@@ -52,14 +54,9 @@ public class ReportService {
             facility = facilityRepository.findById(request.getFacilityId())
                     .orElseThrow(() -> new ResourceNotFoundException("Fasilitas tidak ditemukan."));
         }
-        String photoPath = photoStorage.store(photo);
+        String photoPath = photoStorage.storeForTransaction(photo);
         Report report = new Report(user, facility, request.getCategory().trim(), request.getDescription().trim(), photoPath, ReportStatus.NEW);
-        try {
-            return reportRepository.save(report);
-        } catch (RuntimeException e) {
-            try { photoStorage.delete(photoPath); } catch (RuntimeException cleanup) { e.addSuppressed(cleanup); }
-            throw e;
-        }
+        return reportRepository.save(report);
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -124,7 +121,7 @@ public class ReportService {
         long staffId = staffActorResolver.resolveId(authenticatedEmail());
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new ResourceNotFoundException("Akun staf tidak ditemukan."));
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         report.setStatus(newStatus);
         // Existing schema: these fields describe the latest staff action, including rejection.
         report.setHandledBy(staff);

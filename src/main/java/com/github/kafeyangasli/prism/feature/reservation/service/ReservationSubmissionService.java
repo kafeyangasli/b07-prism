@@ -172,7 +172,7 @@ public class ReservationSubmissionService {
 
             try {
                 proposalPath =
-                        proposalStorageService.store(proposal);
+                        proposalStorageService.storeForTransaction(proposal);
 
             } catch (IOException exception) {
                 throw new BusinessRuleException(
@@ -188,7 +188,7 @@ public class ReservationSubmissionService {
              */
             try {
                 proposalPath =
-                        proposalStorageService.store(proposal);
+                        proposalStorageService.storeForTransaction(proposal);
 
             } catch (IOException exception) {
                 throw new BusinessRuleException(

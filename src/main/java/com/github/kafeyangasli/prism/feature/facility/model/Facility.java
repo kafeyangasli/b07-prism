@@ -135,6 +135,14 @@ public class Facility {
         changeAdministrativeStatus(status, LocalDateTime.now(java.time.Clock.system(java.time.ZoneId.of("Asia/Jakarta"))));
     }
 
+    /** Business status history uses the caller's clock; persistence audit timestamps remain separate. */
+    public void recordCreationStatus(LocalDateTime effectiveAt) {
+        if (id != null || !statusHistory.isEmpty()) {
+            throw new IllegalStateException("Creation status can only be recorded once before persistence");
+        }
+        statusHistory.add(new FacilityStatusHistory(this, administrativeStatus, effectiveAt, true));
+    }
+
     public void changeAdministrativeStatus(AdministrativeStatus status, LocalDateTime effectiveAt) {
         java.util.Objects.requireNonNull(status);
         if (administrativeStatus != status) {

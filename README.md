@@ -1,4 +1,4 @@
-![Alt Text](src/main/resources/static/images/prism-dark.svg)
+![Alt Text](src/main/resources/static/images/prism-light.svg)
 
 ---
 
@@ -6,7 +6,7 @@
 
 PRISM membantu pengunjung dan civitas akademika melihat fasilitas serta ketersediaannya, mengajukan reservasi, dan melaporkan masalah. Petugas dan Admin dapat memproses reservasi, menangani laporan, mengatur periode blokir fasilitas, serta memantau pemanfaatan fasilitas melalui dashboard dan rekapitulasi.
 
-> Proyek ini dikembangkan untuk memenuhi tugas mata kuliah **Pengembangan Platform Khusus**.
+> Proyek ini dikembangkan untuk memenuhi tugas mata kuliah **Pengembangan Platform Khusus (MIK1624502)**.
 
 ## Kontributor
 
@@ -169,6 +169,8 @@ npm --version
 
 Maven tidak perlu dipasang secara global karena proyek menyediakan Maven Wrapper.
 Pada Windows gunakan `mvnw.cmd`; pada Linux/macOS gunakan `./mvnw`.
+Jika checkout Linux/macOS belum memberi izin eksekusi pada wrapper, jalankan
+`chmod +x mvnw` sekali sebelum menggunakan `./mvnw` (atau gunakan `bash ./mvnw`).
 
 ### 2. Buat basis data MySQL
 

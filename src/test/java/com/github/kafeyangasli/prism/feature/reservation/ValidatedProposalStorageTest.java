@@ -51,6 +51,38 @@ class ValidatedProposalStorageTest {
         assertThat(directory.resolve(name)).exists();
     }
 
+    @Test void originalReadFailureLeavesNoPartialFile() {
+        var broken = new MockMultipartFile("proposal", "original.pdf", "application/pdf", bytes()) {
+            @Override public java.io.InputStream getInputStream() {
+                return new java.io.InputStream() {
+                    int read;
+                    @Override public int read() throws IOException {
+                        if (read++ > 0) throw new IOException("Failed upload read");
+                        return '%';
+                    }
+                };
+            }
+        };
+        assertThatThrownBy(() -> storage.store(broken)).isInstanceOf(IOException.class);
+        assertThat(directory.toFile().list()).isEmpty();
+    }
+
+    @Test void originalSizeLimitIsEnforcedByActualBytes() {
+        var misleading = new MockMultipartFile("proposal", "original.pdf", "application/pdf", new byte[10 * 1024 * 1024 + 1]) {
+            @Override public long getSize() { return 1; }
+        };
+        assertThatThrownBy(() -> storage.store(misleading)).isInstanceOf(IOException.class);
+        assertThat(directory.toFile().list()).isEmpty();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1, 2})
+    void originalProposalCleanupRequiresConfirmedRollback(int status) throws Exception {
+        String name = storage.storeForTransaction(upload());
+        complete(status);
+        assertThat(Files.exists(directory.resolve(name))).isEqualTo(status != TransactionSynchronization.STATUS_ROLLED_BACK);
+    }
+
     @Test void boundedReadingEnforcesConfiguredLimitEvenIfReportedSizeIsFalse() {
         ReflectionTestUtils.setField(storage, "validatedMaxSize", DataSize.ofBytes(128));
         var misleading = new MockMultipartFile("validatedProposal", "approved.pdf", "application/pdf", new byte[129]) {

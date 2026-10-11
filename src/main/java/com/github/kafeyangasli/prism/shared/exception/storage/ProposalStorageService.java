@@ -188,16 +188,40 @@ public class ProposalStorageService {
             );
         }
 
-        try (InputStream input =
-                     file.getInputStream()) {
-
-            Files.copy(
-                    input,
-                    target
-            );
+        byte[] bytes;
+        try (InputStream input = file.getInputStream()) {
+            bytes = input.readNBytes((int) MAX_BYTES + 1);
+        }
+        if (bytes.length == 0 || bytes.length > MAX_BYTES) {
+            throw new IOException("Berkas proposal kosong atau melebihi 10 MB");
+        }
+        var output = Files.newOutputStream(target, StandardOpenOption.CREATE_NEW);
+        try (output) {
+            output.write(bytes);
+        } catch (IOException exception) {
+            try { Files.deleteIfExists(target); }
+            catch (IOException cleanup) { exception.addSuppressed(cleanup); }
+            throw exception;
         }
 
         return storedName;
+    }
+
+    /** Original submissions follow the same rollback cleanup policy as validated PDFs. */
+    public String storeForTransaction(MultipartFile file) throws IOException {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            throw new IllegalStateException("Proposal storage requires a transaction.");
+        }
+        String name = store(file);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override public void afterCompletion(int status) {
+                if (status == STATUS_ROLLED_BACK) {
+                    try { Files.deleteIfExists(root.resolve(name)); }
+                    catch (IOException exception) { log.warn("Unused proposal cleanup failed; storage maintenance is required."); }
+                }
+            }
+        });
+        return name;
     }
 
     public Resource load(

@@ -26,6 +26,28 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class UserServiceTest {
 
+    @Test
+    void registrationRejectsPasswordsBeyondBcryptUtf8Limit() {
+        var dto = new UserRegistrationDto();
+        dto.setName("Test");
+        dto.setEmail("too-long@example.test");
+        dto.setPassword("é".repeat(37));
+        assertThrows(BusinessRuleException.class, () -> userService.registerUser(dto));
+        assertFalse(userRepository.existsByEmailIgnoreCase(dto.getEmail()));
+    }
+
+    @Test
+    void adminCreationRejectsPasswordsBeyondBcryptUtf8Limit() {
+        var admin = userRepository.save(new User("Admin", "password-admin@example.test", "hash", Role.ADMIN, AccountStatus.ACTIVE));
+        var dto = new com.github.kafeyangasli.prism.feature.user.dto.AdminCreateUserDto();
+        dto.setName("Test");
+        dto.setEmail("admin-created-long@example.test");
+        dto.setRole(Role.PENGGUNA);
+        dto.setPassword("a".repeat(73));
+        assertThrows(BusinessRuleException.class, () -> userService.createUserByAdmin(admin.getId(), dto));
+        assertFalse(userRepository.existsByEmailIgnoreCase(dto.getEmail()));
+    }
+
     @Autowired
     private UserService userService;
 

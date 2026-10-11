@@ -1,6 +1,75 @@
 (function () {
   "use strict";
 
+  // Only server-rendered values update the persistent navigation shell.
+  function syncDisplayName(root) {
+    const content = root.querySelector?.('[data-navigation-name]');
+    if (!content) return;
+    document.querySelectorAll('[data-display-name]').forEach(function (element) {
+      element.textContent = content.dataset.navigationName;
+    });
+  }
+
+  function openDialog(dialog, trigger) {
+    document.querySelectorAll('dialog[open]').forEach(function (other) {
+      if (other !== dialog) other.close();
+    });
+    if (trigger) {
+      trigger.setAttribute('aria-expanded', 'true');
+      dialog.returnFocus = trigger;
+    }
+    if (!dialog.open) dialog.showModal();
+    focusDialog(dialog);
+  }
+
+  // Upgrade existing disclosure forms without cloning fields, CSRF tokens or
+  // HTMX attributes. Native dialogs enter the top layer, outside table layout.
+  function initializeActionDialogs(root) {
+    if (typeof HTMLDialogElement === 'undefined' || !HTMLDialogElement.prototype.showModal) return;
+    root.querySelectorAll('.ui-table details:not([data-overlay-ready]), details[data-action-dialog]:not([data-overlay-ready])').forEach(function (details) {
+      const summary = details.querySelector(':scope > summary');
+      if (!summary) return;
+      const dialog = document.createElement('dialog');
+      dialog.id = 'action-' + crypto.randomUUID();
+      dialog.className = 'ui-dialog';
+      dialog.setAttribute('aria-labelledby', dialog.id + '-title');
+      const header = document.createElement('div');
+      header.className = 'ui-dialog-header';
+      const title = document.createElement('h2');
+      title.id = dialog.id + '-title';
+      title.textContent = summary.textContent.trim();
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'ui-btn ui-btn-ghost';
+      close.dataset.closeDialog = '';
+      close.setAttribute('aria-label', 'Tutup dialog');
+      close.textContent = '×';
+      header.append(title, close);
+      const content = document.createElement('div');
+      content.className = 'space-y-5';
+      Array.from(details.children).forEach(function (child) {
+        if (child !== summary) content.append(child);
+      });
+      dialog.append(header, content);
+      details.after(dialog);
+      details.open = false;
+      details.dataset.overlayReady = 'true';
+      details.classList.add('ui-action-dialog');
+      summary.dataset.openDialog = dialog.id;
+      summary.setAttribute('aria-haspopup', 'dialog');
+      summary.setAttribute('aria-controls', dialog.id);
+      summary.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  document.addEventListener('close', function (event) {
+    if (!(event.target instanceof HTMLDialogElement)) return;
+    document.querySelectorAll('[data-open-dialog]').forEach(function (trigger) {
+      if (trigger.dataset.openDialog === event.target.id) trigger.setAttribute('aria-expanded', 'false');
+    });
+    if (event.target.returnFocus?.isConnected) event.target.returnFocus.focus();
+  }, true);
+
   // Early format/size feedback; the server also parses the uploaded PDF.
   document.addEventListener("change", async function (event) {
     const input = event.target;
@@ -127,7 +196,8 @@
     const target = dialog.querySelector("[data-form-errors]")
       || dialog.querySelector('[aria-invalid="true"]')
       || dialog.querySelector("[autofocus]")
-      || dialog.querySelector('input:not([type="hidden"]), select, textarea, button');
+      || dialog.querySelector('input:not([type="hidden"]), select, textarea')
+      || dialog.querySelector('button');
     target?.focus();
   }
 
@@ -208,6 +278,7 @@
   }
 
   function initializeEnhancements(root) {
+    initializeActionDialogs(root);
     root.querySelectorAll?.('[data-list-search]').forEach(function (input) {
       const region = document.getElementById(input.dataset.listSearch);
       const tools = input.closest('[data-list-tools]');
@@ -300,10 +371,10 @@
 
     const openButton = event.target.closest("[data-open-dialog]");
     if (openButton) {
+      event.preventDefault();
       const dialog = document.getElementById(openButton.dataset.openDialog);
       if (dialog && typeof dialog.showModal === "function") {
-        dialog.showModal();
-        focusDialog(dialog);
+        openDialog(dialog, openButton);
       }
       return;
     }
@@ -410,8 +481,7 @@
     root.querySelectorAll?.("dialog[open]").forEach(function (dialog) {
       if (!dialog.isConnected || typeof dialog.showModal !== "function" || dialog.matches(":modal")) return;
       dialog.removeAttribute("open");
-      dialog.showModal();
-      focusDialog(dialog);
+      openDialog(dialog);
     });
   }
 
@@ -434,6 +504,9 @@
 
   promoteOpenDialogs(document);
   document.addEventListener("htmx:afterSwap", function (event) {
+    // History snapshots can contain an older name; only fresh server responses
+    // may replace the current navigation name.
+    if (event.detail.xhr) syncDisplayName(document);
     promoteOpenDialogs(document);
     if (event.detail.target?.id === "reservation-availability") {
       document.getElementById("reservation-availability")?.querySelector('input[name="startAt"]:checked, input[name="endAt"]')?.focus();

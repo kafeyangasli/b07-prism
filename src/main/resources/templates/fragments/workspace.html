@@ -1,6 +1,15 @@
 <!doctype html>
 <html lang="id" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
+<button th:fragment="themeToggle" type="button" class="ui-btn ui-btn-ghost shrink-0 px-3" data-theme-toggle
+        aria-label="Tema terang aktif. Gunakan tema gelap" aria-pressed="false" hidden>
+    <span data-theme-light class="inline-flex items-center gap-2"><svg th:replace="~{fragments/workspace :: icon('sun')}"></svg><span class="hidden sm:inline">Terang</span></span>
+    <span data-theme-dark class="inline-flex items-center gap-2"><svg th:replace="~{fragments/workspace :: icon('moon')}"></svg><span class="hidden sm:inline">Gelap</span></span>
+</button>
+<span th:fragment="themeLogo(classes)">
+    <img data-theme-light th:src="@{/images/prism-light.svg}" alt="PRISM" width="412" height="112" th:class="${classes}">
+    <img data-theme-dark th:src="@{/images/prism-dark.svg}" alt="PRISM" width="412" height="112" th:class="${classes}">
+</span>
 <svg th:fragment="icon(name)" class="size-5 shrink-0" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
     <use th:href="|@{/images/icons.svg}#${name}|"></use>
 </svg>

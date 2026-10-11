@@ -61,7 +61,7 @@
                         <td data-label="Kategori" th:text="${row.category}"></td>
                         <td data-label="Status"><span th:replace="~{fragments/status :: badge(${row.status})}"></span></td>
                         <td data-label="Masuk" th:text="${row.createdAt != null ? #temporals.format(row.createdAt, 'dd MMM yyyy, HH:mm') : '—'}"></td>
-                        <td data-label="Detail"><a class="ui-btn ui-btn-secondary" th:href="@{/staff/reports/{id}(id=${row.id})}">Lihat laporan</a></td>
+                        <td data-label="Detail" class="ui-table-actions"><a class="ui-btn ui-btn-secondary" th:href="@{/staff/reports/{id}(id=${row.id})}">Lihat laporan</a></td>
                     </tr></tbody>
                 </table>
             </div>

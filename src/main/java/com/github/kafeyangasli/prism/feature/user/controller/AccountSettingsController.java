@@ -13,6 +13,8 @@ import org.springframework.transaction.TransactionException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import com.github.kafeyangasli.prism.security.PrismUserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -50,10 +52,18 @@ public class AccountSettingsController {
 
     @PostMapping("/profile")
     public String profile(@Valid @ModelAttribute("profileForm") AccountProfileForm form,
-                          BindingResult errors, Model model, RedirectAttributes redirect) {
+                          BindingResult errors, Model model, RedirectAttributes redirect,
+                          HttpServletRequest request, HttpServletResponse response) {
         if (!errors.hasErrors()) {
             try {
                 service.updateProfile(form);
+                // The transaction has succeeded. Publish the persisted name to
+                // the current session without changing identity or authorities.
+                var context = SecurityContextHolder.getContext();
+                if (context.getAuthentication().getPrincipal() instanceof PrismUserDetails principal) {
+                    principal.setDisplayName(service.currentAccount().name());
+                    new HttpSessionSecurityContextRepository().saveContext(context, request, response);
+                }
                 redirect.addFlashAttribute("successMessage", "Nama tampilan berhasil diperbarui.");
                 return "redirect:/account";
             } catch (BusinessRuleException exception) {

@@ -31,7 +31,7 @@ class AccountSettingsControllerTest {
         var profile = new AccountProfileForm(); profile.setName("Safe input");
         var errors = new BeanPropertyBindingResult(profile, "profileForm");
         var model = new ExtendedModelMap(); model.addAttribute("profileForm", profile);
-        assertThat(controller.profile(profile, errors, model, new RedirectAttributesModelMap())).isEqualTo("account/settings");
+        assertThat(controller.profile(profile, errors, model, new RedirectAttributesModelMap(), request, response)).isEqualTo("account/settings");
         assertThat(errors.getAllErrors().getFirst().getDefaultMessage()).doesNotContain("Sensitive database details");
         model.clear();
         assertThat(controller.password("old-secret", "new-secret", "new-secret", model, request, response)).isEqualTo("account/password");

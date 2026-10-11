@@ -4,11 +4,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light">
+    <meta name="color-scheme" content="light dark">
     <meta name="theme-color" content="#5d5098">
     <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
     <title th:text="${pageTitle + ' · PRISM'}">PRISM</title>
+    <script th:src="@{/js/theme.js}"></script>
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <script defer th:src="@{/vendor/htmx.min.js}"></script>
     <script defer th:src="@{/js/app.js}"></script>
@@ -19,7 +20,7 @@
 </head>
 <body>
 <a href="#main-content"
-   class="sr-only fixed left-4 top-4 z-50 rounded-lg bg-white px-4 py-2 font-semibold text-ink-900 shadow-lg focus:not-sr-only">Lewati
+   class="sr-only fixed left-4 top-4 z-50 rounded-lg bg-surface px-4 py-2 font-semibold text-ink-900 shadow-lg focus:not-sr-only">Lewati
     ke konten utama</a>
 <div id="global-progress" class="htmx-indicator fixed inset-x-0 top-0 z-50 h-1 bg-prism-600" role="progressbar"
      aria-label="Memuat"></div>
@@ -35,7 +36,7 @@
     <div id="main-content" tabindex="-1" class="ui-container py-8 sm:py-10">
         <main th:replace="${content}"></main>
     </div>
-    <footer class="mt-auto border-t border-ink-200 bg-white py-6">
+    <footer class="mt-auto border-t border-ink-200 bg-surface py-6">
         <div class="ui-container text-sm text-ink-500"><p>&copy; 2026 PRISM. All rights reserved.</p></div>
     </footer>
 </th:block>
@@ -45,9 +46,11 @@
         <button type="button" class="ui-btn ui-btn-ghost" data-open-drawer aria-controls="dashboard-sidebar"
                 aria-expanded="false" aria-label="Buka navigasi"><svg th:replace="~{fragments/workspace :: icon('menu')}"></svg>
         </button>
-        <a th:href="@{/}" aria-label="Beranda PRISM"><img th:src="@{/images/prism-light.svg}" alt="PRISM" width="442"
-                                                          height="112" class="h-7 w-auto"></a>
-        <a th:href="@{/account}" aria-label="Pengaturan Akun"><img th:replace="~{fragments/avatar :: avatar('ui-avatar-small')}"></a>
+        <a th:href="@{/}" aria-label="Beranda PRISM"><span th:replace="~{fragments/workspace :: themeLogo('h-7 w-auto')}"></span></a>
+        <div class="flex items-center gap-2">
+            <button th:replace="~{fragments/workspace :: themeToggle}"></button>
+            <a th:href="@{/account}" aria-label="Pengaturan Akun"><img th:replace="~{fragments/avatar :: avatar('ui-avatar-small')}"></a>
+        </div>
     </header>
     <button type="button" class="ui-dashboard-backdrop" data-close-drawer aria-label="Tutup navigasi"
             tabindex="-1"></button>
@@ -55,7 +58,7 @@
     <div class="ui-dashboard-main">
         <header class="ui-workspace-bar" aria-label="Ruang kerja PRISM">
             <div class="flex items-center gap-3"><span class="size-2 rounded-full bg-accent" aria-hidden="true"></span><span class="font-semibold text-content">Ruang kerja PRISM</span><span class="text-border" aria-hidden="true">/</span><span sec:authorize="hasRole('PENGGUNA')" class="text-muted">Pengguna</span><span sec:authorize="hasRole('PETUGAS')" class="text-muted">Petugas</span><span sec:authorize="hasRole('ADMIN')" class="text-muted">Admin</span></div>
-            <a class="flex min-h-11 items-center gap-3 rounded-xl px-2 hover:bg-primary-subtle" th:href="@{/account}" aria-label="Pengaturan Akun"><span class="max-w-48 truncate font-medium" sec:authentication="principal.displayName">Pengguna</span><svg th:replace="~{fragments/workspace :: icon('settings')}"></svg></a>
+            <button th:replace="~{fragments/workspace :: themeToggle}"></button>
         </header>
         <div class="ui-dashboard-feedback has-[[hidden]]:hidden">
             <div id="htmx-error" class="ui-alert ui-alert-error" role="alert" tabindex="-1" hidden>
@@ -64,11 +67,11 @@
             </div>
         </div>
         <div id="main-content" tabindex="-1" class="ui-dashboard-content">
-            <div id="dashboard-content" tabindex="-1" th:attr="data-active-nav=${activeNav}">
+            <div id="dashboard-content" tabindex="-1" th:attr="data-active-nav=${activeNav},data-navigation-name=${#authentication.principal.displayName}">
                 <main th:replace="${content}"></main>
             </div>
         </div>
-        <footer class="border-t border-border bg-white px-5 py-5 text-sm text-muted sm:px-8"><p>&copy; 2026 PRISM. All
+        <footer class="border-t border-border bg-surface px-5 py-5 text-sm text-muted sm:px-8"><p>&copy; 2026 PRISM. All
             rights reserved.</p></footer>
     </div>
 </div>

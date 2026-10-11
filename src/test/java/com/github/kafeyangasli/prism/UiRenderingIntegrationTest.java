@@ -59,6 +59,8 @@ class UiRenderingIntegrationTest {
         assertThat(html).contains("/css/app.css", "id=\"main-content\"")
             .doesNotContain("th:field=", "th:replace=", "sec:authorize=");
         assertThat(html.split("<main", -1)).hasSize(2);
+        assertThat(html).contains("data-theme-toggle", "/js/theme.js");
+        assertThat(html.indexOf("/js/theme.js")).isLessThan(html.indexOf("/css/app.css"));
         if (Boolean.getBoolean("prism.ui.snapshots")) {
             Path directory = Path.of("target/ui-preview");
             Files.createDirectories(directory);
@@ -258,6 +260,9 @@ class UiRenderingIntegrationTest {
                 "History-rejected-UI", "Laporan ditolak", null, com.github.kafeyangasli.prism.feature.report.model.ReportStatus.REJECTED));
         mvc.perform(post("/staff/reports/" + report.getId() + "/status").with(csrf()).param("status", "IN_PROGRESS"))
                 .andExpect(status().is3xxRedirection());
+        assertThat(render("/staff/reports", "report-queue"))
+                .contains("data-action-dialog", "name=\"resolutionNote\"", "name=\"_csrf\"", "Selesaikan laporan");
+        render("/staff/reports/" + report.getId(), "report-in-progress");
         mvc.perform(post("/staff/reports/" + report.getId() + "/status").with(csrf())
                 .param("status", "RESOLVED").param("resolutionNote", "Masalah sudah diperbaiki"))
                 .andExpect(redirectedUrl("/staff/reports"));

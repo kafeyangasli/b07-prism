@@ -12,7 +12,8 @@ import java.util.UUID;
 @EnabledIfEnvironmentVariable(named = "PRISM_TEST_MYSQL_URL", matches = "jdbc:mysql:.*")
 @SpringBootTest(properties = {
         "spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver",
-        "spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=validate"})
+        "spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=validate",
+        "prism.seed.enabled=true"})
 class DevelopmentDatabaseSeederMySqlTest extends DevelopmentDatabaseSeederIntegrationTest {
     private static final String SCHEMA = "prism_seed_" + UUID.randomUUID().toString().replace("-", "");
     private static String rootUrl;

@@ -113,9 +113,14 @@
                                     <dt class="text-muted">Tipe</dt>
                                     <dd class="mt-1 font-medium" th:text="${facility.facilityType.name}">Tipe</dd>
                                 </div>
-                                <div>
+                                <div th:unless="${facility.equipment}">
                                     <dt class="text-muted">Kapasitas</dt>
                                     <dd class="mt-1 font-medium" th:text="${facility.capacity + ' orang'}">0 orang</dd>
+                                </div>
+                                <div th:if="${facility.equipment}">
+                                    <dt class="text-muted">Stok tersedia</dt>
+                                    <dd class="mt-1 font-medium" th:text="${availableStock[facility.id] + ' unit'}">0 unit</dd>
+                                    <p class="mt-1 text-xs text-muted" th:text="${stockForSelectedInterval ? 'Pada waktu yang dipilih' : 'Saat ini'}"></p>
                                 </div>
                                 <div class="col-span-2">
                                     <dt class="text-muted">Lokasi</dt>

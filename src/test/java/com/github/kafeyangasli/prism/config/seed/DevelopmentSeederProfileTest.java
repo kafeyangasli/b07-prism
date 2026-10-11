@@ -2,6 +2,8 @@ package com.github.kafeyangasli.prism.config.seed;
 
 import com.github.kafeyangasli.prism.feature.facility.repository.FacilityRepository;
 import com.github.kafeyangasli.prism.feature.facility.repository.FacilityTypeRepository;
+import com.github.kafeyangasli.prism.feature.facility.repository.FacilityImageRepository;
+import com.github.kafeyangasli.prism.feature.facility.service.FacilityImageStorage;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -18,6 +20,8 @@ class DevelopmentSeederProfileTest {
                 context.getEnvironment().setActiveProfiles(profiles);
                 context.registerBean(FacilityRepository.class, () -> mock(FacilityRepository.class));
                 context.registerBean(FacilityTypeRepository.class, () -> mock(FacilityTypeRepository.class));
+                context.registerBean(FacilityImageRepository.class, () -> mock(FacilityImageRepository.class));
+                context.registerBean(FacilityImageStorage.class, () -> mock(FacilityImageStorage.class));
                 context.registerBean(UserRepository.class, () -> mock(UserRepository.class));
                 context.registerBean(PasswordEncoder.class, () -> mock(PasswordEncoder.class));
                 context.registerBean(Clock.class, Clock::systemUTC);
@@ -37,6 +41,8 @@ class DevelopmentSeederProfileTest {
                             java.util.Map.of("prism.seed.enabled", "false")));
             context.registerBean(FacilityRepository.class, () -> mock(FacilityRepository.class));
             context.registerBean(FacilityTypeRepository.class, () -> mock(FacilityTypeRepository.class));
+            context.registerBean(FacilityImageRepository.class, () -> mock(FacilityImageRepository.class));
+            context.registerBean(FacilityImageStorage.class, () -> mock(FacilityImageStorage.class));
             context.registerBean(UserRepository.class, () -> mock(UserRepository.class));
             context.registerBean(PasswordEncoder.class, () -> mock(PasswordEncoder.class));
             context.registerBean(Clock.class, Clock::systemUTC);

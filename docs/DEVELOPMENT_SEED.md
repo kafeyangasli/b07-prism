@@ -22,9 +22,7 @@ production JAR.
 
 ## Facility mapping
 
-Every UTF-8 `.txt` file is one record. Images are companion assets and are not
-imported by this database seeder; the existing facility image upload workflow remains
-available. Code and name come from the first two comma-separated fields. For rooms
+Every UTF-8 `.txt` file is one record. Code and name come from the first two comma-separated fields. For rooms
 and grounds, the final comma-delimited number is capacity. Everything between name
 and capacity is description, including embedded commas and newlines. The three-field
 `code,name,capacity` form also works. Quoted descriptions support doubled quotes;
@@ -50,6 +48,33 @@ the campus identified in README.md; no building/address is guessed. All new faci
 are administratively ACTIVE. These category, location, and per-unit capacity mappings
 are the only facility assumptions.
 
+## Companion images
+
+The seeder matches each text file to a `.jpg`, `.jpeg`, or `.png` file with the same
+basename, ignoring case (for example `1. aula_fakultas.txt` and
+`1. aula_fakultas.jpg`). No companion is required; the facility is still inserted
+without an image. Multiple matching companions fail clearly rather than choosing
+one arbitrarily. Unmatched image files do not create facilities.
+
+When the facility's gallery is empty, the image is validated and copied through
+the existing `FacilityImageStorage` into `PRISM_FACILITY_STORAGE` (default
+`./storage/facilities`). The storage system checks actual JPEG/PNG content, the
+configured byte limit, and the existing dimension limit, then assigns a safe UUID
+filename. The seeder creates its `FacilityImage` record with display order zero
+and selects it as the thumbnail. The source file remains unchanged; images are
+served through the existing `/facilities/{facilityId}/images/{imageId}` endpoint.
+
+This also fills empty galleries on facilities created by the earlier seeder.
+Any existing gallery is preserved, including user uploads, image ordering, and
+the chosen thumbnail. Restarting does not copy the image again or add records.
+If an administrator removes every image, the next enabled seed run fills that
+empty gallery from its companion again. Existing records with missing stored
+files are not overwritten automatically.
+
+Invalid images fail with the source path and facility code. New files are registered
+with the existing transaction cleanup: if any seed insert or validation fails,
+all newly created database rows and image files are rolled back together.
+
 ## Accounts and repeat execution
 
 | Email | Development password | Role |
@@ -74,7 +99,7 @@ startup races (a losing startup fails and can be restarted).
 
 ## Verification
 
-Run `.\mvnw.cmd test` for parser, H2 startup/login/repeat/rollback, profile isolation,
+Run `.\mvnw.cmd test` for parser, H2 startup/login/image serving/repeat/rollback, profile isolation,
 and the existing regression tests. The opt-in real-MySQL test additionally runs all
 Flyway migrations and Hibernate schema validation before the same assertions:
 

@@ -12,6 +12,7 @@ class FacilitySeedSourceTest {
     @Test void readsEveryActualRecordIncludingStockAndQuotedCommas() throws Exception {
         var entries = FacilitySeedSource.read(Path.of("initial_data"));
         assertThat(entries).hasSize(18);
+        assertThat(entries).allSatisfy(e -> assertThat(e.image()).isRegularFile());
         var aula = entries.stream().filter(e -> e.code().equals("F001")).findFirst().orElseThrow();
         assertThat(aula.capacity()).isEqualTo(300);
         assertThat(aula.description()).isEqualTo("Aula untuk seminar, kuliah umum, dan kegiatan mahasiswa berskala besar.");
@@ -45,12 +46,23 @@ class FacilitySeedSourceTest {
         }
     }
 
-    @Test void rejectsDuplicateCodesAndEmptySourcesAndIgnoresImages() throws Exception {
+    @Test void rejectsDuplicateCodesAndEmptySourcesAndIgnoresUnmatchedImages() throws Exception {
         assertThatThrownBy(() -> FacilitySeedSource.read(directory)).hasMessageContaining("no facility .txt");
         Files.writeString(directory.resolve("a.txt"), "F001,Aula,20");
         Files.writeString(directory.resolve("photo.jpg"), "not a text record");
         assertThat(FacilitySeedSource.read(directory)).hasSize(1);
+        assertThat(FacilitySeedSource.read(directory).getFirst().image()).isNull();
         Files.writeString(directory.resolve("b.txt"), "f001,Aula,20");
         assertThatThrownBy(() -> FacilitySeedSource.read(directory)).hasMessageContaining("b.txt").hasMessageContaining("duplicate");
+    }
+
+    @Test void matchesCompanionsByBasenameCaseInsensitivelyAndRejectsAmbiguousImages() throws Exception {
+        Files.writeString(directory.resolve("1. aula.txt"), "F001,Aula,20");
+        Path companion = directory.resolve("1. AULA.JPEG");
+        Files.write(companion, new byte[]{1});
+        assertThat(FacilitySeedSource.read(directory).getFirst().image()).isEqualTo(companion);
+        Files.write(directory.resolve("1. aula.png"), new byte[]{1});
+        assertThatThrownBy(() -> FacilitySeedSource.read(directory)).hasMessageContaining("1. aula.txt")
+                .hasMessageContaining("multiple companion images");
     }
 }

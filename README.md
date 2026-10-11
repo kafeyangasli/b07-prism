@@ -287,7 +287,11 @@ Hentikan aplikasi dengan `Ctrl+C` pada terminal yang menjalankannya.
 ### 6. Data awal dan akun pengembangan
 
 Pada startup pertama, seeder otomatis membuat 18 fasilitas dari `initial_data`, tipe
-fasilitas yang dibutuhkan, dan empat akun berikut. Seeder bersifat idempoten: startup
+fasilitas yang dibutuhkan, gambar pendamping beserta thumbnail, dan empat akun berikut.
+Gambar `.jpg`, `.jpeg`, atau `.png` dipasangkan dengan file `.txt` yang memiliki nama
+dasar sama, lalu disalin ke `PRISM_FACILITY_STORAGE`. Seeder juga mengisi galeri kosong
+pada fasilitas yang sudah ada; galeri dan thumbnail yang sudah diunggah tetap dipertahankan.
+Seeder bersifat idempoten: startup
 berikutnya memeriksa kode fasilitas, kode/nama tipe, dan email sehingga tidak membuat
 duplikat atau menimpa data yang sudah ada.
 

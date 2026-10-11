@@ -10,6 +10,8 @@ import com.github.kafeyangasli.prism.feature.user.model.*;
 import com.github.kafeyangasli.prism.feature.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -236,6 +238,44 @@ class UiRenderingIntegrationTest {
     void staffActionsRenderWithoutAdminLinks() throws Exception {
         assertThat(render("/staff/dashboard?sort=start", "staff")).contains("/approve", "/reject", "name=\"reasonDetail\"", "Penolakan manual", "Batas pending", "name=\"_csrf\"", "Operasional", "Blokir", "Pengaturan Akun")
             .doesNotContain("href=\"/admin/users\"");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"PETUGAS", "ADMIN"})
+    void dashboardNavigationRendersOpenReportsForStaffAndAdmin(String role) throws Exception {
+        var equipmentType = facilityTypes.save(new com.github.kafeyangasli.prism.feature.facility.model.FacilityType(
+                "ALAT-UI", "Alat", null));
+        var equipment = new Facility("SPEAKER-UI", "Speaker UI", equipmentType,
+                "Gedung Informatika", 1, null, AdministrativeStatus.ACTIVE);
+        equipment.setTotalStock(10);
+        facilities.save(equipment);
+        var equipmentReservation = new Reservation(reservation.getUser(), equipment,
+                reservation.getStartAt(), reservation.getEndAt(), "Kegiatan audio", null,
+                ReservationStatus.PENDING, reservation.getExpiresAt());
+        equipmentReservation.setQuantity(3);
+        reservations.save(equipmentReservation);
+        reports.save(new com.github.kafeyangasli.prism.feature.report.model.Report(reservation.getUser(), room,
+                "Lampu rusak", "Lampu tidak menyala", null,
+                com.github.kafeyangasli.prism.feature.report.model.ReportStatus.NEW));
+        reports.save(new com.github.kafeyangasli.prism.feature.report.model.Report(reservation.getUser(), equipment,
+                "Kabel audio", "Kabel perlu diperiksa", null,
+                com.github.kafeyangasli.prism.feature.report.model.ReportStatus.IN_PROGRESS));
+        var account = com.github.kafeyangasli.prism.support.PrismTestUsers
+                .user(role.toLowerCase(java.util.Locale.ROOT) + "-dashboard@example.test").roles(role);
+
+        // Match the sidebar flow: open another page, then request the dashboard via HTMX.
+        mvc.perform(get("/staff/reports").with(account)).andExpect(status().isOk());
+        for (String sort : java.util.List.of("created", "start")) {
+            for (boolean navigation : java.util.List.of(false, true)) {
+                var request = get("/staff/dashboard").param("sort", sort).with(account);
+                if (navigation) request.header("HX-Request", "true").header("HX-Target", "dashboard-content");
+                String html = mvc.perform(request).andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+                assertThat(html).contains("id=\"dashboard-content\"", "data-active-nav=\"dashboard\"",
+                        "Lampu rusak", "Kabel audio", "Baru", "Sedang Ditangani", "Speaker UI · 3 unit");
+                assertThat(html.strip()).endsWith("</html>");
+            }
+        }
     }
 
     @Test @WithPrismUser(roles="PETUGAS")

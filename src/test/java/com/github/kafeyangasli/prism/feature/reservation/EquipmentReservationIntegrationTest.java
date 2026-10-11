@@ -294,6 +294,68 @@ class EquipmentReservationIntegrationTest {
         assertThat(fullForm).contains("name=\"quantity\"", "Lebih dari 5 unit");
         snapshot("equipment-form", fullForm);
     }
+
+    @Test void facilityCardsAndDetailsShowAvailableEquipmentStockInsteadOfCapacity() throws Exception {
+        reserve(requester, equipment, NOW.minusHours(1), NOW.plusHours(1), 6,
+                ReservationStatus.APPROVED, NOW.plusHours(12));
+        reserve(other, equipment, NOW.minusHours(1), NOW.plusHours(1), 20,
+                ReservationStatus.CANCELLED, NOW.plusHours(12));
+        var renamed = types.findById(equipment.getFacilityType().getId()).orElseThrow();
+        renamed.updateDetails("Peralatan audio", null);
+        types.saveAndFlush(renamed);
+
+        String catalogue = mvc.perform(get("/facilities").param("type", "ALAT"))
+                .andExpect(status().isOk()).andExpect(model().attribute("availableStock", Map.of(equipment.getId(), 14)))
+                .andReturn().getResponse().getContentAsString();
+        String card = catalogue.substring(catalogue.indexOf("<article"), catalogue.indexOf("</article>") + 10);
+        assertThat(card).contains("Stok tersedia", "14 unit", "Saat ini")
+                .doesNotContain("Kapasitas", "orang", "20 unit");
+        String detail = mvc.perform(get("/facilities/" + equipment.getId()))
+                .andExpect(status().isOk()).andExpect(model().attribute("availableStock", 14))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(detail).contains("Stok tersedia", "14 unit").doesNotContain("Kapasitas", "Total stok alat");
+
+        String roomCatalogue = mvc.perform(get("/facilities").param("type", "Kelas"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(roomCatalogue).contains("Kapasitas", "20 orang").doesNotContain("Stok tersedia");
+        String roomDetail = mvc.perform(get("/facilities/" + room.getId()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(roomDetail).contains("Kapasitas").doesNotContain("Stok tersedia");
+    }
+
+    @Test void facilityStockUsesSelectedIntervalAndCountsPendingAllocationsInHtmxResults() throws Exception {
+        reserve(requester, equipment, START, START.plusHours(1), 5,
+                ReservationStatus.PENDING, NOW.plusHours(12));
+        reserve(other, equipment, START.plusMinutes(30), START.plusHours(2), 3,
+                ReservationStatus.APPROVED, NOW.plusHours(12));
+        reserve(requester, equipment, START, START.plusHours(2), 20,
+                ReservationStatus.PENDING, NOW);
+
+        String html = mvc.perform(get("/facilities").param("type", "ALAT")
+                        .param("startAt", START.toString()).param("endAt", START.plusHours(2).toString())
+                        .header("HX-Request", "true").header("HX-Target", "facility-results"))
+                .andExpect(status().isOk()).andExpect(model().attribute("availableStock", Map.of(equipment.getId(), 12)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("Stok tersedia", "12 unit", "Pada waktu yang dipilih");
+        mvc.perform(get("/facilities/" + equipment.getId())).andExpect(status().isOk())
+                .andExpect(model().attribute("availableStock", 20));
+    }
+
+    @Test void unavailableEquipmentDisplaysZeroStock() throws Exception {
+        var maintenance = blockageTypes.saveAndFlush(new BlockageType("DISPLAY-MAINTENANCE", "Pemeliharaan", null));
+        var blockage = blockages.saveAndFlush(new FacilityBlockage(equipment, maintenance, null,
+                NOW.minusHours(1), NOW.plusHours(1), BlockageStatus.ACTIVE, "Pemeliharaan", null, admin));
+        mvc.perform(get("/facilities").param("type", "ALAT")).andExpect(status().isOk())
+                .andExpect(model().attribute("availableStock", Map.of(equipment.getId(), 0)));
+        String blocked = mvc.perform(get("/facilities/" + equipment.getId())).andExpect(status().isOk())
+                .andExpect(model().attribute("availableStock", 0)).andReturn().getResponse().getContentAsString();
+        assertThat(blocked).contains("Stok tersedia", "0 unit").doesNotContain("Kapasitas", "Total stok alat");
+        blockages.delete(blockage);
+        equipment.setAdministrativeStatus(AdministrativeStatus.INACTIVE);
+        facilities.saveAndFlush(equipment);
+        mvc.perform(get("/facilities/" + equipment.getId())).andExpect(status().isOk())
+                .andExpect(model().attribute("availableStock", 0));
+    }
     @Test void adminAndStaffPagesShowStockAndQuantityWithoutCascade() throws Exception {
         submit(requester, 5, 60, false);
         submit(other, 5, 60, false);

@@ -1,6 +1,9 @@
 package com.github.kafeyangasli.prism.feature.facility.controller;
 
 import com.github.kafeyangasli.prism.feature.facility.service.FacilityService;
+import com.github.kafeyangasli.prism.feature.facility.model.AdministrativeStatus;
+import com.github.kafeyangasli.prism.feature.facility.model.Facility;
+import com.github.kafeyangasli.prism.feature.reservation.service.EquipmentAvailabilityService;
 import com.github.kafeyangasli.prism.feature.reservation.service.ReservationQueryService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
@@ -11,6 +14,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
@@ -20,13 +26,19 @@ public class FacilityController {
 
     private final FacilityService facilityService;
     private final ReservationQueryService reservationQueryService;
+    private final EquipmentAvailabilityService equipmentAvailability;
+    private final Clock clock;
 
     public FacilityController(
             FacilityService facilityService,
-            ReservationQueryService reservationQueryService
+            ReservationQueryService reservationQueryService,
+            EquipmentAvailabilityService equipmentAvailability,
+            Clock clock
     ) {
         this.facilityService = facilityService;
         this.reservationQueryService = reservationQueryService;
+        this.equipmentAvailability = equipmentAvailability;
+        this.clock = clock;
     }
 
     @GetMapping("/")
@@ -65,6 +77,17 @@ public class FacilityController {
             }
         }
         model.addAttribute("facilities", model.containsAttribute("filterError") ? List.of() : results);
+        var availableStock = new LinkedHashMap<Long, Integer>();
+        if (!model.containsAttribute("filterError")) {
+            LocalDateTime now = LocalDateTime.now(clock).truncatedTo(ChronoUnit.MICROS);
+            LocalDateTime stockStart = startAt == null ? now : startAt;
+            LocalDateTime stockEnd = endAt == null ? now.plusNanos(1_000) : endAt;
+            for (Facility facility : results) {
+                if (facility.isEquipment()) availableStock.put(facility.getId(), availableStock(facility, stockStart, stockEnd));
+            }
+        }
+        model.addAttribute("availableStock", availableStock);
+        model.addAttribute("stockForSelectedInterval", startAt != null && endAt != null);
         model.addAttribute("type", type);
         model.addAttribute("location", location);
         model.addAttribute("capacity", capacity);
@@ -75,9 +98,19 @@ public class FacilityController {
 
     @GetMapping("/facilities/{id}")
     public String facilityDetail(@PathVariable("id") Long id, Model model) {
-        model.addAttribute("facility", facilityService.getFacilityById(id));
+        Facility facility = facilityService.getFacilityById(id);
+        model.addAttribute("facility", facility);
+        if (facility.isEquipment()) {
+            LocalDateTime now = LocalDateTime.now(clock).truncatedTo(ChronoUnit.MICROS);
+            model.addAttribute("availableStock", availableStock(facility, now, now.plusNanos(1_000)));
+        }
         model.addAttribute("approvedReservations", facilityService.getApprovedReservationsForFacility(id));
         model.addAttribute("blockages", facilityService.getBlockagesForFacility(id));
         return "facilities/detail";
+    }
+
+    private int availableStock(Facility facility, LocalDateTime start, LocalDateTime end) {
+        return facility.getAdministrativeStatus() == AdministrativeStatus.ACTIVE
+                ? equipmentAvailability.available(facility, start, end) : 0;
     }
 }

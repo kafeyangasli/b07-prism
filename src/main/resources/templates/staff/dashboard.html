@@ -145,7 +145,7 @@
                     </thead>
                     <tbody>
                     <tr data-list-record th:each="row : ${dashboard.unresolvedReports}">
-                        <td data-label="Fasilitas" th:text="${row.facilityName + (row.quantity != null ? ' · ' + row.quantity + ' unit' : '')}">
+                        <td data-label="Fasilitas" th:text="${row.facilityName}">
                         </td>
                         <td data-label="Kategori" th:text="${row.category}">
                         </td>

@@ -15,22 +15,40 @@ final class FacilitySeedSource {
     private static final Pattern STOCK = Pattern.compile("(?is)^(.*)\\bStok\\s+tersedia\\s*:\\s*(\\d+)\\s*\\.?\\s*$");
 
     record Entry(String code, String name, String typeCode, String typeName,
-                 int capacity, Integer stock, String description) {}
+                 int capacity, Integer stock, String description, Path image) {
+        Entry(String code, String name, String typeCode, String typeName,
+              int capacity, Integer stock, String description) {
+            this(code, name, typeCode, typeName, capacity, stock, description, null);
+        }
+    }
 
     static List<Entry> read(Path directory) throws IOException {
         List<Entry> entries = new ArrayList<>();
         var codes = new HashSet<String>();
         try (var files = Files.list(directory)) {
-            for (Path file : files.filter(Files::isRegularFile)
+            var sourceFiles = files.filter(Files::isRegularFile).sorted().toList();
+            for (Path file : sourceFiles.stream()
                     .filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".txt"))
-                    .sorted().toList()) {
+                    .toList()) {
                 Entry entry = parse(file.toString(), Files.readString(file, StandardCharsets.UTF_8));
                 if (!codes.add(entry.code())) throw invalid(file.toString(), "duplicate facility code " + entry.code());
-                entries.add(entry);
+                var companions = sourceFiles.stream()
+                        .filter(p -> p.getFileName().toString().matches("(?i).*\\.(jpg|jpeg|png)$"))
+                        .filter(p -> basename(p).equalsIgnoreCase(basename(file)))
+                        .toList();
+                if (companions.size() > 1) throw invalid(file.toString(), "multiple companion images: " + companions);
+                entries.add(new Entry(entry.code(), entry.name(), entry.typeCode(), entry.typeName(),
+                        entry.capacity(), entry.stock(), entry.description(),
+                        companions.isEmpty() ? null : companions.getFirst()));
             }
         }
         if (entries.isEmpty()) throw invalid(directory.toString(), "no facility .txt records found");
         return List.copyOf(entries);
+    }
+
+    private static String basename(Path path) {
+        String name = path.getFileName().toString();
+        return name.substring(0, name.lastIndexOf('.'));
     }
 
     static Entry parse(String source, String text) {

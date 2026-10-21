@@ -11,14 +11,24 @@
                 <h1 th:text="${facilityName}">Fasilitas</h1>
                 <p class="ui-description">Senin–Jumat, slot 30 menit, pukul 07:00–20:00 WIB. Sabtu dan Minggu tidak tersedia. Jadwal dapat berubah sampai reservasi disetujui.</p>
             </div>
-            <a sec:authorize="hasRole('PENGGUNA')" class="ui-btn ui-btn-primary" th:href="@{/reservations/new(facilityId=${facilityId},date=${date})}">Ajukan reservasi</a>
+            <a id="availability-reserve-link" sec:authorize="hasRole('PENGGUNA')" class="ui-btn ui-btn-primary" th:href="@{/reservations/new(facilityId=${facilityId},date=${date})}">Ajukan reservasi</a>
             <a sec:authorize="!isAuthenticated()" class="ui-btn ui-btn-primary" th:href="@{/login}">Masuk untuk reservasi</a>
         </header>
-        <section class="ui-card ui-card-body space-y-5">
-            <form class="grid gap-3 sm:grid-cols-[minmax(12rem,20rem)_auto] sm:items-end" method="get" th:action="@{/facilities/{id}/availability(id=${facilityId})}">
+        <section id="facility-availability" class="ui-card ui-card-body space-y-5" aria-live="polite">
+            <form class="grid gap-3 sm:grid-cols-[minmax(12rem,20rem)_auto] sm:items-end" method="get" th:action="@{/facilities/{id}/availability(id=${facilityId})}"
+                  th:hx-get="@{/facilities/{id}/availability(id=${facilityId})}" hx-trigger="submit, change"
+                  hx-target="#facility-availability" hx-select="#facility-availability" hx-swap="outerHTML"
+                  hx-select-oob="#availability-reserve-link"
+                  hx-sync="this:replace" hx-push-url="true" hx-indicator="#global-progress">
                 <div><label class="ui-label" for="availability-date">Tanggal</label>
-                <input class="ui-input" id="availability-date" type="date" name="date" th:value="${date}" required></div>
-                <button type="submit" class="ui-btn ui-btn-secondary sm:justify-self-start">Lihat ketersediaan</button>
+                <input class="ui-input" id="availability-date" type="date" name="date" th:value="${date}"
+                       th:min="${minimumDate}" th:max="${maximumDate}" required></div>
+                <div class="flex gap-2 sm:justify-self-start" role="group" aria-label="Pilih tanggal cepat">
+                    <button type="button" class="ui-btn ui-btn-secondary" th:attr="data-reservation-date=${minimumDate}"
+                            aria-controls="availability-date">Hari ini</button>
+                    <button type="button" class="ui-btn ui-btn-secondary" th:attr="data-reservation-date=${minimumDate.plusDays(1)}"
+                            aria-controls="availability-date">Besok</button>
+                </div>
             </form>
             <p th:if="${totalStock != null}" class="ui-hint" th:text="${'Total stok: ' + totalStock + ' unit. Alokasi mencakup pengajuan menunggu yang belum kedaluwarsa dan reservasi disetujui.'}"></p>
             <div><h2 th:text="${#temporals.format(date, 'dd MMMM yyyy')}">Tanggal</h2>

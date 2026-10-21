@@ -87,7 +87,10 @@ class ReportWorkflowIntegrationTest {
                 .header("HX-Request", "true").with(user(owner.getEmail()).roles("PENGGUNA")).with(csrf()))
                 .andExpect(status().isNoContent()).andReturn();
         var session = (org.springframework.mock.web.MockHttpSession) result.getRequest().getSession();
-        mvc.perform(get(result.getResponse().getHeader("HX-Redirect")).session(session).with(user(owner.getEmail()).roles("PENGGUNA")))
+        String location = result.getResponse().getHeader("HX-Location");
+        assertTrue(location.contains("\"select\":\"#dashboard-content\""));
+        String path = location.split("\"path\":\"")[1].split("\"")[0];
+        mvc.perform(get(path).session(session).with(user(owner.getEmail()).roles("PENGGUNA")))
                 .andExpect(status().isOk()).andExpect(content().string(containsString("Laporan berhasil dikirim.")));
     }
 

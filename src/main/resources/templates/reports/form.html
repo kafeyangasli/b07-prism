@@ -32,12 +32,9 @@
                     </div>
                 </div>
             </div>
-            <div th:unless="${reservationReport}"><label class="ui-label" for="facilityId">Fasilitas</label>
-                <select class="ui-input" th:field="*{facilityId}" th:aria-invalid="${#fields.hasErrors('facilityId')}" aria-describedby="report-facility-error" required autofocus>
-                    <option value="">Pilih fasilitas</option>
-                    <option th:each="facility : ${facilities}" th:value="${facility.id}" th:text="${facility.name}"></option>
-                </select>
-                <p id="report-facility-error" class="ui-field-error" th:errors="*{facilityId}"></p>
+            <div th:unless="${reservationReport}">
+                <input type="hidden" th:field="*{facilityId}" id="report-facility-id" data-selected-facility-input>
+                <div th:replace="~{fragments/facility-picker :: picker('report-facility', '/reports/new', 'Belum ada fasilitas yang dapat dilaporkan.')}"></div>
             </div>
             <div><label class="ui-label" for="category">Kategori</label>
                 <input class="ui-input" th:field="*{category}" th:aria-invalid="${#fields.hasErrors('category')}" aria-describedby="category-error" maxlength="80" required placeholder="Contoh: AC, kebersihan, listrik">

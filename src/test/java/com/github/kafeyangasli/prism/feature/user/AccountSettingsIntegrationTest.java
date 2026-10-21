@@ -78,8 +78,9 @@ class AccountSettingsIntegrationTest {
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(html).contains("Pengaturan Akun", EMAIL, role.name(), "Aktif", "name=\"_csrf\"")
                 .doesNotContain(owner.getPasswordHash(), "passwordHash", "th:field=");
-        if (role == Role.PENGGUNA) assertThat(html).contains("Zona Bahaya", "href=\"/account/delete\"");
-        else assertThat(html).doesNotContain("Zona Bahaya", "href=\"/account/delete\"");
+        if (role == Role.PENGGUNA) assertThat(html).contains("Zona Bahaya", "data-open-dialog=\"account-deletion-dialog\"");
+        else assertThat(html).doesNotContain("Zona Bahaya", "data-open-dialog=\"account-deletion-dialog\"", "id=\"account-deletion-dialog\"");
+        assertThat(html).doesNotContain("href=\"/account/delete\"", ">Penonaktifan akun</a>");
         mvc.perform(post("/account/profile").with(user(EMAIL).roles(role.name())).with(csrf())
                         .param("name", "  Updated  "))
                 .andExpect(redirectedUrl("/account"));
@@ -245,7 +246,7 @@ class AccountSettingsIntegrationTest {
                 NOW.plusHours(2), "Active", null, ReservationStatus.APPROVED, NOW.plusHours(1)));
         mvc.perform(post("/account/delete").with(user(EMAIL).roles("PENGGUNA")).with(csrf())
                         .param("confirmed", "true").param("currentPassword", OLD_PASSWORD))
-                .andExpect(status().isOk()).andExpect(model().attributeExists("errorMessage"))
+                .andExpect(status().isOk()).andExpect(model().attributeExists("deletionError"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Selesaikan reservasi disetujui")));
         assertThat(owner.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
         assertThat(reservations.findByUserIdOrderByCreatedAtDesc(owner.getId()).getFirst().getStatus()).isEqualTo(ReservationStatus.APPROVED);
@@ -269,14 +270,63 @@ class AccountSettingsIntegrationTest {
         MockHttpSession session = login(OLD_PASSWORD);
         mvc.perform(post("/account/delete").session(session).with(csrf())
                         .param("confirmed", "true").param("currentPassword", "wrong-password"))
-                .andExpect(status().isOk()).andExpect(model().attributeExists("errorMessage"));
+                .andExpect(status().isOk()).andExpect(model().attributeExists("deletionError"));
         assertThat(owner.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
         assertThat(session.isInvalid()).isFalse();
+    }
+
+    @Test void deletionDialogHasOnlyTheSettingsButtonAsAnEntryPoint() throws Exception {
+        mvc.perform(get("/account/delete").with(user(EMAIL).roles("PENGGUNA")))
+                .andExpect(redirectedUrl("/account"));
+        String settings = mvc.perform(get("/account").with(user(EMAIL).roles("PENGGUNA")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(settings).contains("id=\"delete-account-trigger\"", "data-open-dialog=\"account-deletion-dialog\"",
+                        "id=\"account-deletion-dialog\"", "hx-post=\"/account/delete\"")
+                .doesNotContain("href=\"/account/delete\"", "open=\"open\"", ">Penonaktifan akun</a>");
+        String password = mvc.perform(get("/account/password").with(user(EMAIL).roles("PENGGUNA")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(password).doesNotContain("href=\"/account/delete\"", "data-open-dialog=\"account-deletion-dialog\"");
+    }
+
+    @Test void ajaxDeletionErrorsStayInTheDialogAndDoNotEchoPasswordsOrEndTheSession() throws Exception {
+        MockHttpSession session = login(OLD_PASSWORD);
+        String html = mvc.perform(post("/account/delete").session(session).with(csrf()).header("HX-Request", "true")
+                        .param("confirmed", "true").param("currentPassword", "invalid-secret"))
+                .andExpect(status().isOk()).andExpect(view().name("account/delete :: deletion-modal"))
+                .andExpect(model().attributeExists("deletionError"))
+                .andExpect(model().attribute("openDeletionDialog", true))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(html).contains("id=\"account-deletion-modal-region\"", "id=\"account-deletion-dialog\"",
+                        "open=\"open\"", "name=\"currentPassword\"", "data-form-errors", "name=\"_csrf\"")
+                .doesNotContain("invalid-secret", OLD_PASSWORD, owner.getPasswordHash(), "id=\"dashboard-content\"");
+        assertThat(session.isInvalid()).isFalse();
+        assertThat(owner.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
+    }
+
+    @Test void ajaxDeletionLogsOutAndRedirectsToLoginAfterSuccess() throws Exception {
+        MockHttpSession session = login(OLD_PASSWORD);
+        mvc.perform(post("/account/delete").session(session).with(csrf()).header("HX-Request", "true")
+                        .param("confirmed", "true").param("currentPassword", OLD_PASSWORD))
+                .andExpect(status().isNoContent()).andExpect(header().string("HX-Redirect", "/login?accountDeactivated"))
+                .andExpect(unauthenticated());
+        assertThat(session.isInvalid()).isTrue();
+        assertThat(users.findById(owner.getId()).orElseThrow().getAccountStatus()).isEqualTo(AccountStatus.INACTIVE);
+    }
+
+    @Test void ajaxDeletionKeepsTheDialogOpenWhenApprovedReservationsBlockIt() throws Exception {
+        reservations.saveAndFlush(new Reservation(owner, room(), NOW.plusHours(1), NOW.plusHours(2),
+                "Active", null, ReservationStatus.APPROVED, NOW.plusHours(1)));
+        mvc.perform(post("/account/delete").with(user(EMAIL).roles("PENGGUNA")).with(csrf()).header("HX-Request", "true")
+                        .param("confirmed", "true").param("currentPassword", OLD_PASSWORD))
+                .andExpect(status().isOk()).andExpect(view().name("account/delete :: deletion-modal"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Selesaikan reservasi disetujui")))
+                .andExpect(model().attribute("openDeletionDialog", true));
+        assertThat(owner.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
     }
     @Test void explicitConfirmationRequired() throws Exception {
         mvc.perform(post("/account/delete").with(user(EMAIL).roles("PENGGUNA")).with(csrf())
                         .param("currentPassword", OLD_PASSWORD))
-                .andExpect(status().isOk()).andExpect(model().attributeExists("errorMessage"));
+                .andExpect(status().isOk()).andExpect(model().attributeExists("deletionError"));
         assertThat(owner.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
     }
     @Test void manipulatedDeletionIdentifierCannotDeactivateOtherAccount() throws Exception {

@@ -372,7 +372,8 @@ class ReportBlockageAuthorizationTest {
         mvc.perform(multipart("/reports").file(photo()).header("HX-Request", "true")
                         .param("facilityId", "10").param("category", "AC").param("description", "Broken")
                         .with(user("owner@example.com")).with(csrf()))
-                .andExpect(status().isNoContent()).andExpect(header().string("HX-Redirect", "/reports/123"));
+                .andExpect(status().isNoContent()).andExpect(header().string("HX-Location",
+                        "{\"path\":\"/reports/123\",\"target\":\"#dashboard-content\",\"select\":\"#dashboard-content\",\"swap\":\"outerHTML show:top\"}"));
     }
 
     @Test

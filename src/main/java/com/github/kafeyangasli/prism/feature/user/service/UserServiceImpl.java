@@ -99,8 +99,8 @@ public class UserServiceImpl implements UserService {
         if (dto.getName() == null || dto.getName().isBlank()) {
             throw new BusinessRuleException("Nama lengkap wajib diisi.");
         }
-        if (dto.getRole() == null || (dto.getRole() != Role.PENGGUNA && dto.getRole() != Role.PETUGAS)) {
-            throw new BusinessRuleException("Admin hanya dapat membuat akun Pengguna atau Petugas.");
+        if (dto.getRole() == null) {
+            throw new BusinessRuleException("Peran wajib dipilih.");
         }
 
         String normalizedEmail = dto.getEmail().trim().toLowerCase(java.util.Locale.ROOT);

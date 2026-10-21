@@ -9,6 +9,8 @@ import com.github.kafeyangasli.prism.feature.user.service.UserService;
 import com.github.kafeyangasli.prism.security.CustomUserDetailsService;
 import com.github.kafeyangasli.prism.shared.exception.BusinessRuleException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.authentication.DisabledException;
@@ -25,6 +27,42 @@ import static org.junit.jupiter.api.Assertions.*;
 })
 @Transactional
 class UserServiceTest {
+
+    @ParameterizedTest
+    @EnumSource(Role.class)
+    void adminCanCreateActiveVerifiedAccountsForEveryRole(Role role) {
+        var admin = userRepository.save(new User("Admin", "creator@example.test", "hash", Role.ADMIN, AccountStatus.ACTIVE));
+        var dto = new com.github.kafeyangasli.prism.feature.user.dto.AdminCreateUserDto();
+        dto.setName(" New Account ");
+        dto.setEmail(" NEW@EXAMPLE.TEST ");
+        dto.setPassword("secret123");
+        dto.setRole(role);
+
+        User created = userService.createUserByAdmin(admin.getId(), dto);
+
+        assertEquals(role, created.getRole());
+        assertEquals(AccountStatus.ACTIVE, created.getAccountStatus());
+        assertEquals("New Account", created.getName());
+        assertEquals("new@example.test", created.getEmail());
+        assertEquals(admin.getId(), created.getVerifiedBy().getId());
+        assertNotNull(created.getVerifiedAt());
+        assertTrue(passwordEncoder.matches(dto.getPassword(), created.getPasswordHash()));
+        assertDoesNotThrow(() -> customUserDetailsService.loadUserByUsername(created.getEmail()));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = Role.class, names = {"PENGGUNA", "PETUGAS"})
+    void nonAdminsCannotCreateAdminAccounts(Role role) {
+        var actor = userRepository.save(new User("Actor", "actor@example.test", "hash", role, AccountStatus.ACTIVE));
+        var dto = new com.github.kafeyangasli.prism.feature.user.dto.AdminCreateUserDto();
+        dto.setName("Admin");
+        dto.setEmail("forbidden@example.test");
+        dto.setPassword("secret123");
+        dto.setRole(Role.ADMIN);
+
+        assertThrows(BusinessRuleException.class, () -> userService.createUserByAdmin(actor.getId(), dto));
+        assertFalse(userRepository.existsByEmailIgnoreCase(dto.getEmail()));
+    }
 
     @Test
     void registrationRejectsPasswordsBeyondBcryptUtf8Limit() {

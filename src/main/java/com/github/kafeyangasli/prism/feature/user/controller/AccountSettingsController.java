@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.TransactionException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -110,12 +111,11 @@ public class AccountSettingsController {
         if (account.role() != Role.PENGGUNA) {
             throw new AccessDeniedException("Hanya Pengguna yang dapat menonaktifkan akun sendiri.");
         }
-        model.addAttribute("account", account);
-        return "account/delete";
+        return "redirect:/account";
     }
 
     @PostMapping("/delete")
-    public String delete(@RequestParam(defaultValue = "false") boolean confirmed,
+    public Object delete(@RequestParam(defaultValue = "false") boolean confirmed,
                          @RequestParam(defaultValue = "") String currentPassword,
                          Model model, HttpServletRequest request, HttpServletResponse response) {
         var form = new AccountDeletionForm();
@@ -124,14 +124,23 @@ public class AccountSettingsController {
         try {
             service.deactivateAccount(form);
             logout(request, response);
+            if (isHtmx(request)) {
+                return ResponseEntity.noContent().header("HX-Redirect", "/login?accountDeactivated").build();
+            }
             return "redirect:/login?accountDeactivated";
         } catch (BusinessRuleException exception) {
-            model.addAttribute("errorMessage", exception.getMessage());
+            model.addAttribute("deletionError", exception.getMessage());
         } catch (DataAccessException | TransactionException exception) {
-            model.addAttribute("errorMessage", persistenceMessage());
+            model.addAttribute("deletionError", persistenceMessage());
         }
         model.addAttribute("confirmed", confirmed);
-        return deletionPage(model);
+        model.addAttribute("openDeletionDialog", true);
+        if (isHtmx(request)) return "account/delete :: deletion-modal";
+        return settings(model);
+    }
+
+    private boolean isHtmx(HttpServletRequest request) {
+        return "true".equalsIgnoreCase(request.getHeader("HX-Request"));
     }
 
     private void logout(HttpServletRequest request, HttpServletResponse response) {

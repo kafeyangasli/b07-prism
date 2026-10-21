@@ -53,8 +53,13 @@
         <section th:if="${account.role.name() == 'PENGGUNA'}" class="ui-card border-danger-border"><div class="ui-card-body space-y-4">
             <h2 class="text-danger">Zona Bahaya</h2>
             <p class="text-sm leading-6 text-muted">Hapus akses akun dengan menonaktifkannya. Riwayat reservasi dan laporan tetap tersimpan. Reservasi disetujui yang belum berakhir harus diselesaikan terlebih dahulu.</p>
-            <a th:href="@{/account/delete}" class="ui-btn ui-btn-danger">Hapus Akun</a>
+            <button id="delete-account-trigger" type="button" class="ui-btn ui-btn-danger"
+                    data-open-dialog="account-deletion-dialog" aria-haspopup="dialog" aria-controls="account-deletion-dialog"
+                    aria-expanded="false">Hapus Akun</button>
         </div></section>
         </aside></div>
+        <th:block th:if="${account.role.name() == 'PENGGUNA'}">
+            <div th:replace="~{account/delete :: deletion-modal}"></div>
+        </th:block>
     </div>
 </main></body></html>

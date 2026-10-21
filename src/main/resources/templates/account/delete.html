@@ -1,20 +1,30 @@
 <!doctype html>
-<html lang="id" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout('Hapus Akun', 'account', ~{::main})}">
-<body><main><div class="ui-page max-w-2xl">
-    <header th:replace="~{fragments/page :: heading('Akun', 'Hapus Akun', 'Tinjau konsekuensi penonaktifan sebelum melanjutkan.')}"></header>
-    <nav th:replace="~{fragments/workspace :: accountTabs('delete')}"></nav>
-        <div th:replace="~{fragments/feedback :: flash}"></div>
-    <section class="ui-card border-danger-border"><div class="ui-card-body space-y-5">
-        <div class="ui-alert ui-alert-error" role="alert"><p>Akun akan dinonaktifkan dan Anda akan keluar. Anda tidak dapat masuk atau membuat aktivitas baru. Riwayat reservasi, laporan, dan catatan administrasi tetap tersimpan. Aktivasi kembali hanya dapat dilakukan oleh Admin.</p></div>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div id="account-deletion-modal-region" th:fragment="deletion-modal">
+    <dialog id="account-deletion-dialog" class="ui-dialog" aria-labelledby="account-deletion-title"
+            aria-describedby="account-deletion-description" data-account-deletion data-dialog-trigger="delete-account-trigger"
+            th:attr="open=${openDeletionDialog == true ? 'open' : null}">
+        <div class="ui-dialog-header">
+            <h2 id="account-deletion-title">Penonaktifan Akun</h2>
+            <button type="button" class="ui-btn ui-btn-ghost" data-close-dialog aria-label="Tutup dialog">×</button>
+        </div>
+        <div class="space-y-5">
+        <div th:if="${deletionError != null}" class="ui-alert ui-alert-error" role="alert" tabindex="-1" data-form-errors>
+            <p th:text="${deletionError}"></p>
+        </div>
+        <div class="ui-alert ui-alert-error"><p id="account-deletion-description">Akun akan dinonaktifkan dan Anda akan keluar. Anda tidak dapat masuk atau membuat aktivitas baru. Riwayat reservasi, laporan, dan catatan administrasi tetap tersimpan. Aktivasi kembali hanya dapat dilakukan oleh Admin.</p></div>
         <p class="text-sm leading-6 text-muted">Selesaikan reservasi disetujui yang masih berlangsung atau akan datang terlebih dahulu. Reservasi tidak dibatalkan secara otomatis.</p>
-        <form th:action="@{/account/delete}" method="post" class="ui-form">
+        <form th:action="@{/account/delete}" method="post" class="ui-form"
+              hx-post="/account/delete" hx-target="#account-deletion-modal-region" hx-swap="outerHTML" hx-indicator="#global-progress">
             <div><label for="delete-password" class="ui-label">Kata sandi saat ini</label>
                 <input id="delete-password" name="currentPassword" type="password" data-password-toggle autocomplete="current-password" class="ui-input" required></div>
             <label class="flex items-start gap-3"><input type="checkbox" name="confirmed" value="true" required th:checked="${confirmed == true}">
                 <span>Saya memahami konsekuensinya dan menyetujui penonaktifan akun saya.</span></label>
             <div class="ui-form-actions"><button class="ui-btn ui-btn-danger" type="submit">Hapus Akun dan Keluar</button>
-                <a th:href="@{/account}" class="ui-btn ui-btn-secondary">Batal</a></div>
+                <button type="button" class="ui-btn ui-btn-secondary" data-close-dialog>Batal</button></div>
         </form>
-    </div></section>
-</div></main></body></html>
+        </div>
+    </dialog>
+</div>
+</body></html>

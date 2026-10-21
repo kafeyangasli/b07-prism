@@ -16,7 +16,6 @@
 <nav th:fragment="accountTabs(active)" class="flex flex-wrap gap-2" aria-label="Pengaturan akun">
     <a th:href="@{/account}" class="ui-btn ui-btn-ghost" th:classappend="${active == 'profile'} ? ' ui-nav-link-active'" th:aria-current="${active == 'profile'} ? 'page' : null">Profil</a>
     <a th:href="@{/account/password}" class="ui-btn ui-btn-ghost" th:classappend="${active == 'password'} ? ' ui-nav-link-active'" th:aria-current="${active == 'password'} ? 'page' : null">Kata sandi</a>
-    <a sec:authorize="hasRole('PENGGUNA')" th:href="@{/account/delete}" class="ui-btn ui-btn-ghost" th:classappend="${active == 'delete'} ? ' ui-nav-link-active'" th:aria-current="${active == 'delete'} ? 'page' : null">Penonaktifan akun</a>
 </nav>
 <div th:fragment="search(id, target, placeholder)" class="ui-list-tools" data-list-tools hidden>
     <div class="relative min-w-0 flex-1 sm:max-w-sm">

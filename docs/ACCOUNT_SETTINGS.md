@@ -63,8 +63,14 @@ toward the required active account.
 
 ## Self-deactivation and transaction coordination
 
-`GET /account/delete` shows consequences and a confirmation form requiring both
-a checkbox and the current password. It is available only to `PENGGUNA`.
+The Hapus Akun button on `/account` opens the Penonaktifan Akun dialog, requiring
+both a confirmation checkbox and the current password. It is available only to
+`PENGGUNA`; account navigation has no deactivation tab. Legacy `GET /account/delete`
+requests redirect to `/account` without opening the dialog. `POST /account/delete`
+returns validation errors inside the open dialog for HTMX requests, with empty
+password inputs, and preserves the session on failure. Successful HTMX submissions
+log out and use `HX-Redirect` to open `/login?accountDeactivated`. Cancel, Escape,
+and outside-click dismissal return focus to Hapus Akun and clear sensitive fields.
 Spring Security, the controller, and the persistent-role check in the service
 independently restrict privileged accounts. The service checks `ACTIVE` under
 the existing pessimistic user-row locking strategy.

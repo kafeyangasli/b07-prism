@@ -83,6 +83,7 @@ public class ReservationController {
             @RequestParam(name = "facilityId", required = false) Long facilityId,
             @RequestParam(name = "date", required = false) String date,
             @RequestHeader(name = "HX-Request", required = false) String hxRequest,
+            @RequestHeader(name = "HX-Boosted", required = false) String hxBoosted,
             Model model
     ) {
         ReservationForm form = new ReservationForm();
@@ -91,7 +92,7 @@ public class ReservationController {
         form.setFacilityFixed(facilityId != null);
         populateFormModel(model, form, availabilityFor(form));
         model.addAttribute("openReservationDialog", true);
-        return isHtmx(hxRequest)
+        return isHtmx(hxRequest) && !isHtmx(hxBoosted)
                 ? "reservations/form :: reservation-modal"
                 : "reservations/form";
     }
@@ -173,7 +174,8 @@ public class ReservationController {
                         .putAll(redirect.getFlashAttributes());
                 org.springframework.web.servlet.support.RequestContextUtils.saveOutputFlashMap(detailUrl, request, response);
                 return ResponseEntity.noContent()
-                        .header("HX-Redirect", detailUrl)
+                        .header("HX-Location", "{\"path\":\"" + detailUrl + "\",\"target\":\"#dashboard-content\","
+                                + "\"select\":\"#dashboard-content\",\"swap\":\"outerHTML show:top\"}")
                         .build();
             }
             return "redirect:" + detailUrl;

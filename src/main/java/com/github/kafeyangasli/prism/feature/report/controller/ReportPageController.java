@@ -31,14 +31,17 @@ public class ReportPageController {
 
     @GetMapping("/reports/new")
     public String newReport(@RequestParam(required = false) Long reservationId,
-                            @RequestHeader(name = "HX-Request", required = false) String hxRequest, Model model) {
+                            @RequestParam(required = false) Long facilityId,
+                            @RequestHeader(name = "HX-Request", required = false) String hxRequest,
+                            @RequestHeader(name = "HX-Boosted", required = false) String hxBoosted, Model model) {
         var request = new CreateReportRequest();
+        request.setFacilityId(facilityId);
         request.setReservationId(reservationId);
         if (reservationId != null) {
             request.setFacilityId(reportService.getReservationForReport(reservationId).getFacility().getId());
         }
         model.addAttribute("reportForm", request);
-        return form(model, hxRequest);
+        return form(model, isHtmx(hxBoosted) ? null : hxRequest);
     }
 
     private String form(Model model, String hxRequest) {
@@ -46,7 +49,10 @@ public class ReportPageController {
         model.addAttribute("reservationReport", request.getReservationId() != null);
         model.addAttribute("openReportDialog", true);
         if (request.getReservationId() == null) {
-            model.addAttribute("facilities", reportService.getReportFacilities());
+            var facilities = reportService.getReportFacilities();
+            model.addAttribute("facilities", facilities);
+            model.addAttribute("selectedFacility", facilities.stream()
+                    .filter(facility -> facility.getId().equals(request.getFacilityId())).findFirst().orElse(null));
         } else {
             try {
                 var reservation = reportService.getReservationForReport(request.getReservationId());
@@ -77,7 +83,9 @@ public class ReportPageController {
                 org.springframework.web.servlet.support.RequestContextUtils.getOutputFlashMap(servletRequest)
                         .putAll(redirect.getFlashAttributes());
                 org.springframework.web.servlet.support.RequestContextUtils.saveOutputFlashMap(detailUrl, servletRequest, servletResponse);
-                return ResponseEntity.noContent().header("HX-Redirect", detailUrl).build();
+                return ResponseEntity.noContent().header("HX-Location", "{\"path\":\"" + detailUrl
+                        + "\",\"target\":\"#dashboard-content\",\"select\":\"#dashboard-content\","
+                        + "\"swap\":\"outerHTML show:top\"}").build();
             }
             return "redirect:" + detailUrl;
         } catch (BusinessRuleException | ResourceNotFoundException e) {

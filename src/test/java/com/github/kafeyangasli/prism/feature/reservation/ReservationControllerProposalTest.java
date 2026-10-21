@@ -81,7 +81,7 @@ class ReservationControllerProposalTest {
         when(templateSettings.getUrl()).thenReturn(Optional.of("https://docs.example.test/template"));
         ConcurrentModel model = new ConcurrentModel();
 
-        controller.newReservation(null, null, null, model);
+        controller.newReservation(null, null, null, null, model);
 
         org.assertj.core.api.Assertions.assertThat(model.getAttribute("proposalTemplateUrl"))
                 .isEqualTo("https://docs.example.test/template");

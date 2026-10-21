@@ -1,5 +1,15 @@
 # Themes, account names, and table actions
 
+## Filter and AJAX updates (21 October 2026)
+
+Catalogue filtering uses a single optional Tanggal Penggunaan date instead of separate start/end times. The native minimum date is today, using the same application clock as reservations. Availability and equipment stock are checked for 07:00–20:00 WIB on the selected date. Past dates receive a recoverable server-rendered error as well. Native validation reports invalid fields; reset and Back/Forward restore the matching filter selections.
+
+Admin account creation supports all three roles and returns a fresh closed creation dialog after success. User search and role/status/sort filters update automatically. Page links use AJAX with shared request cancellation, focus restoration, and progress/error feedback; media and downloads keep their existing behavior. Reservation/report modal success loads the detail page with `HX-Location` while retaining flash feedback. Public availability dates also update through AJAX.
+
+Initial AJAX verification: 72 passing tests across user service, reservation controller, report workflow/authorization, and UI rendering suites; frontend build, JavaScript syntax, and diff checks passed. Public browser checks covered the original time inputs, subsequent type/capacity filters, reset, history restoration, detail navigation/focus, and availability date updates. Signed-in flows were checked through integration tests; automatic approval review blocked demo-credential entry in the browser. The date-only follow-up adds coverage for the native minimum, today/future/past dates, the full operating-day interval, and selected-date equipment stock.
+
+Date-only verification: all 71 tests in the UI rendering and equipment reservation integration suites passed, along with the frontend build, JavaScript syntax, and diff checks.
+
 PRISM keeps Tailwind 4.2.1 and the shared component tokens in `static/css/prism.css`. The light theme is the default token palette; `[data-theme="dark"]` supplies semantic colors and neutral shades. The permanent violet sidebar and authentication panels retain their brand palette. Use `bg-surface`, `text-content`, and semantic status colors for new surfaces, and `text-primary-contrast` for content on `bg-primary`.
 
 `static/js/theme.js` runs synchronously before CSS in the shared layout. It reads the `prism-theme` preference, falls back to the system theme, and supports storage being unavailable. The shared `workspace :: themeToggle` fragment supplies the current-theme icon and an accessible switch label. `workspace :: themeLogo` selects the existing light/dark brand asset through CSS. Public, mobile, and desktop headers use these fragments.

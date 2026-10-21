@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
@@ -62,8 +63,7 @@ public class FacilityController {
     @GetMapping("/facilities")
     public String facilityCatalogue(@RequestParam MultiValueMap<String, String> parameters,
                                     @RequestParam(required = false) Integer capacity,
-                                    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startAt,
-                                    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endAt,
+                                    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                                     Model model) {
         // Read raw repeated values: Spring's scalar-to-List conversion would split locations containing commas.
         var types = FacilityFilters.normalize(parameters.get("type"));
@@ -74,9 +74,12 @@ public class FacilityController {
                 .collect(Collectors.toMap(t -> t.getId(), t -> t, (a, b) -> a)).values();
         model.addAttribute("typeOptions", FacilityFilters.types(catalogueTypes, types));
         model.addAttribute("locationOptions", FacilityFilters.locations(catalogue, locations));
-        if ((startAt == null) != (endAt == null)) {
-            model.addAttribute("filterError", "Isi waktu mulai dan selesai bersama untuk memeriksa ketersediaan.");
-        } else if (startAt != null) {
+        LocalDate minimumDate = LocalDate.now(clock);
+        LocalDateTime startAt = date == null ? null : date.atTime(7, 0);
+        LocalDateTime endAt = date == null ? null : date.atTime(20, 0);
+        if (date != null && date.isBefore(minimumDate)) {
+            model.addAttribute("filterError", "Tanggal penggunaan harus hari ini atau setelahnya.");
+        } else if (date != null) {
             try {
                 var availableIds = facilityService.getAvailableFacilities(startAt, endAt).stream()
                         .map(facility -> facility.getId()).collect(Collectors.toSet());
@@ -96,12 +99,12 @@ public class FacilityController {
             }
         }
         model.addAttribute("availableStock", availableStock);
-        model.addAttribute("stockForSelectedInterval", startAt != null && endAt != null);
+        model.addAttribute("stockForSelectedDate", date != null);
         model.addAttribute("type", types);
         model.addAttribute("location", locations);
         model.addAttribute("capacity", capacity);
-        model.addAttribute("startAt", startAt);
-        model.addAttribute("endAt", endAt);
+        model.addAttribute("date", date);
+        model.addAttribute("minimumDate", minimumDate);
         return "facilities/list";
     }
 

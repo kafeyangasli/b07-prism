@@ -11,6 +11,7 @@
   }
 
   function openDialog(dialog, trigger) {
+    if (!trigger && dialog.dataset.dialogTrigger) trigger = document.getElementById(dialog.dataset.dialogTrigger);
     document.querySelectorAll('dialog[open]').forEach(function (other) {
       if (other !== dialog) other.close();
     });
@@ -64,6 +65,15 @@
 
   document.addEventListener('close', function (event) {
     if (!(event.target instanceof HTMLDialogElement)) return;
+    if (event.target.matches('[data-account-deletion]')) {
+      event.target.querySelectorAll('input[autocomplete="current-password"]').forEach(input => { input.value = ''; input.type = 'password'; });
+      event.target.querySelectorAll('[data-toggle-password]').forEach(function (toggle) {
+        toggle.textContent = 'Tampilkan';
+        toggle.setAttribute('aria-pressed', 'false');
+      });
+      event.target.querySelectorAll('input[type="checkbox"]').forEach(input => { input.checked = false; });
+      event.target.querySelector('[data-form-errors]')?.remove();
+    }
     document.querySelectorAll('[data-open-dialog]').forEach(function (trigger) {
       if (trigger.dataset.openDialog === event.target.id) trigger.setAttribute('aria-expanded', 'false');
     });
@@ -286,6 +296,7 @@
   }
 
   function initializeEnhancements(root) {
+    initializeAjaxLinks(root);
     initializeActionDialogs(root);
     initializeFacilityPickers(root);
     initializeMultiFilters(root);
@@ -329,7 +340,7 @@
     if (event.target.matches('[data-facility-search]')) {
       const picker = event.target.closest('[data-facility-picker]');
       if (picker.closest('form').querySelector('[data-selected-facility-input]').value) clearFacility(picker, false);
-      picker.querySelector('#facility-search-results').hidden = false;
+      picker.querySelector('[data-facility-results]').hidden = false;
       event.target.setCustomValidity(event.target.value.trim() ? 'Pilih fasilitas dari hasil pencarian.' : '');
     }
     if (event.target.matches('[data-list-search]')) filterRecords(event.target);
@@ -338,6 +349,15 @@
     }
   });
   document.addEventListener('click', function (event) {
+    const dateShortcut = event.target.closest('[data-reservation-date]');
+    if (dateShortcut) {
+      const input = dateShortcut.closest('form')?.querySelector('input[type="date"][name="date"]');
+      if (!input) return;
+      input.value = dateShortcut.dataset.reservationDate;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.focus({ preventScroll: true });
+      return;
+    }
     const facilityChoice = event.target.closest('[data-select-facility]');
     if (facilityChoice) {
       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -350,7 +370,7 @@
       search.setCustomValidity('');
       picker.querySelector('[data-selected-facility-context]').replaceChildren(
         facilityChoice.querySelector('[data-facility-context-template]').content.cloneNode(true));
-      picker.querySelector('#facility-search-results').hidden = true;
+      picker.querySelector('[data-facility-results]').hidden = true;
       picker.querySelector('[data-clear-facility]').hidden = false;
       resetFacilitySchedule(picker.closest('form'));
       input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -406,14 +426,14 @@
     if (!form) return;
     clearTimeout(filterTimers.get(form));
     filterTimers.set(form, setTimeout(function () {
-      if (form.isConnected && form.checkValidity()) {
+      if (form.isConnected && form.reportValidity()) {
         form.dispatchEvent(new Event('prism:filter', { bubbles: true }));
       }
     }, delay));
   }
 
   document.addEventListener('input', function (event) {
-    if (event.target.matches('input[type="number"]')) {
+    if (event.target.matches('input[type="number"], input[type="search"], input[type="text"]')) {
       scheduleFilter(event.target.closest('form[data-auto-filter]'), 250);
     }
   });
@@ -453,7 +473,7 @@
     input.value = '';
     picker.querySelector('[data-selected-facility-context]').replaceChildren();
     picker.querySelector('[data-clear-facility]').hidden = true;
-    picker.querySelector('#facility-search-results').hidden = false;
+    picker.querySelector('[data-facility-results]').hidden = false;
     if (resetSearch) { search.value = ''; search.setCustomValidity(''); filterRecords(search); search.focus(); }
     resetFacilitySchedule(form);
     input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -476,6 +496,64 @@
     alert.hidden = false;
     alert.focus();
   }
+
+  // Enhance page links individually so selection/target attributes cannot leak
+  // into nested modal forms, uploads, downloads, or other partial requests.
+  function initializeAjaxLinks(root) {
+    if (!window.htmx) return;
+    const target = document.getElementById('dashboard-content') ? '#dashboard-content' : '#main-content';
+    const pageRoutes = [
+      /^\/$/,
+      /^\/facilities(?:\/\d+(?:\/availability)?)?$/,
+      /^\/(?:reservations|reports)(?:\/(?:new|\d+))?$/,
+      /^\/staff\/(?:dashboard|reservations(?:\/\d+)?|reports(?:\/\d+)?|blockages(?:\/\d+\/edit)?)$/,
+      /^\/admin\/(?:users|facilities|facility-types|blockage-types|settings|recap)$/,
+      /^\/account(?:\/password)?$/
+    ];
+    root.querySelectorAll?.('a[href]').forEach(function (link) {
+      if (link.hasAttribute('download') || link.hasAttribute('target') || link.matches('[data-select-facility]')
+          || link.hasAttribute('hx-boost') || link.closest('[hx-boost="false"], [data-no-ajax]')
+          || ['get', 'post', 'put', 'patch', 'delete'].some(verb => link.hasAttribute('hx-' + verb))) return;
+      const url = new URL(link.href, location.href);
+      if (url.origin !== location.origin || url.hash || !pageRoutes.some(route => route.test(url.pathname))) return;
+      link.dataset.ajaxLink = '';
+      link.setAttribute('hx-boost', 'true');
+      link.setAttribute('hx-target', target);
+      link.setAttribute('hx-select', target);
+      link.setAttribute('hx-swap', 'outerHTML show:none');
+      link.setAttribute('hx-sync', '#main-content:replace');
+      link.setAttribute('hx-indicator', '#global-progress');
+      window.htmx.process(link);
+    });
+    root.querySelectorAll?.('[data-dashboard-link]').forEach(function (link) {
+      link.setAttribute('hx-sync', '#main-content:replace');
+    });
+  }
+
+  const navigationRequests = new WeakSet();
+  document.addEventListener('htmx:beforeRequest', function (event) {
+    if (event.detail.elt?.matches?.('[data-ajax-link], [data-dashboard-link]')
+        || (event.detail.requestConfig?.verb === 'get' && ['dashboard-content', 'main-content'].includes(event.detail.target?.id))) {
+      navigationRequests.add(event.detail.xhr);
+      document.querySelectorAll('form[data-auto-filter]').forEach(function (form) {
+        clearTimeout(filterTimers.get(form));
+        window.htmx.trigger(form, 'htmx:abort');
+      });
+    }
+  });
+
+  document.addEventListener('htmx:beforeSwap', function (event) {
+    const target = event.detail.target;
+    if (!event.detail.shouldSwap || !['dashboard-content', 'main-content'].includes(target?.id)) return;
+    const response = new DOMParser().parseFromString(event.detail.serverResponse, 'text/html');
+    if (response.getElementById(target.id)) return;
+    // A session may expire while the persistent shell is open. Follow the
+    // server's login redirect as a full navigation instead of swapping nothing.
+    event.detail.shouldSwap = false;
+    const destination = new URL(event.detail.xhr.responseURL, location.href);
+    if (destination.pathname === '/login') location.assign(destination.href);
+    else showHtmxError('Halaman tidak dapat dimuat. Silakan coba lagi.');
+  });
 
   document.addEventListener("click", function (event) {
     if (event.target.closest("[data-open-drawer]")) {
@@ -608,10 +686,16 @@
   }
 
   function syncActiveNavigation() {
-    const content = document.getElementById("dashboard-content");
+    const content = document.getElementById("dashboard-content") || document.getElementById("main-content");
     const activeNav = content?.dataset.activeNav;
     if (!activeNav) return;
     applyActiveNavigation(activeNav);
+    document.querySelectorAll('.ui-nav-link').forEach(function (link) {
+      const active = activeNav === 'facilities' && new URL(link.href).pathname === '/facilities';
+      link.classList.toggle('ui-nav-link-active', active);
+      if (active) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
   }
 
   function applyActiveNavigation(activeNav) {
@@ -662,6 +746,13 @@
     syncEquipmentControls(document);
     promoteOpenDialogs(document);
     syncActiveNavigation();
+    if (event.detail.xhr && navigationRequests.has(event.detail.xhr)) {
+      navigationRequests.delete(event.detail.xhr);
+      setDrawer(false);
+      const content = document.getElementById('dashboard-content') || document.getElementById('main-content');
+      content?.focus({ preventScroll: true });
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
     if (event.detail.target?.id?.endsWith("modal-region")) {
       const dialog = document.querySelector("dialog[open]");
       if (dialog) dialog.querySelector("[data-form-errors]")?.focus();
@@ -670,21 +761,25 @@
   });
 
   document.addEventListener("htmx:historyRestore", function () {
+    // Results-only filter swaps retain live fields. The URL is authoritative
+    // when restoring a snapshot whose input properties were not serialized.
+    document.querySelectorAll('form[data-auto-filter]').forEach(function (form) {
+      const parameters = new URLSearchParams(location.search);
+      Array.from(form.elements).forEach(function (input) {
+        if (!input.name) return;
+        if (input.type === 'checkbox') input.checked = parameters.getAll(input.name).includes(input.value);
+        else if (input.matches('input, select')) {
+          const fallback = form.id === 'recap-filter-form' && input.type === 'date' ? input.defaultValue : input.dataset.filterDefault || '';
+          input.value = parameters.get(input.name) ?? fallback;
+        }
+      });
+    });
     initializeEnhancements(document);
     syncActiveNavigation();
     initializeFilters(document);
     syncDrawerForViewport();
     const title = document.querySelector("#dashboard-content h1")?.textContent?.trim();
     if (title) document.title = title + " · PRISM";
-  });
-
-  document.addEventListener("htmx:afterRequest", function (event) {
-    if (event.detail.successful && event.detail.elt?.matches?.("[data-dashboard-link]")) {
-      setDrawer(false);
-      document.getElementById("dashboard-content")?.focus();
-      const title = document.querySelector("#dashboard-content h1")?.textContent?.trim();
-      if (title) document.title = title + " · PRISM";
-    }
   });
 
   document.addEventListener("htmx:beforeRequest", function (event) {

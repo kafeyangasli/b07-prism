@@ -323,7 +323,7 @@ class EquipmentReservationIntegrationTest {
         assertThat(roomDetail).contains("Kapasitas").doesNotContain("Stok tersedia");
     }
 
-    @Test void facilityStockUsesSelectedIntervalAndCountsPendingAllocationsInHtmxResults() throws Exception {
+    @Test void facilityStockUsesSelectedDateAndCountsPendingAllocationsInHtmxResults() throws Exception {
         reserve(requester, equipment, START, START.plusHours(1), 5,
                 ReservationStatus.PENDING, NOW.plusHours(12));
         reserve(other, equipment, START.plusMinutes(30), START.plusHours(2), 3,
@@ -332,11 +332,11 @@ class EquipmentReservationIntegrationTest {
                 ReservationStatus.PENDING, NOW);
 
         String html = mvc.perform(get("/facilities").param("type", "ALAT")
-                        .param("startAt", START.toString()).param("endAt", START.plusHours(2).toString())
+                        .param("date", START.toLocalDate().toString())
                         .header("HX-Request", "true").header("HX-Target", "facility-results"))
                 .andExpect(status().isOk()).andExpect(model().attribute("availableStock", Map.of(equipment.getId(), 12)))
                 .andReturn().getResponse().getContentAsString();
-        assertThat(html).contains("Stok tersedia", "12 unit", "Pada waktu yang dipilih");
+        assertThat(html).contains("Stok tersedia", "12 unit", "Pada tanggal yang dipilih");
         mvc.perform(get("/facilities/" + equipment.getId())).andExpect(status().isOk())
                 .andExpect(model().attribute("availableStock", 20));
     }

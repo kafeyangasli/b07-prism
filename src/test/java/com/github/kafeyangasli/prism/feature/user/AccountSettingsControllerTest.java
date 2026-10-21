@@ -37,7 +37,14 @@ class AccountSettingsControllerTest {
         assertThat(controller.password("old-secret", "new-secret", "new-secret", model, request, response)).isEqualTo("account/password");
         assertThat(model.toString()).doesNotContain("old-secret", "new-secret", "Sensitive database details");
         model.clear();
-        assertThat(controller.delete(true, "old-secret", model, request, response)).isEqualTo("account/delete");
+        assertThat(controller.delete(true, "old-secret", model, request, response)).isEqualTo("account/settings");
+        assertThat(model).containsEntry("openDeletionDialog", true).containsKey("deletionError");
+        assertThat(model.toString()).doesNotContain("old-secret", "Sensitive database details");
+        assertThat(request.getSession(false)).isSameAs(session);
+        model.clear();
+        request.addHeader("HX-Request", "true");
+        assertThat(controller.delete(true, "old-secret", model, request, response)).isEqualTo("account/delete :: deletion-modal");
+        assertThat(model).containsEntry("openDeletionDialog", true).containsKey("deletionError");
         assertThat(model.toString()).doesNotContain("old-secret", "Sensitive database details");
         assertThat(request.getSession(false)).isSameAs(session);
     }

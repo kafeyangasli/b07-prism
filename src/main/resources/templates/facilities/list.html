@@ -12,7 +12,7 @@
                 <p class="ui-eyebrow">Fasilitas kampus</p>
                 <h1 id="page-title">Temukan fasilitas yang sesuai</h1>
                 <p class="ui-description">
-                    Telusuri fasilitas berdasarkan tipe, lokasi, kapasitas, atau waktu penggunaan.
+                    Telusuri fasilitas berdasarkan tipe, lokasi, kapasitas, atau tanggal penggunaan.
                 </p>
             </div>
             <a sec:authorize="hasRole('PENGGUNA')" th:href="@{/reservations/new}"
@@ -26,8 +26,7 @@
                 <details open data-responsive-filter class="space-y-4">
                 <summary class="ui-filter-summary"><h2 id="filter-title" class="inline">Filter fasilitas</h2></summary>
                 <div>
-                    <p class="ui-hint">Semua filter bersifat opsional. Waktu mulai dan selesai harus diisi
-                        berpasangan.</p>
+                    <p class="ui-hint">Semua filter bersifat opsional.</p>
                 </div>
                 <form id="facility-filter-form"
                       th:action="@{/facilities}"
@@ -48,19 +47,14 @@
                         <input id="capacity" class="ui-input" type="number" name="capacity" th:value="${capacity}"
                                min="1" inputmode="numeric" placeholder="Contoh: 30">
                     </div>
-                    <fieldset class="space-y-4 border-t border-border pt-4"><legend class="pt-4 text-sm font-semibold">Waktu penggunaan</legend>
-                    <div>
-                        <label for="startAt" class="ui-label">Mulai penggunaan</label>
-                        <input id="startAt" class="ui-input" type="datetime-local" name="startAt" th:value="${startAt}"
-                               step="1800">
+                    <div class="border-t border-border pt-4">
+                        <label for="usage-date" class="ui-label">Tanggal Penggunaan</label>
+                        <input id="usage-date" class="ui-input" type="date" name="date" th:value="${date}"
+                               th:min="${minimumDate}" aria-describedby="usage-date-help">
+                        <p id="usage-date-help" class="ui-hint">Pilih hari ini atau setelahnya. Ketersediaan diperiksa pukul 07:00–20:00 WIB.</p>
                     </div>
-                    <div>
-                        <label for="endAt" class="ui-label">Selesai penggunaan</label>
-                        <input id="endAt" class="ui-input" type="datetime-local" name="endAt" th:value="${endAt}"
-                               step="1800">
-                    </div>
-                    </fieldset>
                     <div class="ui-form-actions">
+                        <noscript><button type="submit" class="ui-btn ui-btn-primary">Terapkan filter</button></noscript>
                         <a th:href="@{/facilities}" hx-get="/facilities" hx-target="#facility-catalogue"
                            hx-select="#facility-catalogue" hx-swap="outerHTML" hx-push-url="true"
                            hx-sync="#facility-filter-form:replace" class="ui-btn ui-btn-secondary">Atur ulang</a>
@@ -115,7 +109,7 @@
                                 <div th:if="${facility.equipment}">
                                     <dt class="text-muted">Stok tersedia</dt>
                                     <dd class="mt-1 font-medium" th:text="${availableStock[facility.id] + ' unit'}">0 unit</dd>
-                                    <p class="mt-1 text-xs text-muted" th:text="${stockForSelectedInterval ? 'Pada waktu yang dipilih' : 'Saat ini'}"></p>
+                                    <p class="mt-1 text-xs text-muted" th:text="${stockForSelectedDate ? 'Pada tanggal yang dipilih' : 'Saat ini'}"></p>
                                 </div>
                                 <div class="col-span-2">
                                     <dt class="text-muted">Lokasi</dt>
@@ -133,7 +127,7 @@
                 </div>
                 <div th:if="${#lists.isEmpty(facilities)}" class="ui-empty-state">
                     <h3>Tidak ada fasilitas ditemukan</h3>
-                    <p class="mx-auto mt-2 max-w-md text-sm leading-6">Coba longgarkan filter atau pilih rentang waktu
+                    <p class="mx-auto mt-2 max-w-md text-sm leading-6">Coba longgarkan filter atau pilih tanggal
                         lain.</p>
                     <a th:href="@{/facilities}" hx-get="/facilities" hx-target="#facility-catalogue"
                        hx-select="#facility-catalogue" hx-swap="outerHTML" hx-push-url="true"

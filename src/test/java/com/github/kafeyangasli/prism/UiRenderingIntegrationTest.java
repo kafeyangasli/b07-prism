@@ -38,7 +38,13 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 @AutoConfigureMockMvc
 @Transactional
 class UiRenderingIntegrationTest {
+    private static LocalDate futureWeekday() {
+        LocalDate date = LocalDate.now().plusDays(4);
+        while (date.getDayOfWeek().getValue() > 5) date = date.plusDays(1);
+        return date;
+    }
     @Autowired MockMvc mvc;
+    @Autowired java.time.Clock clock;
     @Autowired UserRepository users;
     @Autowired FacilityRepository facilities;
     @Autowired ReservationRepository reservations;
@@ -99,10 +105,10 @@ class UiRenderingIntegrationTest {
         var hallType = facilityTypes.save(new com.github.kafeyangasli.prism.feature.facility.model.FacilityType("HALL-MULTI", "Aula", null));
         var hall = facilities.save(new Facility("HALL-MULTI", "Aula Pilihan", hallType, "Gedung B", 300, null, AdministrativeStatus.ACTIVE));
         facilities.save(new Facility("HALL-OTHER", "Aula Lokasi Lain", hallType, "Gedung C", 300, null, AdministrativeStatus.ACTIVE));
-        String date = LocalDate.now().plusDays(4).toString();
+        String date = futureWeekday().toString();
         String html = mvc.perform(get("/facilities").param("type", "LAB-UI", "HALL-MULTI")
                         .param("location", room.getLocation(), "Gedung B").param("capacity", "20")
-                        .param("startAt", date + "T09:00").param("endAt", date + "T10:00").header("HX-Request", "true"))
+                        .param("date", date).header("HX-Request", "true"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         String results = html.substring(html.indexOf("<section id=\"facility-results\""));
         assertThat(results).contains(room.getName(), hall.getName()).doesNotContain("Aula Lokasi Lain");
@@ -121,16 +127,99 @@ class UiRenderingIntegrationTest {
         }
     }
 
-    @Test void catalogueCombinesFiltersAndExplainsInvalidIntervals() throws Exception {
+    @Test void catalogueCombinesFiltersAndShowsOneDateInputWithTodayMinimum() throws Exception {
         var other = facilityTypes.save(new com.github.kafeyangasli.prism.feature.facility.model.FacilityType("CLASS-UI", "Kelas", null));
         facilities.save(new Facility("OTHER-UI", "Kelas berbeda", other, "Gedung B", 60, null, AdministrativeStatus.ACTIVE));
-        String date = LocalDate.now().plusDays(3).toString();
-        String html = render("/facilities?type=Laboratorium&location=Informatika&capacity=20&startAt=" + date + "T09:00&endAt=" + date + "T10:00", "catalog-combined");
-        assertThat(html).contains("Laboratorium Informatika").doesNotContain("Kelas berbeda");
-        assertThat(render("/facilities?startAt=" + date + "T09:00", "catalog-invalid"))
-                .contains("Isi waktu mulai dan selesai bersama").doesNotContain("0 fasilitas ditemukan");
-        assertThat(render("/facilities?startAt=" + date + "T10:00&endAt=" + date + "T09:00", "catalog-reversed"))
-                .contains("Waktu mulai dan selesai yang valid");
+        String date = futureWeekday().toString();
+        String html = render("/facilities?type=Laboratorium&location=Informatika&capacity=20&date=" + date, "catalog-combined");
+        assertThat(html).contains("Laboratorium Informatika", "Tanggal Penggunaan", "type=\"date\"", "name=\"date\"",
+                        "min=\"" + LocalDate.now(clock) + "\"", "value=\"" + date + "\"")
+                .doesNotContain("Kelas berbeda", "name=\"startAt\"", "name=\"endAt\"", "datetime-local");
+    }
+
+    @Test void catalogueAcceptsTodayAndFutureDatesAndRecoversAfterAPastDate() throws Exception {
+        LocalDate today = LocalDate.now(clock);
+        for (LocalDate date : java.util.List.of(today.minusDays(1), today, futureWeekday())) {
+            var result = mvc.perform(get("/facilities").header("HX-Request", "true")
+                            .param("date", date.toString())
+                            .param("type", "LAB-UI").param("capacity", "20"))
+                    .andExpect(status().isOk()).andReturn();
+            assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                    .contains("id=\"facility-results\"", "min=\"" + today + "\"");
+            if (!date.isBefore(today)) {
+                assertThat(result.getModelAndView().getModel()).doesNotContainKey("filterError");
+            } else {
+                assertThat(result.getModelAndView().getModel()).containsKey("filterError");
+                assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                        .contains("Tanggal penggunaan harus hari ini atau setelahnya.");
+            }
+        }
+        var cleared = mvc.perform(get("/facilities").header("HX-Request", "true"))
+                .andExpect(status().isOk()).andReturn();
+        assertThat(cleared.getModelAndView().getModel()).doesNotContainKey("filterError");
+        assertThat((java.util.List<Facility>) cleared.getModelAndView().getModel().get("facilities"))
+                .extracting(Facility::getId).contains(room.getId());
+    }
+
+    @Test void catalogueDateChecksTheFullOperatingDayAndClearingRestoresTheCatalogue() throws Exception {
+        LocalDate date = futureWeekday();
+        reservation.setStatus(ReservationStatus.APPROVED);
+        reservation.setStartAt(date.atTime(10, 0));
+        reservation.setEndAt(date.atTime(11, 0));
+        reservations.saveAndFlush(reservation);
+        var occupied = mvc.perform(get("/facilities").param("date", date.toString()))
+                .andExpect(status().isOk()).andReturn().getModelAndView().getModel();
+        assertThat((java.util.List<Facility>) occupied.get("facilities"))
+                .extracting(Facility::getId).doesNotContain(room.getId());
+
+        reservation.setStartAt(date.atTime(6, 0));
+        reservation.setEndAt(date.atTime(7, 0));
+        reservations.saveAndFlush(reservation);
+        var outsideHours = mvc.perform(get("/facilities").param("date", date.toString()))
+                .andExpect(status().isOk()).andReturn().getModelAndView().getModel();
+        assertThat((java.util.List<Facility>) outsideHours.get("facilities"))
+                .extracting(Facility::getId).contains(room.getId());
+    }
+
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
+    void ajaxPageLinksReceiveFullPagesWhileExplicitModalRequestsReceiveFragments() throws Exception {
+        for (String path : java.util.List.of("/reservations/new", "/reports/new")) {
+            String page = mvc.perform(get(path).header("HX-Request", "true").header("HX-Boosted", "true")
+                            .header("HX-Target", "dashboard-content"))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+            assertThat(page).contains("id=\"dashboard-content\"", "id=\"dashboard-sidebar\"")
+                    .doesNotContain("<dialog");
+            String modal = mvc.perform(get(path).header("HX-Request", "true"))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+            assertThat(modal).contains("<dialog").doesNotContain("id=\"dashboard-content\"");
+            if (path.equals("/reservations/new")) {
+                assertThat(modal).contains("data-reservation-date=\"" + LocalDate.now(clock) + "\"",
+                        "data-reservation-date=\"" + LocalDate.now(clock).plusDays(1) + "\"", "Hari ini", "Besok");
+            }
+        }
+    }
+
+    @Test @WithPrismUser(username="admin-ui@example.test", roles="ADMIN")
+    void adminCreationAcceptsAdminRoleThroughAjaxAndNormalForms() throws Exception {
+        assertThat(render("/admin/users", "admin-users"))
+                .contains("<option value=\"ADMIN\">Admin</option>", "data-auto-filter");
+        for (boolean ajax : java.util.List.of(false, true)) {
+            String email = "new-admin-" + ajax + "@example.test";
+            var request = post("/admin/users").with(csrf()).param("name", "Admin Baru")
+                    .param("email", email).param("password", "secret123").param("role", "ADMIN");
+            if (ajax) request.header("HX-Request", "true");
+            var response = mvc.perform(request).andReturn().getResponse();
+            if (ajax) {
+                assertThat(response.getStatus()).isEqualTo(200);
+                assertThat(response.getContentAsString(StandardCharsets.UTF_8))
+                        .contains("Akun baru berhasil dibuat", "Admin Baru", "hx-swap-oob=\"outerHTML\"");
+            } else {
+                assertThat(response.getRedirectedUrl()).isEqualTo("/admin/users");
+            }
+            User created = users.findByEmailIgnoreCase(email).orElseThrow();
+            assertThat(created.getRole()).isEqualTo(Role.ADMIN);
+            assertThat(created.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
+        }
     }
 
     @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
@@ -154,7 +243,9 @@ class UiRenderingIntegrationTest {
                 "Gedung X", 10, null, AdministrativeStatus.INACTIVE));
         String generic = render("/reservations/new", "reservation-search");
         assertThat(generic).contains("type=\"search\"", "data-facility-picker", "data-select-facility",
-                "data-facility-context-template", "data-selected-facility-input", "Laboratorium Informatika")
+                "data-facility-context-template", "data-selected-facility-input", "Laboratorium Informatika",
+                "data-reservation-date=\"" + LocalDate.now(clock) + "\"",
+                "data-reservation-date=\"" + LocalDate.now(clock).plusDays(1) + "\"", "Hari ini", "Besok")
                 .doesNotContain("<select", "Fasilitas nonaktif", "data-facility-id=\"" + inactive.getId() + "\"");
         String fixed = render("/reservations/new?facilityId=" + room.getId(), "reservation-fixed-context");
         assertThat(fixed).contains("ui-facility-context", "data-selected-facility-id=\"" + room.getId() + "\"")
@@ -165,6 +256,34 @@ class UiRenderingIntegrationTest {
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(invalid).contains("data-selected-facility-context", "data-selected-facility-id=\"" + room.getId() + "\"",
                 "value=\"Laboratorium Informatika\"").doesNotContain("<select");
+    }
+
+    @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
+    void reportSearchUsesReservationPickerAndRetainsSelectionOnValidationErrors() throws Exception {
+        var inactive = facilities.save(new Facility("INACTIVE-REPORT-PICKER", "Fasilitas nonaktif untuk laporan",
+                room.getFacilityType(), "Gedung X", 10, null, AdministrativeStatus.INACTIVE));
+        String generic = render("/reports/new", "report-search");
+        assertThat(generic).contains("type=\"search\"", "data-facility-picker", "data-select-facility",
+                        "data-facility-results", "data-selected-facility-input", "data-facility-context-template",
+                        "id=\"report-facility-search\"", "data-list-search=\"report-facility-search-results\"",
+                        "Laboratorium Informatika", "Fasilitas nonaktif untuk laporan",
+                        "/reports/new?facilityId=" + room.getId())
+                .doesNotContain("<select");
+
+        String selected = render("/reports/new?facilityId=" + inactive.getId(), "report-search-selected");
+        assertThat(selected).contains("value=\"Fasilitas nonaktif untuk laporan\"", "data-clear-facility");
+        for (boolean ajax : java.util.List.of(false, true)) {
+            var request = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/reports")
+                    .with(csrf()).param("facilityId", room.getId().toString())
+                    .param("category", "AC").param("description", "Pendingin tidak berfungsi");
+            if (ajax) request.header("HX-Request", "true");
+            var response = mvc.perform(request).andExpect(status().isOk()).andReturn();
+            assertThat(response.getModelAndView().getModel().get("selectedFacility")).isEqualTo(room);
+            assertThat(response.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                    .contains("Foto laporan wajib diunggah", "value=\"Laboratorium Informatika\"",
+                            "value=\"AC\"", "Pendingin tidak berfungsi", "data-selected-facility-context")
+                    .doesNotContain("<select");
+        }
     }
 
     @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
@@ -279,14 +398,16 @@ class UiRenderingIntegrationTest {
 
     @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
     void modalSubmissionCarriesSuccessFeedbackToDetailOnce() throws Exception {
-        String date = LocalDate.now().plusDays(4).toString();
+        String date = futureWeekday().toString();
         var result = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/reservations")
                 .with(csrf()).header("HX-Request", "true")
                 .param("facilityId", room.getId().toString()).param("date", date)
                 .param("startAt", date + "T09:00").param("endAt", date + "T10:00")
                 .param("purpose", "Pengujian alur konfirmasi"))
                 .andExpect(status().isNoContent()).andReturn();
-        String url = result.getResponse().getHeader("HX-Redirect");
+        String location = result.getResponse().getHeader("HX-Location");
+        assertThat(location).contains("\"target\":\"#dashboard-content\"", "\"select\":\"#dashboard-content\"");
+        String url = location.split("\"path\":\"")[1].split("\"")[0];
         assertThat(url).startsWith("/reservations/");
         var session = (org.springframework.mock.web.MockHttpSession) result.getRequest().getSession();
         String detail = mvc.perform(get(url).session(session)).andExpect(status().isOk())
@@ -584,7 +705,8 @@ class UiRenderingIntegrationTest {
                 .param("name", "Petugas HTMX").param("email", "petugas-htmx@example.test")
                 .param("password", "rahasia").param("role", "PETUGAS"))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-        assertThat(createdUser).contains("Akun baru berhasil dibuat", "hx-swap-oob=\"outerHTML\"", "Petugas HTMX");
+        assertThat(createdUser).contains("Akun baru berhasil dibuat", "hx-swap-oob=\"outerHTML\"", "Petugas HTMX",
+                "id=\"user-dialog\"", "id=\"user-modal-region\"").doesNotContain("open=\"open\"");
 
         String invalidFacility = mvc.perform(post("/admin/facilities")
                 .header("HX-Request", "true").with(csrf()))
@@ -596,7 +718,8 @@ class UiRenderingIntegrationTest {
                 .param("code", "AUD-HTMX").param("name", "Auditorium HTMX")
                 .param("facilityTypeId", room.getFacilityType().getId().toString()).param("location", "Gedung B").param("capacity", "100"))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-        assertThat(createdFacility).contains("Fasilitas berhasil ditambahkan", "hx-swap-oob=\"outerHTML\"", "Auditorium HTMX");
+        assertThat(createdFacility).contains("Fasilitas berhasil ditambahkan", "hx-swap-oob=\"outerHTML\"", "Auditorium HTMX",
+                "id=\"management-feedback\" tabindex=\"-1\" hx-swap-oob=\"outerHTML\"");
         assertThat(admin.getRole()).isEqualTo(Role.ADMIN);
     }
 
@@ -628,8 +751,10 @@ class UiRenderingIntegrationTest {
 
     @Test @WithPrismUser(username="ui@example.test", roles="PENGGUNA")
     void accountViewsKeepProfilePasswordAndDeactivationForms() throws Exception {
-        assertThat(render("/account", "account")).contains("/account/profile", "/account/avatar", "name=\"name\"", "name=\"image\"", "name=\"_csrf\"");
+        assertThat(render("/account", "account")).contains("/account/profile", "/account/avatar", "name=\"name\"", "name=\"image\"", "name=\"_csrf\"",
+                        "data-open-dialog=\"account-deletion-dialog\"", "id=\"account-deletion-dialog\"", "name=\"confirmed\"", "name=\"currentPassword\"")
+                .doesNotContain("href=\"/account/delete\"", ">Penonaktifan akun</a>");
         assertThat(render("/account/password", "account-password")).contains("name=\"currentPassword\"", "name=\"newPassword\"", "name=\"confirmPassword\"", "data-password-toggle");
-        assertThat(render("/account/delete", "account-delete")).contains("name=\"confirmed\"", "name=\"currentPassword\"", "name=\"_csrf\"");
+        mvc.perform(get("/account/delete")).andExpect(redirectedUrl("/account"));
     }
 }

@@ -55,6 +55,7 @@ class PublicFacilityAvailabilityIntegrationTest {
     private static final LocalDate DATE = LocalDate.of(2026, 9, 25);
 
     @Autowired MockMvc mvc;
+    @Autowired java.time.Clock clock;
     @Autowired FacilityRepository facilities;
     @Autowired ReservationRepository reservations;
     @Autowired FacilityBlockageRepository blockages;
@@ -102,14 +103,17 @@ class PublicFacilityAvailabilityIntegrationTest {
                 .allSatisfy(slot -> assertThat(slot.reason()).isNull());
 
         Map<String, Object> model = result.getModelAndView().getModel();
-        assertThat(model).containsOnlyKeys("facilityId", "facilityName", "date", "slots");
+        assertThat(model).containsOnlyKeys("facilityId", "facilityName", "date", "slots", "minimumDate", "maximumDate");
         String html = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(html).contains("Ruang Publik", "07:00", "20:00", "Pembersihan publik",
                 "data-start=\"10:00\" data-state=\"RESERVED\"",
-                "data-start=\"11:00\" data-state=\"AVAILABLE\"")
+                "data-start=\"11:00\" data-state=\"AVAILABLE\"",
+                "hx-trigger=\"submit, change\"", "Hari ini", "Besok",
+                "data-reservation-date=\"" + LocalDate.now(clock) + "\"",
+                "data-reservation-date=\"" + LocalDate.now(clock).plusDays(1) + "\"")
                 .doesNotContain("PRIVATE-REQUESTER", "private-requester@example.test", "PRIVATE-STAFF",
                         "private-staff@example.test", "PRIVATE-PURPOSE", "PRIVATE-PROPOSAL.pdf",
-                        "PRIVATE-INTERNAL-NOTE", "proposal", "Proposal", "th:text");
+                        "PRIVATE-INTERNAL-NOTE", "proposal", "Proposal", "th:text", "Lihat ketersediaan");
     }
 
     @Test

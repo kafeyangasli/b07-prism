@@ -17,7 +17,7 @@
 
                 <th:block th:fragment="user-creation-success">
                     <th:block th:if="${creationSuccess == true}">
-                        <div id="user-modal-region"></div>
+                        <div th:replace="~{admin/users :: user-modal}"></div>
                         <div th:replace="~{admin/users :: user-results}"></div>
                     </th:block>
                     <div id="management-feedback" tabindex="-1" th:attr="hx-swap-oob=${creationSuccess == true ? 'outerHTML' : null}">
@@ -32,7 +32,8 @@
                             <p class="ui-hint">Cari berdasarkan nama atau email, lalu batasi hasil berdasarkan peran dan status.</p>
                         </div>
                         <form id="user-filter-form" class="ui-form" th:action="@{/admin/users}" method="get"
-                            hx-get="/admin/users" hx-target="#user-results" hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress">
+                            hx-get="/admin/users" hx-trigger="submit, prism:filter" hx-sync="this:replace"
+                            hx-target="#user-results" hx-swap="outerHTML" hx-push-url="true" hx-indicator="#global-progress" data-auto-filter>
                             <div>
                                 <label class="ui-label" for="user-search">Cari</label>
                                 <input id="user-search" class="ui-input" type="search" name="search" th:value="${search}" placeholder="Nama atau email">
@@ -58,7 +59,7 @@
                             </div>
                             <div>
                                 <label class="ui-label" for="user-sort">Urutkan berdasarkan</label>
-                                <select id="user-sort" class="ui-input" name="sort">
+                                <select id="user-sort" class="ui-input" name="sort" data-filter-default="createdAt">
                                     <option value="createdAt" th:selected="${sort == 'createdAt'}">Tanggal dibuat</option>
                                     <option value="name" th:selected="${sort == 'name'}">Nama</option>
                                     <option value="email" th:selected="${sort == 'email'}">Email</option>
@@ -68,7 +69,7 @@
                             </div>
                             <div>
                                 <label class="ui-label" for="user-direction">Arah urutan</label>
-                                <select id="user-direction" class="ui-input" name="direction">
+                                <select id="user-direction" class="ui-input" name="direction" data-filter-default="desc">
                                     <option value="asc" th:selected="${direction == 'asc'}">Menaik</option>
                                     <option value="desc" th:selected="${direction == 'desc'}">Menurun</option>
                                 </select>
@@ -170,7 +171,7 @@
                             <div>
                                 <p class="ui-eyebrow">Akun baru</p>
                                 <h2 id="user-dialog-title">Tambah Pengguna</h2>
-                                <p class="ui-hint">Buat akun Pengguna atau Petugas sesuai kebutuhan akses.</p>
+                                <p class="ui-hint">Buat akun Pengguna, Petugas, atau Admin sesuai kebutuhan akses.</p>
                             </div>
                             <button class="ui-btn ui-btn-ghost" type="button" data-close-dialog aria-label="Tutup dialog">×</button>
                         </div>
@@ -198,6 +199,7 @@
                                     <option value="">Pilih peran</option>
                                     <option value="PENGGUNA">Pengguna</option>
                                     <option value="PETUGAS">Petugas</option>
+                                    <option value="ADMIN">Admin</option>
                                 </select>
                                 <p class="ui-field-error" th:if="${#fields.hasErrors('role')}" th:errors="*{role}"></p>
                             </div>

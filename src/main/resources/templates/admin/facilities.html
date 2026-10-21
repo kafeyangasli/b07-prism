@@ -16,11 +16,7 @@
                 </header>
 
                 <th:block th:fragment="facility-creation-success">
-                    <th:block th:if="${creationSuccess == true}">
-                        <div id="facility-modal-region"></div>
-                        <div th:replace="~{admin/facilities :: facility-list}"></div>
-                    </th:block>
-                    <div id="management-feedback" tabindex="-1" th:attr="hx-swap-oob=${creationSuccess == true ? 'outerHTML' : null}">
+                    <div id="management-feedback" tabindex="-1" th:attr="hx-swap-oob=${facilityCreationSuccess == true ? 'outerHTML' : null}">
                         <div th:replace="~{fragments/feedback :: flash}"></div>
                     </div>
                     <th:block th:if="${facilityCreationSuccess == true}">

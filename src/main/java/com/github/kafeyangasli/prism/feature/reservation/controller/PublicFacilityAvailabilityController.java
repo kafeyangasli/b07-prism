@@ -45,6 +45,8 @@ public class PublicFacilityAvailabilityController {
         model.addAttribute("facilityId", facilityId);
         model.addAttribute("facilityName", availability.facility().getName());
         model.addAttribute("date", availability.date());
+        model.addAttribute("minimumDate", availabilityService.minimumDate());
+        model.addAttribute("maximumDate", availabilityService.maximumDate());
         model.addAttribute("slots", availability.slots());
         if (availability.facility().isEquipment()) model.addAttribute("totalStock", availability.facility().getTotalStock());
 
